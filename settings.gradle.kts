@@ -24,3 +24,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "SSUTime"
 include(":app")
+include(":data")
