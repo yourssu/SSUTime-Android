@@ -1,5 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-
     <style name="Theme.SSUTime" parent="android:Theme.Material.Light.NoActionBar" />
+
+    <style name="Theme.SSUTime.Starting" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/ssutime_launcher_background</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ssutime_launcher_foreground</item>
+        <item name="postSplashScreenTheme">@style/Theme.SSUTime</item>
+    </style>
 </resources>

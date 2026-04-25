@@ -51,6 +51,7 @@ dependencies {
 
     implementation(libs.androidx.navigation.compose)
     implementation(libs.koin.android)
+    implementation(libs.androidx.core.splashscreen)
 
     testImplementation(libs.junit)
     androidTestImplementation(platform(libs.androidx.compose.bom))
