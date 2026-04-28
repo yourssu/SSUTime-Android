@@ -6,14 +6,14 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.material3.Scaffold
 import androidx.compose.ui.Modifier
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.yourssu.ssutime.screen.login.LoginScreen
+import com.yourssu.ssutime.screen.onboarding.OnBoardingScreen
 import com.yourssu.ssutime.screen.splash.Screens
 import com.yourssu.ssutime.screen.splash.SplashScreen
 import com.yourssu.ssutime.ui.theme.SSUTimeTheme
@@ -48,7 +48,15 @@ class MainActivity : ComponentActivity() {
                         }
 
                         composable(route = Screens.LOGIN.name) {
-                            LoginScreen()
+                            LoginScreen(
+                                successLogin = {
+                                    navController.navigate(Screens.ONBORADING.name)
+                                }
+                            )
+                        }
+
+                        composable(route = Screens.ONBORADING.name) {
+                            OnBoardingScreen()
                         }
                     }
                 }
