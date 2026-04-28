@@ -1,6 +1,13 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.koin.compiler)
+}
+
+koinCompiler {
+    userLogs = true
+    debugLogs = false
+    unsafeDslChecks = true
 }
 
 android {
@@ -50,8 +57,15 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.ktx)
 
     implementation(libs.androidx.navigation.compose)
+
+    implementation(platform(libs.koin.bom))
     implementation(libs.koin.android)
-    implementation(libs.koin.androidx.compose)
+    implementation(libs.koin.compose)
+    implementation(libs.koin.navigation)
+    implementation(libs.koin.compose.viewmodel)
+    implementation(libs.koin.core)
+    implementation(libs.koin.annotations)  // For annotation support
+
     implementation(libs.androidx.core.splashscreen)
 
     implementation(project(":data"))

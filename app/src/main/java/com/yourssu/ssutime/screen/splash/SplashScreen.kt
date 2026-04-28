@@ -9,17 +9,24 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavController
 import com.yourssu.ssutime.R
+import org.koin.compose.viewmodel.koinViewModel
+import java.lang.Thread.sleep
 
 @Preview(showBackground = true)
 @Composable
-fun SplashScreen(modifier: Modifier = Modifier) {
+fun SplashScreen(
+    modifier: Modifier = Modifier,
+    navigateToLogin: () -> Unit,
+) {
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -37,5 +44,10 @@ fun SplashScreen(modifier: Modifier = Modifier) {
             style = MaterialTheme.typography.bodyLarge,
             color = Color.White,
         )
+    }
+
+    LaunchedEffect(Unit) {
+        sleep(1000)
+        navigateToLogin()
     }
 }

@@ -1,9 +1,16 @@
 package com.yourssu.ssutime
 
 import com.yourssu.ssutime.screen.login.LoginViewModel
+import org.koin.core.module.dsl.viewModel
+import org.koin.plugin.module.dsl.*
 import org.koin.dsl.module
-import org.koin.plugin.module.dsl.viewModel
-
 val appModule = module {
     viewModel<LoginViewModel>()
+}
+
+// Compose Preview를 위한 koinModule
+val previewModule = module {
+    viewModel {
+        LoginViewModel()
+    }
 }
