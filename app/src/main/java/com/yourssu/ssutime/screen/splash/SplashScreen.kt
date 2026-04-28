@@ -16,10 +16,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.navigation.NavController
 import com.yourssu.ssutime.R
-import org.koin.compose.viewmodel.koinViewModel
-import java.lang.Thread.sleep
+import kotlinx.coroutines.delay
 
 @Preview(showBackground = true)
 @Composable
@@ -47,7 +45,7 @@ fun SplashScreen(
     }
 
     LaunchedEffect(Unit) {
-        sleep(1000)
+        delay(1000)
         navigateToLogin()
     }
 }
