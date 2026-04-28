@@ -1,6 +1,6 @@
 package com.yourssu.ssutime.component
 
-import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Row
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
@@ -20,7 +20,8 @@ import com.yourssu.ssutime.ui.theme.WHITE
 @Composable
 fun SCheckBox(
     labelText: String,
-    checked: MutableState<Boolean>
+    checked: MutableState<Boolean>,
+    onCheckedChanged: (Boolean) -> Unit = {},
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically
@@ -28,13 +29,18 @@ fun SCheckBox(
         Checkbox(
             colors = CheckboxDefaults.colors(
                 checkedColor = R300,
+                checkmarkColor = WHITE
             ),
             checked = checked.value,
             onCheckedChange = {
                 checked.value = it
+                onCheckedChanged(it)
             }
         )
         Text(
+            modifier = Modifier.clickable {
+                checked.value = !checked.value
+            },
             text = labelText,
             style = SSUType.Label2Medium.copy(color = N500)
         )

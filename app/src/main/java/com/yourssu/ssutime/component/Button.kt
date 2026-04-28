@@ -38,7 +38,7 @@ fun SButton(
             modifier = Modifier
                 .padding(10.dp),
             text = labelText,
-            style = textStyle
+            style = textStyle.copy(color = WHITE)
         )
     }
 }
