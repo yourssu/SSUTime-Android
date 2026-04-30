@@ -1,6 +1,8 @@
 package com.yourssu.ssutime.screen.main
 
+import android.util.Log
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -12,21 +14,31 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.KeyboardArrowDown
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.key
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.yourssu.data.TodoInfo
 import com.yourssu.ssutime.R
+import com.yourssu.ssutime.getRemainingDays
+import com.yourssu.ssutime.ui.theme.N100
 import com.yourssu.ssutime.ui.theme.N300
 import com.yourssu.ssutime.ui.theme.SSUType
 import com.yourssu.ssutime.ui.theme.WHITE
@@ -37,6 +49,9 @@ import org.koin.compose.viewmodel.koinViewModel
 fun MainScreen(
     viewModel: MainViewModel = koinViewModel()
 ) {
+    LaunchedEffect(Unit) {
+        viewModel.loadTodos()
+    }
     Scaffold(
         modifier = Modifier
             .fillMaxSize(),
@@ -48,7 +63,8 @@ fun MainScreen(
         }
     ) { innerPadding ->
         MainFragment(
-            innerPadding = innerPadding
+            innerPadding = innerPadding,
+            todos = viewModel.todos
         )
     }
 }
@@ -56,7 +72,8 @@ fun MainScreen(
 @Composable
 @Preview
 fun MainFragment(
-    innerPadding: PaddingValues = PaddingValues(0.dp)
+    innerPadding: PaddingValues = PaddingValues(0.dp),
+    todos: List<TodoInfo> = emptyList()
 ) {
     val scrollState = rememberScrollState()
 
@@ -68,7 +85,7 @@ fun MainFragment(
         Column(
             modifier = Modifier
                 .verticalScroll(scrollState)
-                .padding(vertical = 32.dp, horizontal = 16.dp)
+                .padding(vertical = 32.dp, horizontal = 16.dp),
         ) {
 
             Text(
@@ -116,9 +133,85 @@ fun MainFragment(
                 )
             }
 
+            todos.forEach {
+                key(it.todoId) {
+                    Spacer(Modifier.height(8.dp))
+                    AssignmentItem(todoInfo = it)
+                }
+            }
+
         }
     }
 }
+
+@Composable
+fun AssignmentItem(
+    todoInfo: TodoInfo
+) {
+    Log.d("리컴포지션", "${todoInfo.todoId} 리컴포지션 발생")
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(N100)
+            .clip(RoundedCornerShape(16.dp))
+    ) {
+        Row(
+            modifier = Modifier
+                .padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(50.dp, 50.dp)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(WHITE),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "D-${getRemainingDays(todoInfo.due_date)}",
+                    style = SSUType.H4ExtraBold
+                )
+            }
+
+            Spacer(Modifier.size(12.dp))
+
+            Column {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(Color(0xFFF7DBF7))
+                            .padding(6.dp),
+                        text = todoInfo.type.kor,
+                        style = SSUType.Caption1SemiBold
+                    )
+                    Spacer(Modifier.width(6.dp))
+
+                    Text(
+                        text = todoInfo.subject?.name ?: "알 수 없는 과목",
+                        style = SSUType.H5SemiBold
+                    )
+                }
+
+                Spacer(Modifier.height(4.dp))
+
+                Text(
+                    text = todoInfo.title,
+                    style = SSUType.H4SemiBold
+                )
+            }
+            Spacer(Modifier.weight(1f))
+
+            Image(
+                imageVector = Icons.Outlined.KeyboardArrowDown,
+                contentDescription = "과제 정보 확장"
+            )
+        }
+    }
+}
+
 @Composable
 @Preview
 fun SSUTimeTopBar(
@@ -144,3 +237,4 @@ fun SSUTimeTopBar(
         )
     }
 }
+

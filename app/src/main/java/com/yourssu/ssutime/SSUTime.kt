@@ -17,6 +17,9 @@ import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
 import java.io.InputStream
 import java.io.OutputStream
+import java.time.Instant
+import java.time.temporal.ChronoUnit
+import kotlin.math.max
 
 const val CHANNEL_ID = "ASSIGNMENT"
 
@@ -59,4 +62,11 @@ object LoginDataSerializer : Serializer<LoginData> {
                 .encodeToByteArray()
         )
     }
+}
+
+fun getRemainingDays(targetTime: String): Long {
+    val targetInstant = Instant.parse(targetTime)
+    val now = Instant.now()
+
+    return max(0, ChronoUnit.DAYS.between(now, targetInstant))
 }

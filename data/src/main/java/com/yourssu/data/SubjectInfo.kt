@@ -1,0 +1,15 @@
+package com.yourssu.data
+
+data class SubjectInfo(
+    val id: Int,
+    val name: String,
+    val professor: String,
+) {
+    override fun equals(other: Any?): Boolean {
+        if(other is SubjectInfo) {
+            return id == other.id
+        }
+        return false
+    }
+}
+
