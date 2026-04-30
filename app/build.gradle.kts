@@ -2,12 +2,14 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.koin.compiler)
+    id("org.jetbrains.kotlin.plugin.serialization")
 }
 
 koinCompiler {
     userLogs = true
     debugLogs = false
-    unsafeDslChecks = true
+    unsafeDslChecks = false
+    compileSafety = false
 }
 
 android {
@@ -55,6 +57,9 @@ dependencies {
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
+    implementation(libs.androidx.datastore.preferences)
+    implementation(libs.androidx.datastore)
+    implementation(libs.kotlinx.serialization.json)
 
     implementation(libs.androidx.compose.material.icons.extended)
 

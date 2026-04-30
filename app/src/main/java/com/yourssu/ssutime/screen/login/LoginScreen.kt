@@ -14,6 +14,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -48,6 +49,13 @@ fun LoginScreen(
     val pwState = remember { viewModel.pwState }
     val errorMessage = remember { viewModel.errorMessage }
     val isLoading by remember { viewModel.isLoading }
+    val isAutoLogined by remember { viewModel.isAutoLogined }
+
+    LaunchedEffect(isAutoLogined) {
+        if(isAutoLogined) {
+            successLogin()
+        }
+    }
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,

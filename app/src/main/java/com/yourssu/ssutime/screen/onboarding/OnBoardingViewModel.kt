@@ -18,7 +18,7 @@ class OnBoardingViewModel(context: Context) : ViewModel() {
             Log.e("PERMISSION", "알림 권한이 거부된 상태입니다.")
         } else {
             isGranted.value = true
-            Log.e("PERMISSION", "알림 권한이 허용된 상태입니다.")
+            Log.i("PERMISSION", "알림 권한이 허용된 상태입니다.")
         }
     }
 }
