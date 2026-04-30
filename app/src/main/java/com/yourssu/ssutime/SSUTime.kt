@@ -18,7 +18,10 @@ import org.koin.dsl.module
 import java.io.InputStream
 import java.io.OutputStream
 import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
+import java.util.Locale
 import kotlin.math.max
 
 const val CHANNEL_ID = "ASSIGNMENT"
@@ -69,4 +72,17 @@ fun getRemainingDays(targetTime: String): Long {
     val now = Instant.now()
 
     return max(0, ChronoUnit.DAYS.between(now, targetInstant))
+}
+
+fun getStringDate(targetTime: String): String {
+    val targetInstant = Instant.parse(targetTime)
+    val zoneId = ZoneId.of("Asia/Seoul")
+    val formatter = DateTimeFormatter.ofPattern(
+        "yyyy년 MM월 dd일 HH:mm:ss",
+        Locale.KOREA
+    )
+
+    return targetInstant
+        .atZone(zoneId)
+        .format(formatter)
 }

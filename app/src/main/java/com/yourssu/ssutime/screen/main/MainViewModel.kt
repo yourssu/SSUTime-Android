@@ -2,6 +2,7 @@ package com.yourssu.ssutime.screen.main
 
 import android.util.Log
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import com.yourssu.data.SubjectInfo
 import com.yourssu.data.TodoInfo
@@ -15,10 +16,12 @@ class MainViewModel(
 
 ) : ViewModel() {
     var todos = mutableStateListOf<TodoInfo>()
+    var isLoading = mutableStateOf(false)
 
     @OptIn(ExperimentalTime::class)
     suspend fun loadTodos() {
         if(isLoggined) {
+            isLoading.value = true
             val todoList = getTodoList(
                 term = getTerms().first()
             )
@@ -42,6 +45,7 @@ class MainViewModel(
                 clear();
                 addAll(newTodos)
             }
+            isLoading.value = false
 
         } else {
             // TODO 재로그인 로직 필요

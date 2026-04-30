@@ -1,9 +1,11 @@
 package com.yourssu.ssutime.screen.main
 
 import android.util.Log
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
@@ -22,12 +24,18 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.KeyboardArrowDown
+import androidx.compose.material.icons.outlined.KeyboardArrowUp
 import androidx.compose.material.icons.outlined.Refresh
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -38,6 +46,7 @@ import androidx.compose.ui.unit.dp
 import com.yourssu.data.TodoInfo
 import com.yourssu.ssutime.R
 import com.yourssu.ssutime.getRemainingDays
+import com.yourssu.ssutime.getStringDate
 import com.yourssu.ssutime.ui.theme.N100
 import com.yourssu.ssutime.ui.theme.N300
 import com.yourssu.ssutime.ui.theme.SSUType
@@ -66,6 +75,15 @@ fun MainScreen(
             innerPadding = innerPadding,
             todos = viewModel.todos
         )
+
+        if(viewModel.isLoading.value)
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator()
+            }
+
     }
 }
 
@@ -94,7 +112,7 @@ fun MainFragment(
             )
 
             Text(
-                text = "N건의 할 일이 있어요",
+                text = "${todos.size}건의 할 일이 있어요",
                 style = SSUType.H1SemiBold
             )
 
@@ -136,7 +154,7 @@ fun MainFragment(
             todos.forEach {
                 key(it.todoId) {
                     Spacer(Modifier.height(8.dp))
-                    AssignmentItem(todoInfo = it)
+                    TodoItem(todoInfo = it)
                 }
             }
 
@@ -145,69 +163,96 @@ fun MainFragment(
 }
 
 @Composable
-fun AssignmentItem(
+fun TodoItem(
     todoInfo: TodoInfo
 ) {
+    var expanded by remember { mutableStateOf(false) }
+
     Log.d("리컴포지션", "${todoInfo.todoId} 리컴포지션 발생")
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .background(N100)
             .clip(RoundedCornerShape(16.dp))
+            .background(N100)
     ) {
-        Row(
+        Column(
             modifier = Modifier
                 .padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically
         ) {
-            Box(
-                modifier = Modifier
-                    .size(50.dp, 50.dp)
-                    .clip(RoundedCornerShape(14.dp))
-                    .background(WHITE),
-                contentAlignment = Alignment.Center
+            Row(
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = "D-${getRemainingDays(todoInfo.due_date)}",
-                    style = SSUType.H4ExtraBold
+                Box(
+                    modifier = Modifier
+                        .size(50.dp, 50.dp)
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(WHITE),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "D-${getRemainingDays(todoInfo.due_date)}",
+                        style = SSUType.H4ExtraBold
+                    )
+                }
+
+                Spacer(Modifier.size(12.dp))
+
+                Column {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(Color(0xFFF7DBF7))
+                                .padding(6.dp),
+                            text = todoInfo.type.kor,
+                            style = SSUType.Caption1SemiBold
+                        )
+                        Spacer(Modifier.width(6.dp))
+
+                        Text(
+                            text = todoInfo.subject?.name ?: "알 수 없는 과목",
+                            style = SSUType.H5SemiBold
+                        )
+                    }
+
+                    Spacer(Modifier.height(4.dp))
+
+                    Text(
+                        text = todoInfo.title,
+                        style = SSUType.H4SemiBold
+                    )
+                }
+                Spacer(Modifier.weight(1f))
+
+                Image(
+                    modifier = Modifier.clickable {
+                        expanded = !expanded
+                    },
+                    imageVector = if (!expanded) Icons.Outlined.KeyboardArrowDown else Icons.Outlined.KeyboardArrowUp,
+                    contentDescription = "과제 정보 확장"
                 )
             }
 
-            Spacer(Modifier.size(12.dp))
-
-            Column {
+            AnimatedVisibility(expanded) {
                 Row(
-                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .padding(top = 12.dp)
                 ) {
                     Text(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(6.dp))
-                            .background(Color(0xFFF7DBF7))
-                            .padding(6.dp),
-                        text = todoInfo.type.kor,
-                        style = SSUType.Caption1SemiBold
+                        text = "마감기한",
+                        style = SSUType.H5SemiBold
                     )
-                    Spacer(Modifier.width(6.dp))
-
+                    Spacer(Modifier.weight(1f))
                     Text(
-                        text = todoInfo.subject?.name ?: "알 수 없는 과목",
+                        text = getStringDate(todoInfo.due_date) + "까지",
                         style = SSUType.H5SemiBold
                     )
                 }
 
-                Spacer(Modifier.height(4.dp))
-
-                Text(
-                    text = todoInfo.title,
-                    style = SSUType.H4SemiBold
-                )
+                // TODO AI 요약
             }
-            Spacer(Modifier.weight(1f))
-
-            Image(
-                imageVector = Icons.Outlined.KeyboardArrowDown,
-                contentDescription = "과제 정보 확장"
-            )
         }
     }
 }
