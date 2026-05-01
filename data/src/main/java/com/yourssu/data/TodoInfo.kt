@@ -1,5 +1,8 @@
 package com.yourssu.data
 
+import kotlinx.serialization.Serializable
+
+@Serializable
 data class TodoInfo(
     val todoId: Int,
     val title: String, // 제목
@@ -10,6 +13,7 @@ data class TodoInfo(
     var subjectId = 0
 }
 
+@Serializable
 enum class TodoType(
     val kor: String,
 ) {

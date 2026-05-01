@@ -1,5 +1,8 @@
 package com.yourssu.data
 
+import kotlinx.serialization.Serializable
+
+@Serializable
 data class SubjectInfo(
     val id: Int,
     val name: String,
@@ -12,4 +15,3 @@ data class SubjectInfo(
         return false
     }
 }
-

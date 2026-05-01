@@ -8,16 +8,21 @@ import androidx.datastore.dataStore
 import com.yourssu.data.LoginData
 import com.yourssu.ssutime.screen.login.LoginRepository
 import com.yourssu.ssutime.screen.login.LoginViewModel
+import com.yourssu.ssutime.screen.main.MainRepository
 import com.yourssu.ssutime.screen.main.MainViewModel
+import com.yourssu.ssutime.screen.main.TodoData
+import com.yourssu.ssutime.screen.main.todoDataStore
 import com.yourssu.ssutime.screen.onboarding.OnBoardingViewModel
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 import org.koin.android.ext.koin.androidContext
 import org.koin.core.module.dsl.viewModel
+import org.koin.core.qualifier.named
 import org.koin.dsl.module
 import java.io.InputStream
 import java.io.OutputStream
 import java.time.Instant
+import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
@@ -28,19 +33,23 @@ const val CHANNEL_ID = "ASSIGNMENT"
 
 val appModule = module {
     single<DataStore<LoginData>> { androidContext().loginDataStore }
+    single<DataStore<TodoData>>(named("todoDataStore")) { androidContext().todoDataStore }
     single { LoginRepository(get()) }
+    single { MainRepository(get(named("todoDataStore"))) }
     viewModel { LoginViewModel(get()) }
     viewModel { OnBoardingViewModel(androidContext()) }
-    viewModel { MainViewModel() }
+    viewModel { MainViewModel(get()) }
 }
 
 // Compose Preview를 위한 koinModule
 val previewModule = module {
     single<DataStore<LoginData>> { androidContext().loginDataStore }
+    single<DataStore<TodoData>>(named("todoDataStore")) { androidContext().todoDataStore }
     single { LoginRepository(get()) }
+    single { MainRepository(get(named("todoDataStore"))) }
     viewModel { LoginViewModel(get()) }
     viewModel { OnBoardingViewModel(androidContext()) }
-    viewModel { MainViewModel() }
+    viewModel { MainViewModel(get()) }
 }
 
 val Context.loginDataStore: DataStore<LoginData> by dataStore(
@@ -67,11 +76,36 @@ object LoginDataSerializer : Serializer<LoginData> {
     }
 }
 
-fun getRemainingDays(targetTime: String): Long {
-    val targetInstant = Instant.parse(targetTime)
-    val now = Instant.now()
-
+fun getRemainingDays(targetTime: String, now: Instant = Instant.now()): Long {
+    val targetInstant = parseTargetInstant(targetTime)
     return max(0, ChronoUnit.DAYS.between(now, targetInstant))
+}
+
+fun getRemainingTimeText(targetTime: String, now: Instant = Instant.now()): String {
+    val targetInstant = parseTargetInstant(targetTime)
+
+    val remainingSeconds = max(
+        0,
+        ChronoUnit.SECONDS.between(now, targetInstant)
+    )
+
+    return if (remainingSeconds < 60) {
+        "${remainingSeconds}초"
+    } else {
+        val hours = remainingSeconds / 3600
+        val minutes = (remainingSeconds % 3600) / 60
+
+        "%02d:%02d".format(hours, minutes)
+    }
+}
+
+private fun parseTargetInstant(targetTime: String): Instant {
+    val normalizedTime = targetTime.removeSuffix("Z")
+
+    return LocalDateTime
+        .parse(normalizedTime)
+        .atZone(ZoneId.of("Asia/Seoul"))
+        .toInstant()
 }
 
 fun getStringDate(targetTime: String): String {
@@ -86,3 +120,17 @@ fun getStringDate(targetTime: String): String {
         .atZone(zoneId)
         .format(formatter)
 }
+
+fun getStringSimpleDate(targetTime: String): String {
+    val targetInstant = Instant.parse(targetTime)
+    val zoneId = ZoneId.of("Asia/Seoul")
+    val formatter = DateTimeFormatter.ofPattern(
+        "MM월 dd일 HH:mm",
+        Locale.KOREA
+    )
+
+    return targetInstant
+        .atZone(zoneId)
+        .format(formatter)
+}
+
