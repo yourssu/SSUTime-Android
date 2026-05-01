@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -71,7 +72,8 @@ fun NotificationFragment(
     Column(
         modifier = Modifier
             .padding(20.dp)
-            .fillMaxSize(),
+            .fillMaxSize()
+            .safeDrawingPadding(),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
@@ -90,7 +92,8 @@ fun NotificationFragment(
     Box(
         modifier = Modifier
             .padding(20.dp)
-            .fillMaxSize(),
+            .fillMaxSize()
+            .safeDrawingPadding(),
         contentAlignment = Alignment.BottomCenter
     ) {
         SButton(
@@ -108,8 +111,9 @@ fun TipFragment(
 ) {
     Column(
         modifier = Modifier
+            .padding(horizontal = 50.dp)
             .fillMaxSize()
-            .padding(horizontal = 50.dp),
+            .safeDrawingPadding(),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
@@ -143,7 +147,8 @@ fun TipFragment(
     Box(
         modifier = Modifier
             .padding(20.dp)
-            .fillMaxSize(),
+            .fillMaxSize()
+            .safeDrawingPadding(),
         contentAlignment = Alignment.BottomCenter
     ) {
         SButton(

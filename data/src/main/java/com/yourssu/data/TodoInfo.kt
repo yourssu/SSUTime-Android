@@ -13,5 +13,5 @@ data class TodoInfo(
 enum class TodoType(
     val kor: String,
 ) {
-    COMMONS("강의"), ASSIGNMENT("과제")
+    COMMONS("강의"), ASSIGNMENT("과제"), SUBMITTED("정상 제출"), SUBMITTED_LATE("지각 제출")
 }

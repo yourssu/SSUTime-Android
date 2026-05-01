@@ -6,6 +6,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
@@ -16,9 +17,12 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -27,14 +31,19 @@ import androidx.compose.material.icons.outlined.KeyboardArrowDown
 import androidx.compose.material.icons.outlined.KeyboardArrowUp
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -44,26 +53,37 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.yourssu.data.TodoInfo
+import com.yourssu.data.TodoType
 import com.yourssu.ssutime.R
 import com.yourssu.ssutime.getRemainingDays
 import com.yourssu.ssutime.getStringDate
+import com.yourssu.ssutime.ui.theme.G100
+import com.yourssu.ssutime.ui.theme.G400
 import com.yourssu.ssutime.ui.theme.N100
 import com.yourssu.ssutime.ui.theme.N300
+import com.yourssu.ssutime.ui.theme.R100
+import com.yourssu.ssutime.ui.theme.R400
 import com.yourssu.ssutime.ui.theme.SSUType
 import com.yourssu.ssutime.ui.theme.WHITE
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 import org.koin.compose.viewmodel.koinViewModel
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 @Preview
 fun MainScreen(
-    viewModel: MainViewModel = koinViewModel()
+    viewModel: MainViewModel = koinViewModel(),
+    coroutine: CoroutineScope = rememberCoroutineScope()
 ) {
+    var showSubmittedBottomSheet by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) {
         viewModel.loadTodos()
     }
     Scaffold(
         modifier = Modifier
-            .fillMaxSize(),
+            .fillMaxSize()
+            .safeDrawingPadding(),
         containerColor = WHITE,
         topBar = {
             SSUTimeTopBar(
@@ -73,15 +93,76 @@ fun MainScreen(
     ) { innerPadding ->
         MainFragment(
             innerPadding = innerPadding,
-            todos = viewModel.todos
+            todos = viewModel.todos,
+            submitted = viewModel.submitted,
+            onClickRefresh = {
+                coroutine.launch {
+                    viewModel.loadTodos()
+                }
+            },
+            onClickSubmitted = {
+                showSubmittedBottomSheet = true
+            }
         )
+
+        if (showSubmittedBottomSheet) {
+            ModalBottomSheet(
+                modifier = Modifier
+                    .fillMaxWidth(),
+                containerColor = WHITE,
+                onDismissRequest = { showSubmittedBottomSheet = false },
+                sheetState = rememberModalBottomSheetState(
+                    skipPartiallyExpanded = false,
+                )
+
+            ) {
+                Column(
+                    modifier = Modifier
+                        .padding(16.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "제출한 과제",
+                            style = SSUType.H3SemiBold
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            text = viewModel.submitted.size.toString(),
+                            style = SSUType.H3SemiBold.copy(color = R400)
+                        )
+                        Spacer(Modifier.weight(1f))
+                        Text( //TODO
+                            text = "00월 00일 기준",
+                            style = SSUType.Caption1SemiBold
+                        )
+                    }
+
+                    Spacer(Modifier.height(16.dp))
+
+                    LazyColumn(
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        items(
+                            items = viewModel.submitted,
+                            key = { item -> item.todoId }
+                        ) {
+                            SubmittedItem(it)
+                        }
+                    }
+                }
+            }
+        }
 
         if(viewModel.isLoading.value)
             Box(
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier.fillMaxSize().background(Color(0x80000000)),
                 contentAlignment = Alignment.Center
             ) {
-                CircularProgressIndicator()
+                CircularProgressIndicator(
+                    progress = { viewModel.loadingProgress.value },
+                )
             }
 
     }
@@ -91,7 +172,10 @@ fun MainScreen(
 @Preview
 fun MainFragment(
     innerPadding: PaddingValues = PaddingValues(0.dp),
-    todos: List<TodoInfo> = emptyList()
+    todos: List<TodoInfo> = emptyList(),
+    submitted: List<TodoInfo> = emptyList(),
+    onClickRefresh: () -> Unit = {},
+    onClickSubmitted: () -> Unit = {},
 ) {
     val scrollState = rememberScrollState()
 
@@ -125,7 +209,9 @@ fun MainFragment(
                 )
 
                 Image(
-                    modifier = Modifier.height(13.dp),
+                    modifier = Modifier
+                        .height(13.dp)
+                        .clickable { onClickRefresh() },
                     imageVector = Icons.Outlined.Refresh,
                     contentDescription = "새로고침"
                 )
@@ -145,8 +231,9 @@ fun MainFragment(
                 Text(
                     modifier = Modifier
                         .border(width = 1.dp, color = N300, shape = RoundedCornerShape(8.dp))
-                        .padding(8.dp),
-                    text = "제출 완료 N",
+                        .padding(8.dp)
+                        .clickable { onClickSubmitted() },
+                    text = "제출 완료 ${submitted.size}",
                     style = SSUType.Caption1SemiBold
                 )
             }
@@ -189,9 +276,28 @@ fun TodoItem(
                         .background(WHITE),
                     contentAlignment = Alignment.Center
                 ) {
+                    var res by remember { mutableIntStateOf(-1) }
+                    val leftDay = getRemainingDays(todoInfo.due_date)
+                    res = when(leftDay) {
+                        3L -> R.drawable.day3
+                        2L -> R.drawable.day2
+                        1L -> R.drawable.day_red2
+                        0L -> R.drawable.timer
+                        else -> {
+                            -1
+                        }
+                    }
+
+                    if(res > 0)
+                        Image(
+                            painter = painterResource(res),
+                            contentDescription = "day-$res"
+                        )
+
+
                     Text(
-                        text = "D-${getRemainingDays(todoInfo.due_date)}",
-                        style = SSUType.H4ExtraBold
+                        text = "D-${leftDay}",
+                        style = if(leftDay > 1) SSUType.H4ExtraBold else SSUType.H4ExtraBold.copy(color = WHITE)
                     )
                 }
 
@@ -252,6 +358,56 @@ fun TodoItem(
                 }
 
                 // TODO AI 요약
+            }
+        }
+    }
+}
+
+@Composable
+fun SubmittedItem(
+    todoInfo: TodoInfo
+) {
+    Log.d("리컴포지션", "${todoInfo.todoId} 리컴포지션 발생")
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(N100)
+    ) {
+        Column(
+            modifier = Modifier
+                .padding(18.dp),
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            text = todoInfo.subject?.name ?: "알 수 없는 과목",
+                            style = SSUType.Caption1SemiBold
+                        )
+                    }
+
+                    Spacer(Modifier.height(4.dp))
+
+                    Text(
+                        text = todoInfo.title,
+                        style = SSUType.H5SemiBold
+                    )
+                }
+                Spacer(Modifier.weight(1f))
+
+                Text(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(if(todoInfo.type == TodoType.SUBMITTED_LATE) R100 else G100)
+                        .padding(6.dp),
+                    text = todoInfo.type.kor,
+                    style = SSUType.Caption2Medium.copy(color = if(todoInfo.type == TodoType.SUBMITTED_LATE) R400 else G400)
+                )
             }
         }
     }
