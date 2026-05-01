@@ -7,9 +7,16 @@ import android.util.Log
 import androidx.compose.runtime.mutableStateOf
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.launch
 
-class OnBoardingViewModel(context: Context) : ViewModel() {
+class OnBoardingViewModel(
+    context: Context,
+    private val onBoardingRepository: OnBoardingRepository
+) : ViewModel() {
     var isGranted = mutableStateOf(false)
+    var isTipConfirmed = mutableStateOf(false)
+    var isOnBoardingDataLoaded = mutableStateOf(false)
 
     init {
         val permissionStatus = ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS)
@@ -20,5 +27,19 @@ class OnBoardingViewModel(context: Context) : ViewModel() {
             isGranted.value = true
             Log.i("PERMISSION", "알림 권한이 허용된 상태입니다.")
         }
+
+        viewModelScope.launch {
+            val onBoardingData = onBoardingRepository.getOnBoardingData()
+            isTipConfirmed.value = onBoardingData.isTipConfirmed
+            isOnBoardingDataLoaded.value = true
+        }
+    }
+
+    suspend fun confirmTip() {
+        val onBoardingData = OnBoardingData(
+            isTipConfirmed = true
+        )
+        onBoardingRepository.updateOnBoardingData(onBoardingData)
+        isTipConfirmed.value = true
     }
 }

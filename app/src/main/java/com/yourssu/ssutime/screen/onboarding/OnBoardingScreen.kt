@@ -21,8 +21,10 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -40,6 +42,7 @@ import com.yourssu.ssutime.ui.theme.R300
 import com.yourssu.ssutime.ui.theme.R500
 import com.yourssu.ssutime.ui.theme.SSUType
 import com.yourssu.ssutime.ui.theme.WHITE
+import kotlinx.coroutines.launch
 import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
@@ -48,6 +51,9 @@ fun OnBoardingScreen(
     onConfirmClick: () -> Unit = {}
 ) {
     var isGranted by remember { viewModel.isGranted }
+    val isTipConfirmed by remember { viewModel.isTipConfirmed }
+    val isOnBoardingDataLoaded by remember { viewModel.isOnBoardingDataLoaded }
+    val coroutine = rememberCoroutineScope()
 
     val launcher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
@@ -55,8 +61,22 @@ fun OnBoardingScreen(
         isGranted = granted
     }
 
+    LaunchedEffect(isGranted, isTipConfirmed, isOnBoardingDataLoaded) {
+        if(isGranted && isTipConfirmed && isOnBoardingDataLoaded) {
+            onConfirmClick()
+        }
+    }
+
     if(isGranted) {
-        TipFragment(onConfirmClick)
+        if(!isOnBoardingDataLoaded || isTipConfirmed) {
+            return
+        }
+
+        TipFragment {
+            coroutine.launch {
+                viewModel.confirmTip()
+            }
+        }
     } else {
         NotificationFragment() {
             launcher.launch(Manifest.permission.POST_NOTIFICATIONS)

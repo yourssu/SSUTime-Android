@@ -12,7 +12,10 @@ import com.yourssu.ssutime.screen.main.MainRepository
 import com.yourssu.ssutime.screen.main.MainViewModel
 import com.yourssu.ssutime.screen.main.TodoData
 import com.yourssu.ssutime.screen.main.todoDataStore
+import com.yourssu.ssutime.screen.onboarding.OnBoardingData
+import com.yourssu.ssutime.screen.onboarding.OnBoardingRepository
 import com.yourssu.ssutime.screen.onboarding.OnBoardingViewModel
+import com.yourssu.ssutime.screen.onboarding.onBoardingDataStore
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 import org.koin.android.ext.koin.androidContext
@@ -34,10 +37,12 @@ const val CHANNEL_ID = "ASSIGNMENT"
 val appModule = module {
     single<DataStore<LoginData>> { androidContext().loginDataStore }
     single<DataStore<TodoData>>(named("todoDataStore")) { androidContext().todoDataStore }
+    single<DataStore<OnBoardingData>>(named("onBoardingDataStore")) { androidContext().onBoardingDataStore }
     single { LoginRepository(get()) }
     single { MainRepository(get(named("todoDataStore"))) }
+    single { OnBoardingRepository(get(named("onBoardingDataStore"))) }
     viewModel { LoginViewModel(get()) }
-    viewModel { OnBoardingViewModel(androidContext()) }
+    viewModel { OnBoardingViewModel(androidContext(), get()) }
     viewModel { MainViewModel(get()) }
 }
 
@@ -45,10 +50,12 @@ val appModule = module {
 val previewModule = module {
     single<DataStore<LoginData>> { androidContext().loginDataStore }
     single<DataStore<TodoData>>(named("todoDataStore")) { androidContext().todoDataStore }
+    single<DataStore<OnBoardingData>>(named("onBoardingDataStore")) { androidContext().onBoardingDataStore }
     single { LoginRepository(get()) }
     single { MainRepository(get(named("todoDataStore"))) }
+    single { OnBoardingRepository(get(named("onBoardingDataStore"))) }
     viewModel { LoginViewModel(get()) }
-    viewModel { OnBoardingViewModel(androidContext()) }
+    viewModel { OnBoardingViewModel(androidContext(), get()) }
     viewModel { MainViewModel(get()) }
 }
 
@@ -133,4 +140,3 @@ fun getStringSimpleDate(targetTime: String): String {
         .atZone(zoneId)
         .format(formatter)
 }
-
