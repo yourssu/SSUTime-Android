@@ -13,6 +13,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.yourssu.ssutime.screen.login.LoginScreen
 import com.yourssu.ssutime.screen.main.MainScreen
+import com.yourssu.ssutime.screen.my.MyPageScreen
 import com.yourssu.ssutime.screen.onboarding.OnBoardingScreen
 import com.yourssu.ssutime.screen.splash.Screens
 import com.yourssu.ssutime.screen.splash.SplashScreen
@@ -61,7 +62,23 @@ class MainActivity : ComponentActivity() {
                     }
 
                     composable(route = Screens.MAIN.name) {
-                        MainScreen()
+                        MainScreen(onProfileClick = {
+                            navController.navigate(Screens.MY.name)
+                        })
+                    }
+
+                    composable(route = Screens.MY.name) {
+                        MyPageScreen(
+                            onPressBack = {
+                                navController.popBackStack()
+                            },
+                            onLogout =  {
+                                navController.navigate(Screens.LOGIN.name) {
+                                    popUpTo(0) { inclusive = true }
+                                    launchSingleTop = true
+                                }
+                            }
+                        )
                     }
                 }
             }

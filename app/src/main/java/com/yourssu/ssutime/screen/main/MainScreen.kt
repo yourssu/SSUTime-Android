@@ -80,7 +80,8 @@ import java.time.Instant
 @Preview
 fun MainScreen(
     viewModel: MainViewModel = koinViewModel(),
-    coroutine: CoroutineScope = rememberCoroutineScope()
+    coroutine: CoroutineScope = rememberCoroutineScope(),
+    onProfileClick: () -> Unit = {},
 ) {
     var showSubmittedBottomSheet by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) {
@@ -93,7 +94,8 @@ fun MainScreen(
         containerColor = WHITE,
         topBar = {
             SSUTimeTopBar(
-                modifier = Modifier.statusBarsPadding()
+                modifier = Modifier.statusBarsPadding(),
+                onProfileClick = onProfileClick
             )
         }
     ) { innerPadding ->
@@ -561,7 +563,8 @@ fun SubmittedItem(
 @Composable
 @Preview
 fun SSUTimeTopBar(
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onProfileClick: () -> Unit = {}
 ) {
     Row(
         modifier = modifier
@@ -577,7 +580,10 @@ fun SSUTimeTopBar(
         Spacer(Modifier.weight(1f))
 
         Image(
-            modifier = Modifier.height(IntrinsicSize.Max),
+            modifier = Modifier
+                .height(IntrinsicSize.Max)
+                .clickable { onProfileClick() }
+            ,
             painter = painterResource(R.drawable.ic_user),
             contentDescription = "User"
         )

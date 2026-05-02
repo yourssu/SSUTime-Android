@@ -12,6 +12,7 @@ import com.yourssu.ssutime.screen.main.MainRepository
 import com.yourssu.ssutime.screen.main.MainViewModel
 import com.yourssu.ssutime.screen.main.TodoData
 import com.yourssu.ssutime.screen.main.todoDataStore
+import com.yourssu.ssutime.screen.my.MyViewModel
 import com.yourssu.ssutime.screen.onboarding.OnBoardingData
 import com.yourssu.ssutime.screen.onboarding.OnBoardingRepository
 import com.yourssu.ssutime.screen.onboarding.OnBoardingViewModel
@@ -41,6 +42,7 @@ val appModule = module {
     single { LoginRepository(get()) }
     single { MainRepository(get(named("todoDataStore"))) }
     single { OnBoardingRepository(get(named("onBoardingDataStore"))) }
+    viewModel { MyViewModel(get()) }
     viewModel { LoginViewModel(get()) }
     viewModel { OnBoardingViewModel(androidContext(), get()) }
     viewModel { MainViewModel(get()) }
@@ -54,6 +56,7 @@ val previewModule = module {
     single { LoginRepository(get()) }
     single { MainRepository(get(named("todoDataStore"))) }
     single { OnBoardingRepository(get(named("onBoardingDataStore"))) }
+    viewModel { MyViewModel(get()) }
     viewModel { LoginViewModel(get()) }
     viewModel { OnBoardingViewModel(androidContext(), get()) }
     viewModel { MainViewModel(get()) }

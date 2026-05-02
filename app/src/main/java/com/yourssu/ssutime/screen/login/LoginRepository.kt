@@ -14,5 +14,11 @@ class LoginRepository(
         loginDataStore.updateData { loginData }
     }
 
+    suspend fun logout() {
+        loginDataStore.updateData {
+            it.copy(isAutoLogin = false)
+        }
+    }
+
     suspend fun getLoginData(): LoginData = loginDataStore.data.first()
 }
