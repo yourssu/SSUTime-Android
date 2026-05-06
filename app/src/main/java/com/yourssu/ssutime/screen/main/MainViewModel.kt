@@ -108,7 +108,7 @@ class MainViewModel(
 
     private fun updateTodoState(todoData: TodoData) {
         todos.apply {
-            clear();
+            clear()
             addAll(todoData.todos)
         }
 
