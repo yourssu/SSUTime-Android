@@ -6,19 +6,13 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.yourssu.data.SubjectInfo
 import com.yourssu.data.TodoInfo
-import com.yourssu.data.TodoType
-import io.github.chlwhdtn03.LmsApi
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import java.time.Instant
-import kotlin.time.ExperimentalTime
 
 class MainViewModel(
-    private val mainRepository: MainRepository
+    private val mainRepository: MainRepository,
+    private val lmsRefreshRepository: LmsRefreshRepository,
 ) : ViewModel() {
     var todos = mutableStateListOf<TodoInfo>()
     var submitted = mutableStateListOf<TodoInfo>()
@@ -27,7 +21,6 @@ class MainViewModel(
     var loadingProgress = mutableFloatStateOf(0f)
     var loadedAt = mutableStateOf("")
 
-    @OptIn(ExperimentalTime::class)
     suspend fun loadTodos() {
         if(isLoading.value) {
             return
@@ -44,58 +37,26 @@ class MainViewModel(
                 updateTodoState(cachedTodoData)
             }
 
-            if(LmsApi.isLoggined) {
-                val todoData = withContext(Dispatchers.IO) {
-                    val todoList = LmsApi.getTodoList(
-                        term = LmsApi.getTerms().first()
-                    ) {
-                        viewModelScope.launch {
-                            loadingProgress.value = it
-                        }
+            when (val refreshResult = lmsRefreshRepository.refreshTodos(
+                source = RefreshSource.MANUAL,
+                loadingState = {
+                    viewModelScope.launch {
+                        loadingProgress.value = it
                     }
-
-                    // 불러온 정보에서 과목 정보 먼저 보관
-                    val subjects = todoList.map { SubjectInfo(it.id, it.name, it.professor) }.toSet()
-                    val newTodos = todoList.flatMap { subject ->
-                        subject.todoList.map { todo ->
-                            Log.d("Todos", todo.due_date)
-                            TodoInfo(
-                                todo.assignment_id ?: -1,
-                                todo.title,
-                                todo.due_date,
-                                TodoType.valueOf(todo.component_type.uppercase()),
-                                subjects.find { it.id == subject.id }
-                            )
-                        }
-                    }.sortedBy { it.due_date }
-
-                    val newSubmitted = todoList.flatMap { subject ->
-                        subject.submissions
-                            .filter { it.submitted_at.isNotEmpty() }
-                            .map { todo ->
-                                TodoInfo(
-                                    todo.assignment_id,
-                                    todo.name,
-                                    todo.cached_due_date,
-                                    if(todo.late) TodoType.SUBMITTED_LATE else TodoType.SUBMITTED,
-                                    subjects.find { it.id == subject.id }
-                                )
-                            }
-                    }.sortedByDescending { it.due_date }
-
-                    TodoData(
-                        todos = newTodos,
-                        submitted = emptyList(),
-                        loadedAt = Instant.now().toString()
-                    )
+                }
+            )) {
+                is TodoRefreshResult.Success -> {
+                    loadingProgress.value = 1f
+                    updateTodoState(refreshResult.todoData)
                 }
 
-                updateTodoState(todoData)
-                mainRepository.updateTodoData(todoData)
-            } else {
-                // TODO 재로그인 로직 필요
-                Log.e(javaClass.name, "로그인이 되어있지 않아 정보를 불러올 수 없습니다")
-                Log.e(javaClass.name, "앱 재실행을 요청하세요")
+                is TodoRefreshResult.Skipped -> {
+                    Log.i(javaClass.name, refreshResult.reason)
+                }
+
+                is TodoRefreshResult.Failure -> {
+                    Log.e(javaClass.name, refreshResult.message, refreshResult.throwable)
+                }
             }
         } catch(e: Exception) {
             if(e is CancellationException) throw e

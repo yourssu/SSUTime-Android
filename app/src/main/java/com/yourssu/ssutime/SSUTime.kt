@@ -9,6 +9,7 @@ import androidx.datastore.dataStore
 import com.yourssu.data.LoginData
 import com.yourssu.ssutime.screen.login.LoginRepository
 import com.yourssu.ssutime.screen.login.LoginViewModel
+import com.yourssu.ssutime.screen.main.LmsRefreshRepository
 import com.yourssu.ssutime.screen.main.MainRepository
 import com.yourssu.ssutime.screen.main.MainViewModel
 import com.yourssu.ssutime.screen.main.TodoData
@@ -35,6 +36,8 @@ import java.util.Locale
 import kotlin.math.max
 
 const val CHANNEL_ID = "ASSIGNMENT"
+const val LMS_REFRESH_TOPIC = "lms-refresh"
+const val LMS_REFRESH_MESSAGE_TYPE = "lms_refresh"
 
 val appModule = module {
     single<DataStore<LoginData>> { androidContext().loginDataStore }
@@ -42,11 +45,12 @@ val appModule = module {
     single<DataStore<OnBoardingData>>(named("onBoardingDataStore")) { androidContext().onBoardingDataStore }
     single { LoginRepository(get()) }
     single { MainRepository(get(named("todoDataStore"))) }
+    single { LmsRefreshRepository(get(), get()) }
     single { OnBoardingRepository(get(named("onBoardingDataStore"))) }
     viewModel { MyViewModel(get()) }
     viewModel { LoginViewModel(get()) }
     viewModel { OnBoardingViewModel(androidContext(), get()) }
-    viewModel { MainViewModel(get()) }
+    viewModel { MainViewModel(get(), get()) }
 }
 
 // Compose Preview를 위한 koinModule
@@ -56,11 +60,12 @@ val previewModule = module {
     single<DataStore<OnBoardingData>>(named("onBoardingDataStore")) { androidContext().onBoardingDataStore }
     single { LoginRepository(get()) }
     single { MainRepository(get(named("todoDataStore"))) }
+    single { LmsRefreshRepository(get(), get()) }
     single { OnBoardingRepository(get(named("onBoardingDataStore"))) }
     viewModel { MyViewModel(get()) }
     viewModel { LoginViewModel(get()) }
     viewModel { OnBoardingViewModel(androidContext(), get()) }
-    viewModel { MainViewModel(get()) }
+    viewModel { MainViewModel(get(), get()) }
 }
 
 val Context.loginDataStore: DataStore<LoginData> by dataStore(

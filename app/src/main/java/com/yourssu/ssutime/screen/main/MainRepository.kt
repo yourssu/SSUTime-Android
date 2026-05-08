@@ -13,5 +13,9 @@ class MainRepository(
         todoDataStore.updateData { todoData }
     }
 
+    suspend fun updateTodoData(transform: (TodoData) -> TodoData) {
+        todoDataStore.updateData(transform)
+    }
+
     suspend fun getTodoData(): TodoData = todoDataStore.data.first()
 }
