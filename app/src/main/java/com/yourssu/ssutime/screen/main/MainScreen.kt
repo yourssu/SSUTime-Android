@@ -77,7 +77,6 @@ import java.time.Instant
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-@Preview
 fun MainScreen(
     viewModel: MainViewModel = koinViewModel(),
     coroutine: CoroutineScope = rememberCoroutineScope(),
@@ -202,6 +201,7 @@ fun MainFragment(
     ) {
         Column(
             modifier = Modifier
+                .fillMaxSize()
                 .verticalScroll(scrollState)
                 .padding(vertical = 32.dp, horizontal = 16.dp),
         ) {
@@ -240,6 +240,9 @@ fun MainFragment(
             Spacer(Modifier.height(28.dp))
 
             TodoList(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .weight(1f),
                 todos = todos,
                 onClickSubmitted = onClickSubmitted,
                 submittedSize = submitted.size,
@@ -250,114 +253,118 @@ fun MainFragment(
 
 @Composable
 fun TodoList(
+    modifier: Modifier = Modifier,
     todos: List<TodoInfo>,
     onClickSubmitted: () -> Unit,
     submittedSize: Int
 ) {
-
     val immediateTodos = todos.filter { getRemainingDays(it.due_date) <= 1 }
     val freeTodos = todos.filter { getRemainingDays(it.due_date) > 1 }
 
-    if(immediateTodos.isNotEmpty()) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = "가장 급한 과제에요",
-                style = SSUType.H3SemiBold
-            )
-            Spacer(Modifier.weight(1f))
-            Text(
-                modifier = Modifier
-                    .border(width = 1.dp, color = N300, shape = RoundedCornerShape(8.dp))
-                    .clickable { onClickSubmitted() }
-                    .padding(8.dp),
-                text = "제출 완료 $submittedSize",
-                style = SSUType.Caption1SemiBold
-            )
-        }
+    Column (
+        modifier = modifier.fillMaxSize()
+    ) {
 
-        immediateTodos.forEach {
-            key(it.todoId) {
-                Spacer(Modifier.height(8.dp))
-                TodoItem(todoInfo = it)
+        if (immediateTodos.isNotEmpty()) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "가장 급한 과제에요",
+                    style = SSUType.H3SemiBold
+                )
+                Spacer(Modifier.weight(1f))
+                Text(
+                    modifier = Modifier
+                        .border(width = 1.dp, color = N300, shape = RoundedCornerShape(8.dp))
+                        .clickable { onClickSubmitted() }
+                        .padding(8.dp),
+                    text = "제출 완료 $submittedSize",
+                    style = SSUType.Caption1SemiBold
+                )
             }
-        }
 
-        Spacer(Modifier.height(28.dp))
-
-        Text(
-            text = "여유가 있는 할 일 리스트",
-            style = SSUType.H3SemiBold
-        )
-
-        freeTodos.forEach {
-            key(it.todoId) {
-                Spacer(Modifier.height(8.dp))
-                TodoItem(todoInfo = it)
+            immediateTodos.forEach {
+                key(it.todoId) {
+                    Spacer(Modifier.height(8.dp))
+                    TodoItem(todoInfo = it)
+                }
             }
-        }
-    } else if(freeTodos.isNotEmpty()) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
+
+            Spacer(Modifier.height(28.dp))
+
             Text(
                 text = "여유가 있는 할 일 리스트",
                 style = SSUType.H3SemiBold
             )
-            Spacer(Modifier.weight(1f))
-            Text(
-                modifier = Modifier
-                    .border(width = 1.dp, color = N300, shape = RoundedCornerShape(8.dp))
-                    .clickable { onClickSubmitted() }
-                    .padding(8.dp),
-                text = "제출 완료 $submittedSize",
-                style = SSUType.Caption1SemiBold
-            )
-        }
-        freeTodos.forEach {
-            key(it.todoId) {
-                Spacer(Modifier.height(8.dp))
-                TodoItem(todoInfo = it)
-            }
-        }
-    } else {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = "과제 목록",
-                style = SSUType.H3SemiBold
-            )
-            Spacer(Modifier.weight(1f))
-            Text(
-                modifier = Modifier
-                    .border(width = 1.dp, color = N300, shape = RoundedCornerShape(8.dp))
-                    .padding(8.dp)
-                    .clickable { onClickSubmitted() },
-                text = "제출 완료 $submittedSize",
-                style = SSUType.Caption1SemiBold
-            )
-        }
 
-        Column(
-            modifier = Modifier
-                .fillMaxSize(1f),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            Image(
-                painter = painterResource(R.drawable.done),
-                contentDescription = "Done All Assignment"
-            )
-            Spacer(modifier = Modifier.height(12.dp))
-            Text(
-                text = "제출할 과제가 없어요",
-                style = SSUType.H3Medium,
-            )
+            freeTodos.forEach {
+                key(it.todoId) {
+                    Spacer(Modifier.height(8.dp))
+                    TodoItem(todoInfo = it)
+                }
+            }
+        } else if (freeTodos.isNotEmpty()) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "여유가 있는 할 일 리스트",
+                    style = SSUType.H3SemiBold
+                )
+                Spacer(Modifier.weight(1f))
+                Text(
+                    modifier = Modifier
+                        .border(width = 1.dp, color = N300, shape = RoundedCornerShape(8.dp))
+                        .clickable { onClickSubmitted() }
+                        .padding(8.dp),
+                    text = "제출 완료 $submittedSize",
+                    style = SSUType.Caption1SemiBold
+                )
+            }
+            freeTodos.forEach {
+                key(it.todoId) {
+                    Spacer(Modifier.height(8.dp))
+                    TodoItem(todoInfo = it)
+                }
+            }
+        } else {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "과제 목록",
+                    style = SSUType.H3SemiBold
+                )
+                Spacer(Modifier.weight(1f))
+                Text(
+                    modifier = Modifier
+                        .border(width = 1.dp, color = N300, shape = RoundedCornerShape(8.dp))
+                        .padding(8.dp)
+                        .clickable { onClickSubmitted() },
+                    text = "제출 완료 $submittedSize",
+                    style = SSUType.Caption1SemiBold
+                )
+            }
+
+            Column(
+                modifier = Modifier.fillMaxSize(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Image(
+                    painter = painterResource(R.drawable.done),
+                    contentDescription = "Done All Assignment"
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                Text(
+                    text = "제출할 과제가 없어요",
+                    style = SSUType.H3Medium,
+                )
+            }
         }
     }
 }

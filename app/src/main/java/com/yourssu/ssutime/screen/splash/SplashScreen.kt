@@ -19,11 +19,11 @@ import androidx.compose.ui.unit.dp
 import com.yourssu.ssutime.R
 import kotlinx.coroutines.delay
 
-@Preview(showBackground = true)
 @Composable
+@Preview
 fun SplashScreen(
     modifier: Modifier = Modifier,
-    navigateToLogin: () -> Unit,
+    navigateToLogin: () -> Unit = {},
 ) {
     Column(
         modifier = modifier
