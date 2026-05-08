@@ -50,6 +50,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -192,6 +193,7 @@ fun MainFragment(
     onClickRefresh: () -> Unit = {},
     onClickSubmitted: () -> Unit = {},
 ) {
+    val context = LocalContext.current
     val scrollState = rememberScrollState()
 
     Box(
@@ -221,7 +223,7 @@ fun MainFragment(
             ) {
                 Text(
                     text = if(loadedAt.isNotEmpty()) {
-                        "${getStringSimpleDate(loadedAt)} 기준"
+                        "업데이트 ${getStringSimpleDate(context, loadedAt)} 기준"
                     } else {
                         "업데이트 정보 없음"
                     },
@@ -296,7 +298,7 @@ fun TodoList(
 
             Text(
                 text = "여유가 있는 할 일 리스트",
-                style = SSUType.H3SemiBold
+                style = SSUType.H5SemiBold
             )
 
             freeTodos.forEach {
@@ -312,7 +314,7 @@ fun TodoList(
             ) {
                 Text(
                     text = "여유가 있는 할 일 리스트",
-                    style = SSUType.H3SemiBold
+                    style = SSUType.H5SemiBold
                 )
                 Spacer(Modifier.weight(1f))
                 Text(

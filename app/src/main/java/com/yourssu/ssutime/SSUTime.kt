@@ -1,6 +1,7 @@
 package com.yourssu.ssutime
 
 import android.content.Context
+import android.text.format.DateFormat
 import androidx.datastore.core.CorruptionException
 import androidx.datastore.core.DataStore
 import androidx.datastore.core.Serializer
@@ -122,7 +123,8 @@ fun getStringDate(targetTime: String): String {
     val targetInstant = Instant.parse(targetTime)
     val zoneId = ZoneId.of("Asia/Seoul")
     val formatter = DateTimeFormatter.ofPattern(
-        "yyyy년 MM월 dd일 HH:mm:ss",
+//        "yyyy년 MM월 dd일 HH:mm:ss",
+        "MM월 dd일",
         Locale.KOREA
     )
 
@@ -131,11 +133,11 @@ fun getStringDate(targetTime: String): String {
         .format(formatter)
 }
 
-fun getStringSimpleDate(targetTime: String): String {
+fun getStringSimpleDate(context: Context, targetTime: String): String {
     val targetInstant = Instant.parse(targetTime)
     val zoneId = ZoneId.of("Asia/Seoul")
     val formatter = DateTimeFormatter.ofPattern(
-        "MM월 dd일 HH:mm",
+        if (DateFormat.is24HourFormat(context)) "HH:mm" else "a hh:mm",
         Locale.KOREA
     )
 
