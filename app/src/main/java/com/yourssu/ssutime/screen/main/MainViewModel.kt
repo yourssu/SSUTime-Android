@@ -34,12 +34,12 @@ class MainViewModel(
         }
 
         isLoading.value = true
+        showLoading.value = true
         loadingProgress.value = 0f
 
         try {
             val cachedTodoData = mainRepository.getTodoData()
             val hasCachedTodoData = cachedTodoData.loadedAt.isNotEmpty()
-            showLoading.value = !hasCachedTodoData
             if(hasCachedTodoData) {
                 updateTodoState(cachedTodoData)
             }
@@ -85,7 +85,7 @@ class MainViewModel(
 
                     TodoData(
                         todos = newTodos,
-                        submitted = newSubmitted,
+                        submitted = emptyList(),
                         loadedAt = Instant.now().toString()
                     )
                 }

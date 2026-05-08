@@ -30,8 +30,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.KeyboardArrowDown
 import androidx.compose.material.icons.outlined.KeyboardArrowUp
 import androidx.compose.material.icons.outlined.Refresh
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -154,16 +154,25 @@ fun MainScreen(
 
                     Spacer(Modifier.height(16.dp))
 
-                    LazyColumn(
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        items(
-                            items = viewModel.submitted,
-                            key = { item -> item.todoId }
+                    if(viewModel.submitted.isNotEmpty()) {
+                        LazyColumn(
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
-                            SubmittedItem(it)
+                            items(
+                                items = viewModel.submitted,
+                                key = { item -> item.todoId }
+                            ) {
+                                SubmittedItem(it)
+                            }
                         }
+                    } else {
+                        Text(
+                            modifier = Modifier.fillMaxSize(),
+                            text = "아직 제출한 과제가 없어요",
+                            style = SSUType.H3Medium
+                        )
                     }
+
                 }
             }
         }
@@ -175,9 +184,19 @@ fun MainScreen(
                     .background(Color(0x80000000)),
                 contentAlignment = Alignment.Center
             ) {
-                CircularProgressIndicator(
-                    progress = { viewModel.loadingProgress.value },
-                )
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    LinearProgressIndicator(
+                        progress = { viewModel.loadingProgress.value },
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        text = "정보를 불러오는 중이에요... ${(viewModel.loadingProgress.value * 100).toInt()}%",
+                        style = SSUType.H2Medium,
+                        color = WHITE
+                    )
+                }
             }
 
     }
