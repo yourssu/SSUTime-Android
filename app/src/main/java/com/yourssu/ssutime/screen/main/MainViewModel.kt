@@ -9,6 +9,11 @@ import androidx.lifecycle.viewModelScope
 import com.yourssu.data.TodoInfo
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
+
+private val REFRESH_DATE_ZONE_ID: ZoneId = ZoneId.of("Asia/Seoul")
 
 class MainViewModel(
     private val mainRepository: MainRepository,
@@ -21,13 +26,12 @@ class MainViewModel(
     var loadingProgress = mutableFloatStateOf(0f)
     var loadedAt = mutableStateOf("")
 
-    suspend fun loadTodos() {
+    suspend fun loadTodos(forceRefresh: Boolean = false) {
         if(isLoading.value) {
             return
         }
 
         isLoading.value = true
-        showLoading.value = true
         loadingProgress.value = 0f
 
         try {
@@ -37,6 +41,11 @@ class MainViewModel(
                 updateTodoState(cachedTodoData)
             }
 
+            if (!forceRefresh && !shouldRefreshOnOpen(cachedTodoData)) {
+                return
+            }
+
+            showLoading.value = true
             when (val refreshResult = lmsRefreshRepository.refreshTodos(
                 source = RefreshSource.MANUAL,
                 loadingState = {
@@ -80,5 +89,18 @@ class MainViewModel(
 
         loadedAt.value = todoData.loadedAt
     }
+
+    private fun shouldRefreshOnOpen(todoData: TodoData): Boolean {
+        val loadedDate = todoData.loadedAt.toLocalDateOrNull()
+            ?: return true
+        val today = LocalDate.now(REFRESH_DATE_ZONE_ID)
+        return loadedDate.isBefore(today)
+    }
+
+    private fun String.toLocalDateOrNull(): LocalDate? = runCatching {
+        Instant.parse(this)
+            .atZone(REFRESH_DATE_ZONE_ID)
+            .toLocalDate()
+    }.getOrNull()
 
 }

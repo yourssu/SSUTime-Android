@@ -106,7 +106,7 @@ fun MainScreen(
             loadedAt = viewModel.loadedAt.value,
             onClickRefresh = {
                 coroutine.launch {
-                    viewModel.loadTodos()
+                    viewModel.loadTodos(forceRefresh = true)
                 }
             },
             onClickSubmitted = {
