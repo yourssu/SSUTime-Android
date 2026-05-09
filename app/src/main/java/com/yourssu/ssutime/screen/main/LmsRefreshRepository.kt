@@ -20,6 +20,8 @@ import kotlin.time.ExperimentalTime
 private const val BACKGROUND_REFRESH_RUNNING = "running"
 private const val BACKGROUND_REFRESH_SUCCESS = "success"
 private const val BACKGROUND_REFRESH_FAILED = "failed"
+private const val LMS_API_TOKEN_ERROR_MESSAGE = "API 토큰값을 불러오지 못했습니다. 다시 시도해주세요."
+private const val LMS_API_TOKEN_MAX_RETRIES = 2
 private val BACKGROUND_REFRESH_LOCK_WINDOW: Duration = Duration.ofMinutes(10)
 
 class LmsRefreshRepository(
@@ -163,7 +165,7 @@ class LmsRefreshRepository(
 
     private suspend fun loginIfNeeded(source: RefreshSource, loginData: LoginData) {
         if (loginData.hasAutoLoginCredentials && (source == RefreshSource.FCM || !LmsApi.isLoggined)) {
-            val isLoggedIn = LmsApi.loginLMS(loginData.id, loginData.pw)
+            val isLoggedIn = loginWithRetryIfNeeded(source, loginData)
             if (!isLoggedIn) {
                 throw IllegalStateException("LMS 로그인에 실패했어요.")
             }
@@ -172,6 +174,24 @@ class LmsRefreshRepository(
 
         if (!LmsApi.isLoggined) {
             throw IllegalStateException("LMS 로그인이 필요해요.")
+        }
+    }
+
+    private suspend fun loginWithRetryIfNeeded(source: RefreshSource, loginData: LoginData): Boolean {
+        var attempt = 0
+
+        while (true) {
+            try {
+                return LmsApi.loginLMS(loginData.id, loginData.pw)
+            } catch (e: Exception) {
+                val shouldRetry = source == RefreshSource.FCM &&
+                    e.message == LMS_API_TOKEN_ERROR_MESSAGE &&
+                    attempt < LMS_API_TOKEN_MAX_RETRIES
+                if (!shouldRetry) {
+                    throw e
+                }
+                attempt += 1
+            }
         }
     }
 
