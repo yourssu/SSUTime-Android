@@ -1,6 +1,5 @@
 package com.yourssu.ssutime.screen.my
 
-import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -34,16 +33,21 @@ import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
 import com.yourssu.ssutime.R
 import com.yourssu.ssutime.ui.theme.N100
+import com.yourssu.ssutime.ui.theme.N200
 import com.yourssu.ssutime.ui.theme.R400
 import com.yourssu.ssutime.ui.theme.SSUType
 import com.yourssu.ssutime.ui.theme.WHITE
@@ -59,15 +63,24 @@ fun MyPageScreen(
 ) {
     val loginInfo = viewModel.loginInfo.value
     val isLogout by remember { viewModel.isLogout }
+    var showLogoutPopup by remember { mutableStateOf(false) }
     val tooltipState = rememberTooltipState(
         isPersistent = true
     )
     val coroutine = rememberCoroutineScope()
 
     LaunchedEffect(isLogout) {
-        Log.d(javaClass.name, "로그아웃")
         if(isLogout)
             onLogout()
+    }
+
+    if (showLogoutPopup) {
+        Dialog(onDismissRequest = { showLogoutPopup = false }) {
+            LogoutPopup(
+                onCancel = { showLogoutPopup = false },
+                onConfirm = { viewModel.logout() }
+            )
+        }
     }
 
     Column(
@@ -159,7 +172,7 @@ fun MyPageScreen(
         OptionButton(
             text = "로그아웃"
         ) {
-            viewModel.logout()
+            showLogoutPopup = true
         }
     }
 }
@@ -206,11 +219,37 @@ fun OptionButton(
             .clickable { onClick() }
             .background(color = N100)
             .padding(14.dp),
-        verticalAlignment = Alignment.CenterVertically
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
             text = text,
             style = SSUType.H5SemiBold
+        )
+    }
+}
+
+@Composable
+fun PopupButton(
+    modifier: Modifier = Modifier,
+    text: String,
+    color: Color = Color.Unspecified,
+    textColor: Color = Color.Unspecified,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .clickable { onClick() }
+            .background(color = color)
+            .padding(14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Center
+    ) {
+        Text(
+            text = text,
+            style = SSUType.H5SemiBold,
+            color = textColor
         )
     }
 }
@@ -251,5 +290,50 @@ fun NotificationTooltip() {
             text = "과제 마감 당일 설정한 시간까지 완료하지 않았다면, 전화 알림을 드려요! * 진짜 전화는 아니니 놀라지 않으셔도 돼요!",
             style = SSUType.Body2Medium
         )
+    }
+}
+
+@Composable
+@Preview
+fun LogoutPopup(
+    onCancel: () -> Unit = {},
+    onConfirm: () -> Unit = {}
+) {
+    Column(
+        Modifier
+            .width(300.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .background(WHITE)
+            .padding(top = 18.dp, start = 12.dp, end = 12.dp, bottom = 12.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        Text(
+            text = "로그아웃",
+            style = SSUType.H4SemiBold
+        )
+        Text(
+            text = "정말 로그아웃 하시겠어요?",
+            style = SSUType.Body1Medium
+        )
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            PopupButton(
+                modifier = Modifier
+                    .weight(1f),
+                text = "취소",
+                color = N200,
+                onClick = onCancel
+            )
+            PopupButton(
+                modifier = Modifier
+                    .weight(1f),
+                text = "확인",
+                color = R400,
+                textColor = WHITE,
+                onClick = onConfirm
+            )
+        }
     }
 }
