@@ -14,7 +14,7 @@ koinCompiler {
 }
 
 android {
-    namespace = "com.yourssu.ssutime"
+    namespace = "com.yourssu.ssutime.v2"
     compileSdk {
         version = release(36) {
             minorApiLevel = 1
@@ -22,7 +22,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.yourssu.ssutime"
+        applicationId = "com.yourssu.ssutime.v2"
         minSdk = 26
         targetSdk = 36
         versionCode = 1

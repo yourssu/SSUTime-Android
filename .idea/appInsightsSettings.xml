@@ -8,10 +8,10 @@
             <InsightsFilterSettings>
               <option name="connection">
                 <ConnectionSetting>
-                  <option name="appId" value="com.yourssu.ssutime" />
-                  <option name="mobileSdkAppId" value="1:234459276395:android:46d62b2bcaa3a3141e7d2e" />
-                  <option name="projectId" value="ssutime-v2" />
-                  <option name="projectNumber" value="234459276395" />
+                  <option name="appId" value="PLACEHOLDER" />
+                  <option name="mobileSdkAppId" value="" />
+                  <option name="projectId" value="" />
+                  <option name="projectNumber" value="" />
                 </ConnectionSetting>
               </option>
               <option name="signal" value="SIGNAL_UNSPECIFIED" />

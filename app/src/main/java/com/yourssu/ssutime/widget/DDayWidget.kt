@@ -27,12 +27,12 @@ import androidx.glance.layout.size
 import androidx.glance.text.Text
 import com.yourssu.data.TodoInfo
 import com.yourssu.ssutime.MainActivity
-import com.yourssu.ssutime.R
 import com.yourssu.ssutime.getRemainingDays
 import com.yourssu.ssutime.getStringSimpleDate
 import com.yourssu.ssutime.screen.main.TodoData
 import com.yourssu.ssutime.screen.main.todoDataStore
 import com.yourssu.ssutime.ui.theme.SSUType
+import com.yourssu.ssutime.v2.R
 import kotlinx.coroutines.flow.first
 import kotlin.math.abs
 

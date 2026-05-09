@@ -45,12 +45,12 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
-import com.yourssu.ssutime.R
 import com.yourssu.ssutime.ui.theme.N100
 import com.yourssu.ssutime.ui.theme.N200
 import com.yourssu.ssutime.ui.theme.R400
 import com.yourssu.ssutime.ui.theme.SSUType
 import com.yourssu.ssutime.ui.theme.WHITE
+import com.yourssu.ssutime.v2.R
 import kotlinx.coroutines.launch
 import org.koin.compose.viewmodel.koinViewModel
 

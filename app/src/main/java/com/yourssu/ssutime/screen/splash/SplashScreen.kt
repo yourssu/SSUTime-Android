@@ -16,7 +16,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.yourssu.ssutime.R
+import com.yourssu.ssutime.v2.R
 import kotlinx.coroutines.delay
 
 @Composable

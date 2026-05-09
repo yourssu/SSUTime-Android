@@ -24,7 +24,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.yourssu.ssutime.R
 import com.yourssu.ssutime.component.SButton
 import com.yourssu.ssutime.component.SCheckBox
 import com.yourssu.ssutime.component.SSecureTextField
@@ -33,6 +32,7 @@ import com.yourssu.ssutime.previewModule
 import com.yourssu.ssutime.ui.theme.R500
 import com.yourssu.ssutime.ui.theme.SSUType
 import com.yourssu.ssutime.ui.theme.WHITE
+import com.yourssu.ssutime.v2.R
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import org.koin.compose.KoinApplicationPreview

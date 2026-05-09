@@ -33,7 +33,6 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.yourssu.ssutime.R
 import com.yourssu.ssutime.component.SButton
 import com.yourssu.ssutime.ui.theme.N100
 import com.yourssu.ssutime.ui.theme.N500
@@ -42,6 +41,7 @@ import com.yourssu.ssutime.ui.theme.R300
 import com.yourssu.ssutime.ui.theme.R500
 import com.yourssu.ssutime.ui.theme.SSUType
 import com.yourssu.ssutime.ui.theme.WHITE
+import com.yourssu.ssutime.v2.R
 import kotlinx.coroutines.launch
 import org.koin.compose.viewmodel.koinViewModel
 

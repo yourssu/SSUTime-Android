@@ -56,7 +56,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.yourssu.data.TodoInfo
 import com.yourssu.data.TodoType
-import com.yourssu.ssutime.R
 import com.yourssu.ssutime.getRemainingDays
 import com.yourssu.ssutime.getRemainingTimeText
 import com.yourssu.ssutime.getStringDate
@@ -70,6 +69,7 @@ import com.yourssu.ssutime.ui.theme.R400
 import com.yourssu.ssutime.ui.theme.R500
 import com.yourssu.ssutime.ui.theme.SSUType
 import com.yourssu.ssutime.ui.theme.WHITE
+import com.yourssu.ssutime.v2.R
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
