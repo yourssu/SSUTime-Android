@@ -44,7 +44,7 @@ val appModule = module {
     single<DataStore<TodoData>>(named("todoDataStore")) { androidContext().todoDataStore }
     single<DataStore<OnBoardingData>>(named("onBoardingDataStore")) { androidContext().onBoardingDataStore }
     single { LoginRepository(get()) }
-    single { MainRepository(get(named("todoDataStore"))) }
+    single { MainRepository(get(named("todoDataStore")), androidContext()) }
     single { LmsRefreshRepository(get(), get()) }
     single { OnBoardingRepository(get(named("onBoardingDataStore"))) }
     viewModel { MyViewModel(get()) }
@@ -59,7 +59,7 @@ val previewModule = module {
     single<DataStore<TodoData>>(named("todoDataStore")) { androidContext().todoDataStore }
     single<DataStore<OnBoardingData>>(named("onBoardingDataStore")) { androidContext().onBoardingDataStore }
     single { LoginRepository(get()) }
-    single { MainRepository(get(named("todoDataStore"))) }
+    single { MainRepository(get(named("todoDataStore")), androidContext()) }
     single { LmsRefreshRepository(get(), get()) }
     single { OnBoardingRepository(get(named("onBoardingDataStore"))) }
     viewModel { MyViewModel(get()) }
