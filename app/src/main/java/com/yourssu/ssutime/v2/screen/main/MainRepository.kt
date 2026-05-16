@@ -6,6 +6,7 @@ import androidx.datastore.core.DataStore
 import androidx.glance.appwidget.updateAll
 import com.yourssu.data.AlertData
 import com.yourssu.data.TodoData
+import com.yourssu.ssutime.v2.network.ApiRepository
 import com.yourssu.ssutime.v2.widget.DDayWidget
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
@@ -13,6 +14,7 @@ import kotlinx.coroutines.flow.first
 class MainRepository(
     private val todoDataStore: DataStore<TodoData>,
     private val alertDataStore: DataStore<AlertData>,
+    private val apiRepository: ApiRepository,
     private val context: Context,
 ) {
     val todoData: Flow<TodoData> = todoDataStore.data
@@ -27,9 +29,7 @@ class MainRepository(
         Log.i("AlertData", "Update AlertData : $alertData")
         alertData.valid = true
         alertDataStore.updateData { alertData }
-        if(alertData.callingAlertThresholdMinutes > 0L) {
-            // TODO POST Backend
-        }
+        apiRepository.setNotificationSetting(alertData.allowCallAlert, alertData.callingAlertThresholdMinutes)
     }
 
     suspend fun updateTodoData(transform: (TodoData) -> TodoData) {

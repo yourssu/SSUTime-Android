@@ -7,6 +7,7 @@ import com.google.firebase.messaging.FirebaseMessaging
 import com.yourssu.data.AlertData
 import com.yourssu.data.UiState
 import com.yourssu.ssutime.v2.LMS_REFRESH_TOPIC
+import com.yourssu.ssutime.v2.network.ApiRepository
 import com.yourssu.ssutime.v2.screen.login.LoginRepository
 import com.yourssu.ssutime.v2.screen.main.MainRepository
 import io.github.chlwhdtn03.LmsApi
@@ -19,6 +20,7 @@ import kotlinx.coroutines.launch
 class MyViewModel(
     private val loginRepository: LoginRepository,
     private val mainRepository: MainRepository,
+    private val apiRepository: ApiRepository
 ) : ViewModel() {
     var loginInfo = mutableStateOf<Info?>(null)
     var isLogout = mutableStateOf(false)

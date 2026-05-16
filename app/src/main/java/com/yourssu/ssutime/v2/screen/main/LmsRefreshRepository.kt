@@ -137,7 +137,7 @@ class LmsRefreshRepository(
             subjectCount = subjects.size,
             todoCount = subjects.sumOf { it.todoList.size },
             submittedCount = subjects.sumOf { subject ->
-                subject.submissions.count { it.submitted_at.isNotEmpty() }
+                subject.submissions.count { it.submitted_at?.isNotEmpty() == true }
             },
         )
         val refreshedTodoData = buildTodoData(
@@ -219,13 +219,13 @@ class LmsRefreshRepository(
 
         val newSubmitted = subjects.flatMap { subject ->
             subject.submissions
-                .filter { it.submitted_at.isNotEmpty() }
+                .filter { it.submitted_at?.isNotEmpty() == true }
                 .map { todo ->
                     TodoInfo(
-                        todo.assignment_id,
+                        todo.assignment_id ?: -1,
                         todo.name,
-                        todo.cached_due_date,
-                        if (todo.late) TodoType.SUBMITTED_LATE else TodoType.SUBMITTED,
+                        todo.cached_due_date ?: "",
+                        if (todo.late == true) TodoType.SUBMITTED_LATE else TodoType.SUBMITTED,
                         subjectInfoById[subject.id],
                     )
                 }

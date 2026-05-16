@@ -9,6 +9,7 @@ import androidx.datastore.dataStore
 import com.yourssu.data.AlertData
 import com.yourssu.data.LoginData
 import com.yourssu.data.TodoData
+import com.yourssu.ssutime.v2.network.ApiRepository
 import com.yourssu.ssutime.v2.screen.login.LoginRepository
 import com.yourssu.ssutime.v2.screen.login.LoginViewModel
 import com.yourssu.ssutime.v2.screen.main.LmsRefreshRepository
@@ -41,6 +42,8 @@ const val CHANNEL_ID = "ASSIGNMENT"
 const val LMS_REFRESH_TOPIC = "lms-refresh"
 const val LMS_REFRESH_MESSAGE_TYPE = "lms_refresh"
 
+internal var accessToken = ""
+
 val appModule = module {
     single<DataStore<LoginData>> { androidContext().loginDataStore }
     single<DataStore<TodoData>>(named("todoDataStore")) { androidContext().todoDataStore }
@@ -52,8 +55,12 @@ val appModule = module {
         MainRepository(
             get(named("todoDataStore")),
             get(named("alertDataStore")),
+            get(),
             androidContext()
         )
+    }
+    single {
+        ApiRepository()
     }
     single {
         LmsRefreshRepository(
@@ -68,8 +75,8 @@ val appModule = module {
             )
         )
     }
-    viewModel { MyViewModel(get(), get()) }
-    viewModel { LoginViewModel(get()) }
+    viewModel { MyViewModel(get(), get(), get()) }
+    viewModel { LoginViewModel(get(), get()) }
     viewModel {
         OnBoardingViewModel(
             androidContext(),
@@ -91,6 +98,7 @@ val previewModule = module {
         MainRepository(
             get(named("todoDataStore")),
             get(named("alertDataStore")),
+            get(),
             androidContext()
         )
     }
@@ -107,8 +115,8 @@ val previewModule = module {
             )
         )
     }
-    viewModel { MyViewModel(get(), get()) }
-    viewModel { LoginViewModel(get()) }
+    viewModel { MyViewModel(get(), get(), get()) }
+    viewModel { LoginViewModel(get(), get()) }
     viewModel {
         OnBoardingViewModel(
             androidContext(),
@@ -124,7 +132,7 @@ val Context.loginDataStore: DataStore<LoginData> by dataStore(
 )
 
 object LoginDataSerializer : Serializer<LoginData> {
-    override val defaultValue: LoginData = LoginData(id = "", pw = "", isAutoLogin = false)
+    override val defaultValue: LoginData = LoginData(id = "", pw = "", isAutoLogin = false, accessToken = "")
     override suspend fun readFrom(input: InputStream): LoginData =
         try {
             Json.decodeFromString<LoginData>(

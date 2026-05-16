@@ -274,12 +274,13 @@ fun ComboOption(
             Row(
                 modifier = Modifier
                     .fillMaxWidth(0.5f)
+                    .clip(RoundedCornerShape(8.dp))
                     .border(width = (0.5).dp, shape = RoundedCornerShape(8.dp), color = N300)
                     .background(WHITE)
-                    .padding(start = 12.dp, top = 4.dp, bottom = 4.dp, end = 4.dp)
                     .clickable {
                         expanded = true
                     }
+                    .padding(start = 12.dp, top = 4.dp, bottom = 4.dp, end = 4.dp)
             ) {
                 Text(
                     text = value,

@@ -1,5 +1,6 @@
 package com.yourssu.ssutime.v2.screen.login
 
+import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -24,6 +25,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.google.android.gms.tasks.OnCompleteListener
+import com.google.firebase.messaging.FirebaseMessaging
 import com.yourssu.ssutime.v2.R
 import com.yourssu.ssutime.v2.component.SButton
 import com.yourssu.ssutime.v2.component.SCheckBox
@@ -52,9 +55,23 @@ fun LoginScreen(
     val isAutoLogined by remember { viewModel.isAutoLogined }
 
     LaunchedEffect(isAutoLogined) {
-        if(isAutoLogined) {
-            successLogin()
+        if (isAutoLogined) {
+            FirebaseMessaging.getInstance().token.addOnCompleteListener(OnCompleteListener { task ->
+                if (!task.isSuccessful) {
+                    Log.w("FCM", "Fetching FCM registration token failed", task.exception)
+                    return@OnCompleteListener
+                }
+
+                // Get new FCM registration token
+                coroutine.launch {
+                    val token = task.result
+                    Log.d("FCM TOKEN", token)
+                    viewModel.registerFCMToken(token)
+                    successLogin()
+                }
+            })
         }
+
     }
 
     Column(

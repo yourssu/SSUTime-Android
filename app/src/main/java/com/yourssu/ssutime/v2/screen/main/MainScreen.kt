@@ -2,7 +2,6 @@ package com.yourssu.ssutime.v2.screen.main
 
 import android.Manifest
 import android.content.pm.PackageManager
-import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -133,7 +132,7 @@ fun MainScreen(
             }
         )
 
-        if(viewModel.requiredShowAlertBottomSheet) {
+        if(viewModel.requiredShowAlertBottomSheet.value) {
             CallingAlertBottomSheet(
                 onConfirmClick = {
                     val allowSystem = ContextCompat.checkSelfPermission(
@@ -473,12 +472,12 @@ fun TodoItem(
 
     val leftDay = getRemainingDays(todoInfo.due_date, now)
 
-    Log.d("리컴포지션", "${todoInfo.todoId} 리컴포지션 발생 (남은시간: ${
-        getRemainingTimeText(
-            todoInfo.due_date,
-            now
-        )
-    })")
+//    Log.d("리컴포지션", "${todoInfo.todoId} 리컴포지션 발생 (남은시간: ${
+//        getRemainingTimeText(
+//            todoInfo.due_date,
+//            now
+//        )
+//    })")
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -614,7 +613,7 @@ fun TodoItem(
 fun SubmittedItem(
     todoInfo: TodoInfo
 ) {
-    Log.d("리컴포지션", "${todoInfo.todoId} 리컴포지션 발생")
+//    Log.d("리컴포지션", "${todoInfo.todoId} 리컴포지션 발생")
     Box(
         modifier = Modifier
             .fillMaxWidth()

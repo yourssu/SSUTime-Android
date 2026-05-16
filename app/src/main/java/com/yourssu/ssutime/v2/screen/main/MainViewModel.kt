@@ -28,12 +28,12 @@ class MainViewModel(
     var loadingProgress = mutableFloatStateOf(0f)
     var loadedAt = mutableStateOf("")
 
-    var requiredShowAlertBottomSheet = false
+    var requiredShowAlertBottomSheet = mutableStateOf(false)
 
     init {
         viewModelScope.launch {
             val alertData = mainRepository.getAlertData()
-            requiredShowAlertBottomSheet = !alertData.valid
+            requiredShowAlertBottomSheet.value = !alertData.valid
         }
     }
 
@@ -41,7 +41,7 @@ class MainViewModel(
         viewModelScope.launch {
             mainRepository.updateAlertData(alertData)
         }
-        requiredShowAlertBottomSheet = false
+        requiredShowAlertBottomSheet.value = false
     }
 
     suspend fun loadTodos(forceRefresh: Boolean = false) {

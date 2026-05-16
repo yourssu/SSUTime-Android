@@ -7,14 +7,18 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.messaging.FirebaseMessaging
 import com.yourssu.data.LoginData
+import com.yourssu.data.network.FcmRequest
 import com.yourssu.ssutime.v2.LMS_REFRESH_TOPIC
+import com.yourssu.ssutime.v2.accessToken
+import com.yourssu.ssutime.v2.network.ApiRepository
 import io.github.chlwhdtn03.LmsApi.loginLMS
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 class LoginViewModel(
-    private val loginRepository: LoginRepository
+    private val loginRepository: LoginRepository,
+    private val apiRepository: ApiRepository
 ) : ViewModel() {
     val idState = TextFieldState()
     val pwState = TextFieldState()
@@ -52,7 +56,10 @@ class LoginViewModel(
                 val pw = pwState.text.toString()
                 Log.d(javaClass.name, "id : ${idState.text} || pw : ${pwState.text}")
 
-                loginLMS(id, pw)
+                loginLMS(id, pw).apply {
+                    if(this)
+                        accessToken = apiRepository.requestJwtToken(id, pw).accessToken
+                }
             } catch (e: Exception) {
                 errorMessage = e.message ?: ""
                 false
@@ -64,6 +71,9 @@ class LoginViewModel(
         return isLoggined
     }
 
+    suspend fun registerFCMToken(fcm: String) {
+        apiRepository.registerFCMToken(FcmRequest(fcm))
+    }
     fun processLogin(logined: Boolean, errorMessage: String = "") {
         this.errorMessage.value = errorMessage
         if (logined) {
@@ -72,7 +82,8 @@ class LoginViewModel(
                     LoginData(
                         id = if (autoLoginState.value) idState.text.toString() else "",
                         pw = if (autoLoginState.value) pwState.text.toString() else "",
-                        isAutoLogin = autoLoginState.value
+                        isAutoLogin = autoLoginState.value,
+                        accessToken = accessToken
                     )
                 )
                 updateRefreshTopicSubscription(autoLoginState.value)

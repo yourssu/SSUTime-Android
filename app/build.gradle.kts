@@ -75,6 +75,11 @@ dependencies {
     implementation("androidx.glance:glance-material:1.1.1")
     implementation(libs.androidx.work.runtime.ktx)
 
+    implementation(libs.ktor.client.core)
+    implementation(libs.ktor.client.android)
+    implementation(libs.ktor.content.negotiation)
+    implementation(libs.ktor.json)
+
     implementation(libs.androidx.compose.material.icons.extended)
 
     implementation(libs.lms)
