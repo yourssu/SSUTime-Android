@@ -78,15 +78,15 @@ class MainViewModel(
     }
 
     private fun updateTodoState(todoData: TodoData) {
-//        todos.apply {
-//            clear()
-//            addAll(todoData.todos)
-//        }
-//
-//        submitted.apply {
-//            clear()
-//            addAll(todoData.submitted)
-//        }
+        todos.apply {
+            clear()
+            addAll(todoData.todos)
+        }
+
+        submitted.apply {
+            clear()
+            addAll(todoData.submitted)
+        }
 
         loadedAt.value = todoData.loadedAt
     }
