@@ -1,5 +1,7 @@
 package com.yourssu.ssutime.v2.screen.main
 
+import android.Manifest
+import android.content.pm.PackageManager
 import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Image
@@ -24,6 +26,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -33,6 +37,7 @@ import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.ModalBottomSheetProperties
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -52,11 +57,17 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
+import com.yourssu.data.AlertData
 import com.yourssu.data.TodoInfo
 import com.yourssu.data.TodoType
 import com.yourssu.ssutime.v2.R
+import com.yourssu.ssutime.v2.component.OutlinedButton
+import com.yourssu.ssutime.v2.component.SButton
+import com.yourssu.ssutime.v2.component.SCheckBox
 import com.yourssu.ssutime.v2.getRemainingDays
 import com.yourssu.ssutime.v2.getRemainingTimeText
 import com.yourssu.ssutime.v2.getStringDate
@@ -84,10 +95,15 @@ fun MainScreen(
     coroutine: CoroutineScope = rememberCoroutineScope(),
     onProfileClick: () -> Unit = {},
 ) {
+    val context = LocalContext.current
     var showSubmittedBottomSheet by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) {
         viewModel.loadTodos()
     }
+
+    val sheetState = rememberModalBottomSheetState(
+        skipPartiallyExpanded = false,
+    )
 
 
     Scaffold(
@@ -117,15 +133,37 @@ fun MainScreen(
             }
         )
 
+        if(viewModel.requiredShowAlertBottomSheet) {
+            CallingAlertBottomSheet(
+                onConfirmClick = {
+                    val allowSystem = ContextCompat.checkSelfPermission(
+                        context,
+                        Manifest.permission.POST_NOTIFICATIONS
+                    ) == PackageManager.PERMISSION_GRANTED
+                    var allowCalling = false
+                    if  (it > 0)
+                        allowCalling = true
+
+                    viewModel.updateAlertState(
+                        AlertData(
+                            valid = true,
+                            allowSystemAlert = allowSystem,
+                            allowCallAlert = allowCalling,
+                            callingAlertThresholdMinutes = it
+                        )
+                    )
+
+                }
+            )
+        }
+
         if (showSubmittedBottomSheet) {
             ModalBottomSheet(
                 modifier = Modifier
                     .fillMaxWidth(),
                 containerColor = WHITE,
                 onDismissRequest = { showSubmittedBottomSheet = false },
-                sheetState = rememberModalBottomSheetState(
-                    skipPartiallyExpanded = false,
-                )
+                sheetState = sheetState
 
             ) {
                 Column(
@@ -171,16 +209,28 @@ fun MainScreen(
                     } else {
                         Box(
                             modifier = Modifier
-                                .fillMaxSize(),
+                                .fillMaxWidth(),
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                modifier = Modifier.fillMaxSize(),
+                                modifier = Modifier
+                                    .padding(vertical = 50.dp),
                                 text = "아직 제출한 과제가 없어요",
                                 style = SSUType.H3Medium
                             )
                         }
                     }
+
+                    SButton(
+                        modifier = Modifier.fillMaxWidth(),
+                        labelText = "닫기",
+                        onClick = {
+                            coroutine.launch {
+                                sheetState.hide()
+                                showSubmittedBottomSheet = false
+                            }
+                        }
+                    )
 
                 }
             }
@@ -636,6 +686,115 @@ fun SSUTimeTopBar(
             ,
             painter = painterResource(R.drawable.ic_user),
             contentDescription = "User"
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun CallingAlertBottomSheet(
+    onConfirmClick: (Long) -> Unit
+) {
+    val sheetState = rememberModalBottomSheetState(
+        skipPartiallyExpanded = true,
+    )
+
+    ModalBottomSheet(
+        properties = ModalBottomSheetProperties(
+            shouldDismissOnClickOutside = false,
+            shouldDismissOnBackPress = false,
+        ),
+        sheetGesturesEnabled = false,
+        dragHandle = null,
+        onDismissRequest = {},
+        sheetState = sheetState,
+        containerColor = WHITE,
+    ) {
+        CallingAlertBody(
+            onConfirmClick = onConfirmClick
+        )
+    }
+}
+
+@Composable
+@Preview
+fun CallingAlertBody(
+    modifier: Modifier = Modifier,
+    onConfirmClick: (Long) -> Unit = {}
+) {
+
+    val radioOptions = listOf("마감 당일 1시간 전", "마감 당일 2시간 전", "마감 당일 6시간 전")
+    val (selectedOption, onOptionSelected) = remember { mutableStateOf("") }
+
+    var enableCallingAlert = remember { mutableStateOf(false) }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp, vertical = 36.dp),
+        verticalArrangement = Arrangement.spacedBy(20.dp)
+    ) {
+        Column {
+            Text(
+                text = "전화 알림 설정만 하면 끝이에요!",
+                style = SSUType.H2SemiBold
+            )
+            Text(
+                text = "설정한 시간 기준으로 교수님한테 전화 알림을 받을 수 있어요\n(진짜 전화 연결이 되는 것은 아니에요!)",
+                style = SSUType.Body1Medium
+            )
+        }
+
+        Column(
+            modifier.selectableGroup(),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            radioOptions.forEach { text ->
+                OutlinedButton(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .selectable(
+                            selected = (text == selectedOption && !enableCallingAlert.value),
+                            onClick = {
+                                onOptionSelected(text)
+                                enableCallingAlert.value = false
+                            },
+                            role = Role.RadioButton
+                        ),
+                    labelText = text,
+                    selected = (text == selectedOption && !enableCallingAlert.value)
+                )
+            }
+        }
+        Box(
+            modifier = modifier.fillMaxWidth(),
+            contentAlignment = Alignment.Center
+        ) {
+            SCheckBox(
+                labelText = "전화 알림 받지 않기",
+                checked = enableCallingAlert,
+                onCheckedChanged = {
+                    if(it)
+                        onOptionSelected("")
+                    enableCallingAlert.value = it
+                }
+            )
+        }
+        SButton(
+            modifier = Modifier.fillMaxWidth(),
+            labelText = "확인",
+            onClick = {
+                onConfirmClick(
+                    if(enableCallingAlert.value)
+                        -1L
+                    else when (radioOptions.indexOf(selectedOption)) {
+                        0 -> 60L
+                        1 -> 120L
+                        else -> 360L
+                    }
+                )
+            },
+            enable = enableCallingAlert.value || radioOptions.any { it == selectedOption }
         )
     }
 }

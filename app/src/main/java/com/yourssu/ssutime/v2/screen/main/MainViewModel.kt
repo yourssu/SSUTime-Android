@@ -6,6 +6,7 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.yourssu.data.AlertData
 import com.yourssu.data.TodoData
 import com.yourssu.data.TodoInfo
 import kotlinx.coroutines.CancellationException
@@ -26,6 +27,22 @@ class MainViewModel(
     var showLoading = mutableStateOf(false)
     var loadingProgress = mutableFloatStateOf(0f)
     var loadedAt = mutableStateOf("")
+
+    var requiredShowAlertBottomSheet = false
+
+    init {
+        viewModelScope.launch {
+            val alertData = mainRepository.getAlertData()
+            requiredShowAlertBottomSheet = !alertData.valid
+        }
+    }
+
+    fun updateAlertState(alertData: AlertData) {
+        viewModelScope.launch {
+            mainRepository.updateAlertData(alertData)
+        }
+        requiredShowAlertBottomSheet = false
+    }
 
     suspend fun loadTodos(forceRefresh: Boolean = false) {
         if(isLoading.value) {

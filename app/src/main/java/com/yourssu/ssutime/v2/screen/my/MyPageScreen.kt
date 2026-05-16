@@ -2,8 +2,10 @@ package com.yourssu.ssutime.v2.screen.my
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -18,8 +20,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ArrowBackIosNew
 import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.KeyboardArrowDown
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -45,9 +50,12 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.yourssu.data.UiState
 import com.yourssu.ssutime.v2.R
 import com.yourssu.ssutime.v2.ui.theme.N100
 import com.yourssu.ssutime.v2.ui.theme.N200
+import com.yourssu.ssutime.v2.ui.theme.N300
 import com.yourssu.ssutime.v2.ui.theme.R400
 import com.yourssu.ssutime.v2.ui.theme.SSUType
 import com.yourssu.ssutime.v2.ui.theme.WHITE
@@ -68,6 +76,7 @@ fun MyPageScreen(
         isPersistent = true
     )
     val coroutine = rememberCoroutineScope()
+    val alertData by viewModel.uiState.collectAsStateWithLifecycle()
 
     LaunchedEffect(isLogout) {
         if(isLogout)
@@ -155,16 +164,38 @@ fun MyPageScreen(
                 }
             }
 
-            ToggleOption(
-                text = "시스템 알림",
-                value = true, // TODO: Bind to ViewModel state
-                onValueChanged = { /* TODO: Update ViewModel */ }
-            )
-            ToggleOption(
-                text = "전화 알림",
-                value = true, // TODO: Bind to ViewModel state
-                onValueChanged = { /* TODO: Update ViewModel */ }
-            )
+            when(val state = alertData) {
+                is UiState.Success -> {
+                    val alertData = state.data
+                    ToggleOption(
+                        text = "시스템 알림",
+                        value = alertData.allowSystemAlert,
+                        onValueChanged = {
+                            viewModel.updateAlertData(
+                                alertData.copy(allowSystemAlert = !alertData.allowSystemAlert)
+                            )
+                        }
+                    )
+                    ToggleOption(
+                        text = "전화 알림",
+                        value = alertData.allowCallAlert,
+                        onValueChanged = {
+                            viewModel.updateAlertData(
+                                alertData.copy(allowCallAlert = !alertData.allowCallAlert)
+                            )
+                        },
+                        childOption = {
+                            ComboOption(
+                                text = "시간", value = "${(alertData.callingAlertThresholdMinutes / 60).toInt()}시간 전") { hours ->
+                                viewModel.updateAlertData(
+                                    alertData.copy(callingAlertThresholdMinutes = hours * 60L)
+                                )
+                            }
+                        }
+                    )
+
+                }
+            }
         }
 
         Spacer(Modifier.height(28.dp))
@@ -181,29 +212,106 @@ fun MyPageScreen(
 fun ToggleOption(
     text: String,
     value: Boolean,
-    onValueChanged: (Boolean) -> Unit
+    onValueChanged: (Boolean) -> Unit,
+    childOption: @Composable () -> Unit = {},
 ) {
-    Row(
+    Column(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
             .background(color = N100)
             .padding(14.dp),
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = text,
+                style = SSUType.H5SemiBold
+            )
+            Spacer(Modifier.weight(1f))
+            Switch(
+                modifier = Modifier.height(0.dp),
+                checked = value,
+                onCheckedChange = onValueChanged,
+                colors = SwitchDefaults.colors(
+                    checkedTrackColor = R400
+                )
+            )
+        }
+        Row(
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            childOption()
+        }
+    }
+}
+
+@Composable
+fun ComboOption(
+    modifier: Modifier = Modifier,
+    text: String,
+    value: String,
+    onValueChanged: (Int) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(top = 14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
             text = text,
             style = SSUType.H5SemiBold
         )
+
         Spacer(Modifier.weight(1f))
-        Switch(
-            modifier = Modifier.height(0.dp),
-            checked = value,
-            onCheckedChange = onValueChanged,
-            colors = SwitchDefaults.colors(
-                checkedTrackColor = R400
-            )
-        )
+
+        Box(
+            modifier = Modifier
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth(0.5f)
+                    .border(width = (0.5).dp, shape = RoundedCornerShape(8.dp), color = N300)
+                    .background(WHITE)
+                    .padding(start = 12.dp, top = 4.dp, bottom = 4.dp, end = 4.dp)
+                    .clickable {
+                        expanded = true
+                    }
+            ) {
+                Text(
+                    text = value,
+                    style = SSUType.Label3Medium
+                )
+                Spacer(
+                    modifier = Modifier.weight(1f)
+                )
+                Icon(
+                    imageVector = Icons.Outlined.KeyboardArrowDown,
+                    contentDescription = "전화알림 시간 펼치기"
+                )
+            }
+            DropdownMenu(
+                containerColor = WHITE,
+                expanded = expanded,
+                onDismissRequest = { expanded = false }
+            ) {
+                DropdownMenuItem(
+                    text = { Text("1시간 전") },
+                    onClick = { onValueChanged(1); expanded = false }
+                )
+                DropdownMenuItem(
+                    text = { Text("2시간 전") },
+                    onClick = { onValueChanged(2); expanded = false }
+                )
+                DropdownMenuItem(
+                    text = { Text("6시간 전") },
+                    onClick = { onValueChanged(6); expanded = false }
+                )
+            }
+        }
     }
 }
 
@@ -259,7 +367,7 @@ fun PopupButton(
 @Preview(showBackground = true)
 fun previewToggleOption() {
     ToggleOption(
-        "시스템 알림", true
+        "시스템 알림", true, onValueChanged = {},
     ) { }
 }
 
