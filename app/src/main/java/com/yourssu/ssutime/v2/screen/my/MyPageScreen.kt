@@ -51,6 +51,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.yourssu.data.AlertData
 import com.yourssu.data.UiState
 import com.yourssu.ssutime.v2.R
 import com.yourssu.ssutime.v2.ui.theme.N100
@@ -76,7 +77,15 @@ fun MyPageScreen(
         isPersistent = true
     )
     val coroutine = rememberCoroutineScope()
-    val alertData by viewModel.uiState.collectAsStateWithLifecycle()
+    val alertState by viewModel.uiState.collectAsStateWithLifecycle()
+    var alertData by remember { mutableStateOf<AlertData>(AlertData(valid = false, false, false, -1)) }
+
+
+    when (val state = alertState) {
+        is UiState.Success -> {
+            alertData = state.data
+        }
+    }
 
     LaunchedEffect(isLogout) {
         if(isLogout)
@@ -143,7 +152,9 @@ fun MyPageScreen(
                 )
 
                 TooltipBox(
-                    positionProvider = TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Below),
+                    positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
+                        TooltipAnchorPosition.Below
+                    ),
                     tooltip = {
                         Card(
                             elevation = CardDefaults.cardElevation(
@@ -163,39 +174,34 @@ fun MyPageScreen(
                     }
                 }
             }
-
-            when(val state = alertData) {
-                is UiState.Success -> {
-                    val alertData = state.data
-                    ToggleOption(
-                        text = "시스템 알림",
-                        value = alertData.allowSystemAlert,
-                        onValueChanged = {
-                            viewModel.updateAlertData(
-                                alertData.copy(allowSystemAlert = !alertData.allowSystemAlert)
-                            )
-                        }
+            ToggleOption(
+                text = "시스템 알림",
+                value = alertData.allowSystemAlert,
+                onValueChanged = {
+                    viewModel.updateAlertData(
+                        alertData.copy(allowSystemAlert = !alertData.allowSystemAlert)
                     )
-                    ToggleOption(
-                        text = "전화 알림",
-                        value = alertData.allowCallAlert,
-                        onValueChanged = {
-                            viewModel.updateAlertData(
-                                alertData.copy(allowCallAlert = !alertData.allowCallAlert)
-                            )
-                        },
-                        childOption = {
-                            ComboOption(
-                                text = "시간", value = "${(alertData.callingAlertThresholdMinutes / 60).toInt()}시간 전") { hours ->
-                                viewModel.updateAlertData(
-                                    alertData.copy(callingAlertThresholdMinutes = hours * 60L)
-                                )
-                            }
-                        }
-                    )
-
                 }
-            }
+            )
+            ToggleOption(
+                text = "전화 알림",
+                value = alertData.allowCallAlert,
+                onValueChanged = {
+                    viewModel.updateAlertData(
+                        alertData.copy(allowCallAlert = !alertData.allowCallAlert)
+                    )
+                },
+                childOption = {
+                    ComboOption(
+                        text = "시간",
+                        value = "${(alertData.callingAlertThresholdMinutes / 60).toInt()}시간 전"
+                    ) { hours ->
+                        viewModel.updateAlertData(
+                            alertData.copy(callingAlertThresholdMinutes = hours * 60L)
+                        )
+                    }
+                }
+            )
         }
 
         Spacer(Modifier.height(28.dp))
