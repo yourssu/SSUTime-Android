@@ -25,6 +25,11 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.yourssu.ssutime.v2.R
+import com.yourssu.ssutime.v2.component.SButton
+import com.yourssu.ssutime.v2.component.SCheckBox
+import com.yourssu.ssutime.v2.component.SSecureTextField
+import com.yourssu.ssutime.v2.component.STextField
+import com.yourssu.ssutime.v2.previewModule
 import com.yourssu.ssutime.v2.ui.theme.R500
 import com.yourssu.ssutime.v2.ui.theme.SSUType
 import com.yourssu.ssutime.v2.ui.theme.WHITE
@@ -68,20 +73,20 @@ fun LoginScreen(
 
         Spacer(Modifier.height(24.dp))
 
-        _root_ide_package_.com.yourssu.ssutime.v2.component.STextField(
+        STextField(
             state = idState,
             "유세인트 아이디를 입력하세요"
         )
         Spacer(Modifier.height(10.dp))
 
-        _root_ide_package_.com.yourssu.ssutime.v2.component.SSecureTextField(
+        SSecureTextField(
             state = pwState,
             "유세인트 비밀번호를 입력하세요"
         )
 
         Spacer(Modifier.height(12.dp))
 
-        _root_ide_package_.com.yourssu.ssutime.v2.component.SCheckBox(
+        SCheckBox(
             labelText = "자동 로그인 하기",
             checked = viewModel.autoLoginState,
             onCheckedChanged = {}
@@ -96,7 +101,7 @@ fun LoginScreen(
             )
         }
 
-        _root_ide_package_.com.yourssu.ssutime.v2.component.SButton(
+        SButton(
             modifier = Modifier.fillMaxWidth(),
             labelText = "로그인",
             enable = idState.text.isNotEmpty() && pwState.text.isNotEmpty(),
@@ -140,7 +145,7 @@ fun LoginScreen(
 private fun LoginRoutePreview() {
     KoinApplicationPreview(
         application = {
-            modules(_root_ide_package_.com.yourssu.ssutime.v2.previewModule)
+            modules(previewModule)
         }
     ) {
         LoginScreen()

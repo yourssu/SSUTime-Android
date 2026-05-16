@@ -7,6 +7,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.messaging.FirebaseMessaging
 import com.yourssu.data.LoginData
+import com.yourssu.ssutime.v2.LMS_REFRESH_TOPIC
 import io.github.chlwhdtn03.LmsApi.loginLMS
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -81,9 +82,9 @@ class LoginViewModel(
 
     private fun updateRefreshTopicSubscription(enabled: Boolean) {
         val task = if (enabled) {
-            FirebaseMessaging.getInstance().subscribeToTopic(_root_ide_package_.com.yourssu.ssutime.v2.LMS_REFRESH_TOPIC)
+            FirebaseMessaging.getInstance().subscribeToTopic(LMS_REFRESH_TOPIC)
         } else {
-            FirebaseMessaging.getInstance().unsubscribeFromTopic(_root_ide_package_.com.yourssu.ssutime.v2.LMS_REFRESH_TOPIC)
+            FirebaseMessaging.getInstance().unsubscribeFromTopic(LMS_REFRESH_TOPIC)
         }
 
         task.addOnFailureListener { exception ->

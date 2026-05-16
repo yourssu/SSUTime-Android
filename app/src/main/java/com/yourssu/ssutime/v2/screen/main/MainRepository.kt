@@ -3,6 +3,7 @@ package com.yourssu.ssutime.v2.screen.main
 import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.glance.appwidget.updateAll
+import com.yourssu.ssutime.v2.widget.DDayWidget
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 
@@ -14,12 +15,16 @@ class MainRepository(
 
     suspend fun updateTodoData(todoData: TodoData) {
         todoDataStore.updateData { todoData }
-        _root_ide_package_.com.yourssu.ssutime.v2.widget.DDayWidget().updateAll(context)
+        DDayWidget().updateAll(context)
     }
 
     suspend fun updateTodoData(transform: (TodoData) -> TodoData) {
         todoDataStore.updateData(transform)
-        _root_ide_package_.com.yourssu.ssutime.v2.widget.DDayWidget().updateAll(context)
+        DDayWidget().updateAll(context)
+    }
+
+    suspend fun clearTodoData() {
+        updateTodoData(TodoData())
     }
 
     suspend fun getTodoData(): TodoData = todoDataStore.data.first()

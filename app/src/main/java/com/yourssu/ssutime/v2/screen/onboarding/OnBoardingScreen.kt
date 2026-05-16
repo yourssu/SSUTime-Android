@@ -34,6 +34,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.yourssu.ssutime.v2.R
+import com.yourssu.ssutime.v2.component.SButton
 import com.yourssu.ssutime.v2.ui.theme.N100
 import com.yourssu.ssutime.v2.ui.theme.N500
 import com.yourssu.ssutime.v2.ui.theme.R100
@@ -115,7 +116,7 @@ fun NotificationFragment(
             .safeDrawingPadding(),
         contentAlignment = Alignment.BottomCenter
     ) {
-        _root_ide_package_.com.yourssu.ssutime.v2.component.SButton(
+        SButton(
             modifier = Modifier.fillMaxWidth(),
             labelText = "다음",
             onClick = onClick
@@ -170,7 +171,7 @@ fun TipFragment(
             .safeDrawingPadding(),
         contentAlignment = Alignment.BottomCenter
     ) {
-        _root_ide_package_.com.yourssu.ssutime.v2.component.SButton(
+        SButton(
             modifier = Modifier.fillMaxWidth(),
             labelText = "다음",
             onClick = onClick

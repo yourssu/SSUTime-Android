@@ -26,7 +26,11 @@ import androidx.glance.layout.padding
 import androidx.glance.layout.size
 import androidx.glance.text.Text
 import com.yourssu.data.TodoInfo
+import com.yourssu.ssutime.v2.MainActivity
 import com.yourssu.ssutime.v2.R
+import com.yourssu.ssutime.v2.getRemainingDays
+import com.yourssu.ssutime.v2.getStringSimpleDate
+import com.yourssu.ssutime.v2.screen.main.TodoData
 import com.yourssu.ssutime.v2.screen.main.todoDataStore
 import com.yourssu.ssutime.v2.ui.theme.SSUType
 import kotlinx.coroutines.flow.first
@@ -55,8 +59,8 @@ class DDayWidget : GlanceAppWidget() {
         val squareSize = availableSize.toSquareSize()
         val openAppAction = actionStartActivity(
             Intent().setClassName(
-                _root_ide_package_.com.yourssu.ssutime.v2.MainActivity::class.java.packageName,
-                _root_ide_package_.com.yourssu.ssutime.v2.MainActivity::class.java.name,
+                MainActivity::class.java.packageName,
+                MainActivity::class.java.name,
             ),
         )
 
@@ -130,12 +134,10 @@ private data class DDayWidgetUiState(
     val backgroundResId: Int,
 )
 
-private fun com.yourssu.ssutime.v2.screen.main.TodoData.toWidgetUiState(context: Context): DDayWidgetUiState {
+private fun TodoData.toWidgetUiState(context: Context): DDayWidgetUiState {
     val selectedTodo = todos.selectMostUrgentTodo()
     val remainingDays = selectedTodo?.let {
-        _root_ide_package_.com.yourssu.ssutime.v2.getRemainingDays(
-            it.due_date
-        )
+        getRemainingDays(it.due_date)
     } ?: Long.MAX_VALUE
 
     return DDayWidgetUiState(
@@ -150,7 +152,7 @@ private fun com.yourssu.ssutime.v2.screen.main.TodoData.toWidgetUiState(context:
 
 private fun List<TodoInfo>.selectMostUrgentTodo(): TodoInfo? =
     minWithOrNull(
-        compareBy<TodoInfo> { _root_ide_package_.com.yourssu.ssutime.v2.getRemainingDays(it.due_date) }
+        compareBy<TodoInfo> { getRemainingDays(it.due_date) }
             .thenBy { it.due_date },
     )
 
@@ -169,7 +171,7 @@ private fun String.toUpdatedAtText(context: Context): String {
     if (isBlank()) {
         return "업데이트 전"
     }
-    return "업데이트 ${_root_ide_package_.com.yourssu.ssutime.v2.getStringSimpleDate(context, this)}"
+    return "업데이트 ${getStringSimpleDate(context, this)}"
 }
 
 private fun backgroundFor(todo: TodoInfo?, loadedAt: String, remainingDays: Long): Int {

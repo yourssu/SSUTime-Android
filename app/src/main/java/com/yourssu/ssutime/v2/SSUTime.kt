@@ -7,7 +7,17 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.core.Serializer
 import androidx.datastore.dataStore
 import com.yourssu.data.LoginData
+import com.yourssu.ssutime.v2.screen.login.LoginRepository
+import com.yourssu.ssutime.v2.screen.login.LoginViewModel
+import com.yourssu.ssutime.v2.screen.main.LmsRefreshRepository
+import com.yourssu.ssutime.v2.screen.main.MainRepository
+import com.yourssu.ssutime.v2.screen.main.MainViewModel
+import com.yourssu.ssutime.v2.screen.main.TodoData
 import com.yourssu.ssutime.v2.screen.main.todoDataStore
+import com.yourssu.ssutime.v2.screen.my.MyViewModel
+import com.yourssu.ssutime.v2.screen.onboarding.OnBoardingData
+import com.yourssu.ssutime.v2.screen.onboarding.OnBoardingRepository
+import com.yourssu.ssutime.v2.screen.onboarding.OnBoardingViewModel
 import com.yourssu.ssutime.v2.screen.onboarding.onBoardingDataStore
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
@@ -31,73 +41,73 @@ const val LMS_REFRESH_MESSAGE_TYPE = "lms_refresh"
 
 val appModule = module {
     single<DataStore<LoginData>> { androidContext().loginDataStore }
-    single<DataStore<com.yourssu.ssutime.v2.screen.main.TodoData>>(named("todoDataStore")) { androidContext().todoDataStore }
-    single<DataStore<com.yourssu.ssutime.v2.screen.onboarding.OnBoardingData>>(named("onBoardingDataStore")) { androidContext().onBoardingDataStore }
-    single { _root_ide_package_.com.yourssu.ssutime.v2.screen.login.LoginRepository(get()) }
+    single<DataStore<TodoData>>(named("todoDataStore")) { androidContext().todoDataStore }
+    single<DataStore<OnBoardingData>>(named("onBoardingDataStore")) { androidContext().onBoardingDataStore }
+    single { LoginRepository(get()) }
     single {
-        _root_ide_package_.com.yourssu.ssutime.v2.screen.main.MainRepository(
+        MainRepository(
             get(named("todoDataStore")),
             androidContext()
         )
     }
     single {
-        _root_ide_package_.com.yourssu.ssutime.v2.screen.main.LmsRefreshRepository(
+        LmsRefreshRepository(
             get(),
             get()
         )
     }
     single {
-        _root_ide_package_.com.yourssu.ssutime.v2.screen.onboarding.OnBoardingRepository(
+        OnBoardingRepository(
             get(
                 named("onBoardingDataStore")
             )
         )
     }
-    viewModel { _root_ide_package_.com.yourssu.ssutime.v2.screen.my.MyViewModel(get()) }
-    viewModel { _root_ide_package_.com.yourssu.ssutime.v2.screen.login.LoginViewModel(get()) }
+    viewModel { MyViewModel(get(), get()) }
+    viewModel { LoginViewModel(get()) }
     viewModel {
-        _root_ide_package_.com.yourssu.ssutime.v2.screen.onboarding.OnBoardingViewModel(
+        OnBoardingViewModel(
             androidContext(),
             get()
         )
     }
-    viewModel { _root_ide_package_.com.yourssu.ssutime.v2.screen.main.MainViewModel(get(), get()) }
+    viewModel { MainViewModel(get(), get()) }
 }
 
 // Compose Preview를 위한 koinModule
 val previewModule = module {
     single<DataStore<LoginData>> { androidContext().loginDataStore }
-    single<DataStore<com.yourssu.ssutime.v2.screen.main.TodoData>>(named("todoDataStore")) { androidContext().todoDataStore }
-    single<DataStore<com.yourssu.ssutime.v2.screen.onboarding.OnBoardingData>>(named("onBoardingDataStore")) { androidContext().onBoardingDataStore }
-    single { _root_ide_package_.com.yourssu.ssutime.v2.screen.login.LoginRepository(get()) }
+    single<DataStore<TodoData>>(named("todoDataStore")) { androidContext().todoDataStore }
+    single<DataStore<OnBoardingData>>(named("onBoardingDataStore")) { androidContext().onBoardingDataStore }
+    single { LoginRepository(get()) }
     single {
-        _root_ide_package_.com.yourssu.ssutime.v2.screen.main.MainRepository(
+        MainRepository(
             get(named("todoDataStore")),
             androidContext()
         )
     }
     single {
-        _root_ide_package_.com.yourssu.ssutime.v2.screen.main.LmsRefreshRepository(
+        LmsRefreshRepository(
             get(),
             get()
         )
     }
     single {
-        _root_ide_package_.com.yourssu.ssutime.v2.screen.onboarding.OnBoardingRepository(
+        OnBoardingRepository(
             get(
                 named("onBoardingDataStore")
             )
         )
     }
-    viewModel { _root_ide_package_.com.yourssu.ssutime.v2.screen.my.MyViewModel(get()) }
-    viewModel { _root_ide_package_.com.yourssu.ssutime.v2.screen.login.LoginViewModel(get()) }
+    viewModel { MyViewModel(get(), get()) }
+    viewModel { LoginViewModel(get()) }
     viewModel {
-        _root_ide_package_.com.yourssu.ssutime.v2.screen.onboarding.OnBoardingViewModel(
+        OnBoardingViewModel(
             androidContext(),
             get()
         )
     }
-    viewModel { _root_ide_package_.com.yourssu.ssutime.v2.screen.main.MainViewModel(get(), get()) }
+    viewModel { MainViewModel(get(), get()) }
 }
 
 val Context.loginDataStore: DataStore<LoginData> by dataStore(
@@ -169,6 +179,21 @@ fun getStringDate(targetTime: String): String {
         .atZone(zoneId)
         .format(formatter)
 }
+
+fun getStringDateWithTime(targetTime: String): String {
+    val targetInstant = Instant.parse(targetTime)
+    val zoneId = ZoneId.of("Asia/Seoul")
+    val formatter = DateTimeFormatter.ofPattern(
+//        "yyyy년 MM월 dd일 HH:mm:ss",
+        "MM월 dd일 HH:mm:ss",
+        Locale.KOREA
+    )
+
+    return targetInstant
+        .atZone(zoneId)
+        .format(formatter)
+}
+
 
 fun getStringSimpleDate(context: Context, targetTime: String): String {
     val targetInstant = Instant.parse(targetTime)

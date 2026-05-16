@@ -57,6 +57,11 @@ import androidx.compose.ui.unit.dp
 import com.yourssu.data.TodoInfo
 import com.yourssu.data.TodoType
 import com.yourssu.ssutime.v2.R
+import com.yourssu.ssutime.v2.getRemainingDays
+import com.yourssu.ssutime.v2.getRemainingTimeText
+import com.yourssu.ssutime.v2.getStringDate
+import com.yourssu.ssutime.v2.getStringDateWithTime
+import com.yourssu.ssutime.v2.getStringSimpleDate
 import com.yourssu.ssutime.v2.ui.theme.G100
 import com.yourssu.ssutime.v2.ui.theme.G400
 import com.yourssu.ssutime.v2.ui.theme.N100
@@ -83,6 +88,8 @@ fun MainScreen(
     LaunchedEffect(Unit) {
         viewModel.loadTodos()
     }
+
+
     Scaffold(
         modifier = Modifier
             .fillMaxSize()
@@ -140,7 +147,7 @@ fun MainScreen(
                         Spacer(Modifier.weight(1f))
                         Text( //TODO
                             text = if(viewModel.loadedAt.value.isNotEmpty()) {
-                                "${_root_ide_package_.com.yourssu.ssutime.v2.getStringDate(viewModel.loadedAt.value)} 기준"
+                                "${getStringDate(viewModel.loadedAt.value)} 기준"
                             } else {
                                 "00월 00일 기준"
                             },
@@ -162,11 +169,17 @@ fun MainScreen(
                             }
                         }
                     } else {
-                        Text(
-                            modifier = Modifier.fillMaxSize(),
-                            text = "아직 제출한 과제가 없어요",
-                            style = SSUType.H3Medium
-                        )
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                modifier = Modifier.fillMaxSize(),
+                                text = "아직 제출한 과제가 없어요",
+                                style = SSUType.H3Medium
+                            )
+                        }
                     }
 
                 }
@@ -219,8 +232,8 @@ fun MainFragment(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .verticalScroll(scrollState)
-                .padding(vertical = 32.dp, horizontal = 16.dp),
+                .padding(vertical = 32.dp, horizontal = 16.dp)
+                .verticalScroll(scrollState),
         ) {
 
             Text(
@@ -239,7 +252,7 @@ fun MainFragment(
                 Text(
                     text = if(loadedAt.isNotEmpty()) {
                         "업데이트 ${
-                            _root_ide_package_.com.yourssu.ssutime.v2.getStringSimpleDate(
+                            getStringSimpleDate(
                                 context,
                                 loadedAt
                             )
@@ -263,8 +276,7 @@ fun MainFragment(
 
             TodoList(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .weight(1f),
+                    .fillMaxWidth(),
                 todos = todos,
                 onClickSubmitted = onClickSubmitted,
                 submittedSize = submitted.size,
@@ -280,13 +292,11 @@ fun TodoList(
     onClickSubmitted: () -> Unit,
     submittedSize: Int
 ) {
-    val immediateTodos = todos.filter { _root_ide_package_.com.yourssu.ssutime.v2.getRemainingDays(
-        it.due_date
-    ) <= 1 }
-    val freeTodos = todos.filter { _root_ide_package_.com.yourssu.ssutime.v2.getRemainingDays(it.due_date) > 1 }
+    val immediateTodos = todos.filter { getRemainingDays(it.due_date) <= 1 }
+    val freeTodos = todos.filter { getRemainingDays(it.due_date) > 1 }
 
     Column (
-        modifier = modifier.fillMaxSize()
+        modifier = modifier
     ) {
 
         if (immediateTodos.isNotEmpty()) {
@@ -375,7 +385,7 @@ fun TodoList(
             }
 
             Column(
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier.fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
@@ -410,10 +420,10 @@ fun TodoItem(
         }
     }
 
-    val leftDay = _root_ide_package_.com.yourssu.ssutime.v2.getRemainingDays(todoInfo.due_date, now)
+    val leftDay = getRemainingDays(todoInfo.due_date, now)
 
     Log.d("리컴포지션", "${todoInfo.todoId} 리컴포지션 발생 (남은시간: ${
-        _root_ide_package_.com.yourssu.ssutime.v2.getRemainingTimeText(
+        getRemainingTimeText(
             todoInfo.due_date,
             now
         )
@@ -444,11 +454,10 @@ fun TodoItem(
                         2L -> R.drawable.day2
                         1L -> R.drawable.day_red2
                         0L -> {
-                            val txt =
-                                _root_ide_package_.com.yourssu.ssutime.v2.getRemainingTimeText(
-                                    todoInfo.due_date,
-                                    now
-                                )
+                            val txt = getRemainingTimeText(
+                                todoInfo.due_date,
+                                now
+                            )
                             if(txt == "0초") {
                                 isLate = true
                                 R.drawable.late
@@ -470,7 +479,7 @@ fun TodoItem(
 
                     if(!isLate) {
                         Text(
-                            text = if (leftDay > 0) "D-${leftDay}" else _root_ide_package_.com.yourssu.ssutime.v2.getRemainingTimeText(
+                            text = if (leftDay > 0) "D-${leftDay}" else getRemainingTimeText(
                                 todoInfo.due_date,
                                 now
                             ),
@@ -539,7 +548,7 @@ fun TodoItem(
                     )
                     Spacer(Modifier.weight(1f))
                     Text(
-                        text = _root_ide_package_.com.yourssu.ssutime.v2.getStringDate(todoInfo.due_date) + "까지",
+                        text = getStringDateWithTime(todoInfo.due_date) + "까지",
                         style = SSUType.H5SemiBold
                     )
                 }

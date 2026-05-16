@@ -4,8 +4,9 @@ import com.yourssu.data.LoginData
 import com.yourssu.data.SubjectInfo
 import com.yourssu.data.TodoInfo
 import com.yourssu.data.TodoType
+import com.yourssu.ssutime.v2.screen.login.LoginRepository
 import io.github.chlwhdtn03.LmsApi
-import io.github.chlwhdtn03.data.Subject
+import io.github.chlwhdtn03.data.Lms.Subject
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.TimeoutCancellationException
@@ -24,7 +25,7 @@ private const val LMS_API_TOKEN_MAX_RETRIES = 2
 private val BACKGROUND_REFRESH_LOCK_WINDOW: Duration = Duration.ofMinutes(10)
 
 class LmsRefreshRepository(
-    private val loginRepository: com.yourssu.ssutime.v2.screen.login.LoginRepository,
+    private val loginRepository: LoginRepository,
     private val mainRepository: MainRepository,
 ) {
     private val isRefreshing = AtomicBoolean(false)
