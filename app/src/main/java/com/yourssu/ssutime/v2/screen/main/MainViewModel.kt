@@ -6,6 +6,7 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.yourssu.data.TodoData
 import com.yourssu.data.TodoInfo
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
@@ -77,15 +78,15 @@ class MainViewModel(
     }
 
     private fun updateTodoState(todoData: TodoData) {
-        todos.apply {
-            clear()
-            addAll(todoData.todos)
-        }
-
-        submitted.apply {
-            clear()
-            addAll(todoData.submitted)
-        }
+//        todos.apply {
+//            clear()
+//            addAll(todoData.todos)
+//        }
+//
+//        submitted.apply {
+//            clear()
+//            addAll(todoData.submitted)
+//        }
 
         loadedAt.value = todoData.loadedAt
     }

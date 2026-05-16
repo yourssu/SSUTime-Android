@@ -25,12 +25,12 @@ import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.padding
 import androidx.glance.layout.size
 import androidx.glance.text.Text
+import com.yourssu.data.TodoData
 import com.yourssu.data.TodoInfo
 import com.yourssu.ssutime.v2.MainActivity
 import com.yourssu.ssutime.v2.R
 import com.yourssu.ssutime.v2.getRemainingDays
 import com.yourssu.ssutime.v2.getStringSimpleDate
-import com.yourssu.ssutime.v2.screen.main.TodoData
 import com.yourssu.ssutime.v2.screen.main.todoDataStore
 import com.yourssu.ssutime.v2.ui.theme.SSUType
 import kotlinx.coroutines.flow.first

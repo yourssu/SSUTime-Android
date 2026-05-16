@@ -1,6 +1,5 @@
-package com.yourssu.ssutime.v2.screen.main
+package com.yourssu.data
 
-import com.yourssu.data.TodoInfo
 import kotlinx.serialization.Serializable
 
 @Serializable

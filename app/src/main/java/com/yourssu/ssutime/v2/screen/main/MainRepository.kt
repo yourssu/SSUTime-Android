@@ -3,6 +3,7 @@ package com.yourssu.ssutime.v2.screen.main
 import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.glance.appwidget.updateAll
+import com.yourssu.data.TodoData
 import com.yourssu.ssutime.v2.widget.DDayWidget
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first

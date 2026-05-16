@@ -2,6 +2,7 @@ package com.yourssu.ssutime.v2.screen.main
 
 import com.yourssu.data.LoginData
 import com.yourssu.data.SubjectInfo
+import com.yourssu.data.TodoData
 import com.yourssu.data.TodoInfo
 import com.yourssu.data.TodoType
 import com.yourssu.ssutime.v2.screen.login.LoginRepository

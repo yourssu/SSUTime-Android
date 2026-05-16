@@ -276,7 +276,8 @@ fun MainFragment(
 
             TodoList(
                 modifier = Modifier
-                    .fillMaxWidth(),
+                    .fillMaxSize()
+                    .weight(1f),
                 todos = todos,
                 onClickSubmitted = onClickSubmitted,
                 submittedSize = submitted.size,
@@ -296,7 +297,7 @@ fun TodoList(
     val freeTodos = todos.filter { getRemainingDays(it.due_date) > 1 }
 
     Column (
-        modifier = modifier
+        modifier = modifier.fillMaxSize()
     ) {
 
         if (immediateTodos.isNotEmpty()) {
@@ -385,7 +386,7 @@ fun TodoList(
             }
 
             Column(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxSize(),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
