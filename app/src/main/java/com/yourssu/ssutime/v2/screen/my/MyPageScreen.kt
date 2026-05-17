@@ -16,7 +16,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ArrowBackIosNew
 import androidx.compose.material.icons.outlined.Info
@@ -103,9 +105,13 @@ fun MyPageScreen(
         }
     }
 
+    val scrollState = rememberScrollState()
+
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .verticalScroll(scrollState)
+            .padding(vertical = 32.dp, horizontal = 16.dp)
             .safeDrawingPadding()
     ) {
         Row {
@@ -235,7 +241,7 @@ fun ToggleOption(
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
             .background(color = N100)
-            .padding(14.dp),
+            .padding(20.dp),
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically
@@ -295,7 +301,8 @@ fun ComboOption(
                     .clickable {
                         expanded = true
                     }
-                    .padding(start = 12.dp, top = 4.dp, bottom = 4.dp, end = 4.dp)
+                    .padding(start = 12.dp, top = 4.dp, bottom = 4.dp, end = 4.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
                     text = value,
@@ -342,7 +349,7 @@ fun OptionButton(
             .clip(RoundedCornerShape(12.dp))
             .clickable { onClick() }
             .background(color = N100)
-            .padding(14.dp),
+            .padding(20.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
