@@ -189,7 +189,8 @@ fun MyPageScreen(
                     viewModel.updateAlertData(
                         alertData.copy(allowSystemAlert = !alertData.allowSystemAlert)
                     )
-                }
+                },
+                childOption = null
             )
             ToggleOption(
                 text = "전화 알림",
@@ -234,7 +235,7 @@ fun ToggleOption(
     text: String,
     value: Boolean,
     onValueChanged: (Boolean) -> Unit,
-    childOption: @Composable () -> Unit = {},
+    childOption: (@Composable () -> Unit)?,
 ) {
     Column(
         modifier = Modifier
@@ -242,6 +243,7 @@ fun ToggleOption(
             .clip(RoundedCornerShape(12.dp))
             .background(color = N100)
             .padding(20.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically
@@ -260,10 +262,12 @@ fun ToggleOption(
                 )
             )
         }
-        Row(
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            childOption()
+        if(childOption != null) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                childOption()
+            }
         }
     }
 }
