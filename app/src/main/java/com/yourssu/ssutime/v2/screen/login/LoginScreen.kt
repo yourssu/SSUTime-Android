@@ -56,20 +56,7 @@ fun LoginScreen(
 
     LaunchedEffect(isAutoLogined) {
         if (isAutoLogined) {
-            FirebaseMessaging.getInstance().token.addOnCompleteListener(OnCompleteListener { task ->
-                if (!task.isSuccessful) {
-                    Log.w("FCM", "Fetching FCM registration token failed", task.exception)
-                    return@OnCompleteListener
-                }
-
-                // Get new FCM registration token
-                coroutine.launch {
-                    val token = task.result
-                    Log.d("FCM TOKEN", token)
-                    viewModel.registerFCMToken(token)
-                    successLogin()
-                }
-            })
+            registerFCMTokenAndContinue(viewModel, coroutine, successLogin)
         }
 
     }
@@ -125,7 +112,7 @@ fun LoginScreen(
             onClick = {
                 coroutine.launch {
                     if (viewModel.login()) {
-                        successLogin()
+                        registerFCMTokenAndContinue(viewModel, coroutine, successLogin)
                     }
                 }
             }
@@ -155,6 +142,29 @@ fun LoginScreen(
         }
     }
 
+}
+
+private fun registerFCMTokenAndContinue(
+    viewModel: LoginViewModel,
+    coroutine: CoroutineScope,
+    onComplete: () -> Unit,
+) {
+    FirebaseMessaging.getInstance().token.addOnCompleteListener(OnCompleteListener { task ->
+        if (!task.isSuccessful) {
+            Log.w("FCM", "Fetching FCM registration token failed", task.exception)
+            onComplete()
+            return@OnCompleteListener
+        }
+
+        coroutine.launch {
+            runCatching {
+                viewModel.registerFCMToken(task.result)
+            }.onFailure { exception ->
+                Log.e("FCM", "FCM token registration failed", exception)
+            }
+            onComplete()
+        }
+    })
 }
 
 @Preview(showBackground = true)

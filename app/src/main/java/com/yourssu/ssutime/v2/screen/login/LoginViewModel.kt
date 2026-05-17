@@ -5,10 +5,8 @@ import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.google.firebase.messaging.FirebaseMessaging
 import com.yourssu.data.LoginData
 import com.yourssu.data.network.FcmRequest
-import com.yourssu.ssutime.v2.LMS_REFRESH_TOPIC
 import com.yourssu.ssutime.v2.accessToken
 import com.yourssu.ssutime.v2.network.ApiRepository
 import io.github.chlwhdtn03.LmsApi.loginLMS
@@ -86,20 +84,7 @@ class LoginViewModel(
                         accessToken = accessToken
                     )
                 )
-                updateRefreshTopicSubscription(autoLoginState.value)
             }
-        }
-    }
-
-    private fun updateRefreshTopicSubscription(enabled: Boolean) {
-        val task = if (enabled) {
-            FirebaseMessaging.getInstance().subscribeToTopic(LMS_REFRESH_TOPIC)
-        } else {
-            FirebaseMessaging.getInstance().unsubscribeFromTopic(LMS_REFRESH_TOPIC)
-        }
-
-        task.addOnFailureListener { exception ->
-            Log.e(javaClass.name, "FCM 새로고침 topic 설정에 실패했습니다.", exception)
         }
     }
 }

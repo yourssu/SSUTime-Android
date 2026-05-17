@@ -16,7 +16,10 @@ class LoginRepository(
 
     suspend fun logout() {
         loginDataStore.updateData {
-            it.copy(isAutoLogin = false)
+            it.copy(
+                isAutoLogin = false,
+                accessToken = "",
+            )
         }
     }
 

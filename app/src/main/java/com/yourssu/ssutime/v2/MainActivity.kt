@@ -1,5 +1,7 @@
 package com.yourssu.ssutime.v2
 
+import android.app.NotificationManager
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -17,6 +19,8 @@ import com.yourssu.ssutime.v2.screen.my.MyPageScreen
 import com.yourssu.ssutime.v2.screen.onboarding.OnBoardingScreen
 import com.yourssu.ssutime.v2.screen.splash.Screens
 import com.yourssu.ssutime.v2.screen.splash.SplashScreen
+import com.yourssu.ssutime.v2.notification.ACTION_ANSWER_CALL
+import com.yourssu.ssutime.v2.notification.EXTRA_CALL_NOTIFICATION_ID
 import com.yourssu.ssutime.v2.ui.theme.SSUTimeTheme
 import com.yourssu.ssutime.v2.ui.theme.WHITE
 
@@ -24,6 +28,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
         super.onCreate(savedInstanceState)
+        cancelCallNotificationIfNeeded(intent)
         enableEdgeToEdge()
         setContent {
             val navController = rememberNavController()
@@ -85,5 +90,20 @@ class MainActivity : ComponentActivity() {
             }
 
         }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        cancelCallNotificationIfNeeded(intent)
+    }
+
+    private fun cancelCallNotificationIfNeeded(intent: Intent?) {
+        if (intent?.action != ACTION_ANSWER_CALL) return
+
+        val notificationId = intent.getIntExtra(EXTRA_CALL_NOTIFICATION_ID, Int.MIN_VALUE)
+        if (notificationId == Int.MIN_VALUE) return
+
+        getSystemService(NotificationManager::class.java).cancel(notificationId)
     }
 }

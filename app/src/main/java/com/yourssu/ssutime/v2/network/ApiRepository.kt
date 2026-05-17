@@ -1,6 +1,10 @@
 package com.yourssu.ssutime.v2.network
 
 import android.util.Log
+import com.yourssu.data.network.AddEnrollmentRequest
+import com.yourssu.data.network.AddTodoRequest
+import com.yourssu.data.network.DeleteEnrollmentRequest
+import com.yourssu.data.network.EnrollmentResponse
 import com.yourssu.data.network.FcmRequest
 import com.yourssu.data.network.NotificationSetting
 import com.yourssu.data.network.TokenRequest
@@ -11,11 +15,14 @@ import io.ktor.client.call.body
 import io.ktor.client.engine.android.Android
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.request.bearerAuth
+import io.ktor.client.request.delete
+import io.ktor.client.request.get
 import io.ktor.client.request.post
 import io.ktor.client.request.put
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
+import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.json.Json
@@ -50,10 +57,8 @@ class ApiRepository {
             bearerAuth(accessToken)
             contentType(ContentType.Application.Json)
             setBody(fcmRequest)
-        }.apply {
-            Log.i("ApiRepository", accessToken)
         }
-        Log.i("ApiRepository", response.headers.toString())
+        Log.i("ApiRepository", "FCM token registered: ${response.status}")
     }
 
     suspend fun setNotificationSetting(enabled: Boolean, minutes: Long): NotificationSetting {
@@ -70,5 +75,54 @@ class ApiRepository {
         return response.body()
     }
 
+    suspend fun addEnrollment(enrollment: AddEnrollmentRequest): HttpStatusCode {
+        val response = client.post(
+            urlString = "https://ssutimev2-api-dev.yourssu.com/enrollments"
+        ) {
+            bearerAuth(accessToken)
+            contentType(ContentType.Application.Json)
+            setBody(enrollment)
+        }
+
+        Log.i("ApiRepository", enrollment.name + " Add Enrollment Status Code : ${response.status.value}")
+        return response.status
+    }
+
+    suspend fun deleteEnrollment(enrollment: DeleteEnrollmentRequest): HttpStatusCode {
+        val response = client.delete(
+            urlString = "https://ssutimev2-api-dev.yourssu.com/enrollments"
+        ) {
+            bearerAuth(accessToken)
+            contentType(ContentType.Application.Json)
+            setBody(enrollment)
+        }
+        Log.i("ApiRepository", enrollment.id.toString() + " Delete Enrollment Status Code : ${response.status.value}")
+        return response.status
+    }
+
+    suspend fun getEnrollments(enrollment: AddEnrollmentRequest): List<EnrollmentResponse> {
+        val response = client.get(
+            urlString = "https://ssutimev2-api-dev.yourssu.com/enrollments"
+        ) {
+            bearerAuth(accessToken)
+            contentType(ContentType.Application.Json)
+            setBody(enrollment)
+        }.apply {
+            Log.i("ApiRepository", bodyAsText())
+        }
+        return response.body()
+    }
+
+    suspend fun addTodo(todo: AddTodoRequest): HttpStatusCode {
+        val response = client.post(
+            urlString = "https://ssutimev2-api-dev.yourssu.com/todo/report"
+        ) {
+            bearerAuth(accessToken)
+            contentType(ContentType.Application.Json)
+            setBody(todo)
+        }
+        Log.i("ApiRepository", todo.title + " Add Reqeust Status Code : ${response.status.value}")
+        return response.status
+    }
 
 }

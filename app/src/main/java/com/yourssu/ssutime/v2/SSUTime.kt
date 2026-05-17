@@ -39,8 +39,6 @@ import java.util.Locale
 import kotlin.math.max
 
 const val CHANNEL_ID = "ASSIGNMENT"
-const val LMS_REFRESH_TOPIC = "lms-refresh"
-const val LMS_REFRESH_MESSAGE_TYPE = "lms_refresh"
 
 internal var accessToken = ""
 
@@ -64,6 +62,7 @@ val appModule = module {
     }
     single {
         LmsRefreshRepository(
+            get(),
             get(),
             get()
         )
@@ -95,6 +94,9 @@ val previewModule = module {
 
     single { LoginRepository(get()) }
     single {
+        ApiRepository()
+    }
+    single {
         MainRepository(
             get(named("todoDataStore")),
             get(named("alertDataStore")),
@@ -104,6 +106,7 @@ val previewModule = module {
     }
     single {
         LmsRefreshRepository(
+            get(),
             get(),
             get()
         )

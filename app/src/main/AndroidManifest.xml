@@ -3,6 +3,7 @@
 
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT"/>
 
     <application
         android:name=".MainApplication"
@@ -15,6 +16,10 @@
         android:supportsRtl="true"
         android:enableOnBackInvokedCallback="true"
         android:theme="@style/Theme.SSUTime">
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_channel_id"
+            android:value="ASSIGNMENT" />
+
         <service
             android:name=".fcm.LmsRefreshMessagingService"
             android:exported="false">
@@ -32,6 +37,10 @@
                 android:name="android.appwidget.provider"
                 android:resource="@xml/ddaywidget" />
         </receiver>
+
+        <receiver
+            android:name=".notification.CallNotificationActionReceiver"
+            android:exported="false" />
 
         <activity
             android:name=".MainActivity"

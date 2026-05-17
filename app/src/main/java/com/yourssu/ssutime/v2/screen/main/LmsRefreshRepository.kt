@@ -1,13 +1,19 @@
 package com.yourssu.ssutime.v2.screen.main
 
+import android.util.Log
 import com.yourssu.data.LoginData
 import com.yourssu.data.SubjectInfo
 import com.yourssu.data.TodoData
 import com.yourssu.data.TodoInfo
 import com.yourssu.data.TodoType
+import com.yourssu.data.network.toAddEnrollmentRequest
+import com.yourssu.data.network.toAddTodoRequest
+import com.yourssu.ssutime.v2.accessToken
+import com.yourssu.ssutime.v2.network.ApiRepository
 import com.yourssu.ssutime.v2.screen.login.LoginRepository
 import io.github.chlwhdtn03.LmsApi
 import io.github.chlwhdtn03.data.Lms.Subject
+import io.ktor.http.HttpStatusCode
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.TimeoutCancellationException
@@ -28,6 +34,7 @@ private val BACKGROUND_REFRESH_LOCK_WINDOW: Duration = Duration.ofMinutes(10)
 class LmsRefreshRepository(
     private val loginRepository: LoginRepository,
     private val mainRepository: MainRepository,
+    private val apiRepository: ApiRepository,
 ) {
     private val isRefreshing = AtomicBoolean(false)
 
@@ -129,6 +136,7 @@ class LmsRefreshRepository(
         val currentTerm = terms.firstOrNull()
             ?: throw IllegalStateException("학기 정보를 불러오지 못했어요.")
         val subjects = LmsApi.getTodoList(term = currentTerm, loadingState = loadingState)
+        val subjectInfos = buildSubjectInfos(subjects)
         val completedAt = Instant.now()
         val previousData = mainRepository.getTodoData()
         val summary = TodoRefreshSummary(
@@ -142,6 +150,7 @@ class LmsRefreshRepository(
         )
         val refreshedTodoData = buildTodoData(
             subjects = subjects,
+            subjectInfos = subjectInfos,
             previousData = previousData,
             loadedAt = completedAt.toString(),
         )
@@ -161,7 +170,86 @@ class LmsRefreshRepository(
         }
 
         mainRepository.updateTodoData(todoData)
+        reportEnrollmentsToBackend(subjectInfos, currentTerm.toString(), loginData)
+        reportTodosToBackend(todoData.todos, loginData)
         TodoRefreshResult.Success(todoData, summary)
+    }
+
+    private suspend fun reportEnrollmentsToBackend(
+        subjects: List<SubjectInfo>,
+        semester: String,
+        loginData: LoginData,
+    ) {
+        if (subjects.isEmpty() || !prepareBackendToken(loginData)) {
+            return
+        }
+
+        var tokenRefreshAttempted = false
+        subjects.forEach { subject ->
+            runCatching {
+                var status = apiRepository.addEnrollment(subject.toAddEnrollmentRequest(semester))
+                if (status == HttpStatusCode.Unauthorized && !tokenRefreshAttempted) {
+                    tokenRefreshAttempted = true
+                    if (refreshBackendToken(loginData)) {
+                        status = apiRepository.addEnrollment(subject.toAddEnrollmentRequest(semester))
+                    }
+                }
+
+                if (status.value !in 200..299 && status != HttpStatusCode.Conflict) {
+                    Log.w(TAG, "Enrollment 백엔드 등록 실패: ${subject.name}, status=$status")
+                }
+            }.onFailure { exception ->
+                Log.e(TAG, "Enrollment 백엔드 등록 중 오류가 발생했습니다: ${subject.name}", exception)
+            }
+        }
+    }
+
+    private suspend fun reportTodosToBackend(todos: List<TodoInfo>, loginData: LoginData) {
+        if (todos.isEmpty() || !prepareBackendToken(loginData)) {
+            return
+        }
+
+        var tokenRefreshAttempted = false
+        todos.forEach { todo ->
+            runCatching {
+                var status = apiRepository.addTodo(todo.toAddTodoRequest())
+                if (status == HttpStatusCode.Unauthorized && !tokenRefreshAttempted) {
+                    tokenRefreshAttempted = true
+                    if (refreshBackendToken(loginData)) {
+                        status = apiRepository.addTodo(todo.toAddTodoRequest())
+                    }
+                }
+
+                if (status.value !in 200..299) {
+                    Log.w(TAG, "Todo 백엔드 등록 실패: ${todo.title}, status=$status")
+                }
+            }.onFailure { exception ->
+                Log.e(TAG, "Todo 백엔드 등록 중 오류가 발생했습니다: ${todo.title}", exception)
+            }
+        }
+    }
+
+    private suspend fun prepareBackendToken(loginData: LoginData): Boolean {
+        accessToken = accessToken.ifBlank { loginData.accessToken }
+        if (accessToken.isNotBlank()) {
+            return true
+        }
+
+        return refreshBackendToken(loginData)
+    }
+
+    private suspend fun refreshBackendToken(loginData: LoginData): Boolean {
+        if (!loginData.hasAutoLoginCredentials) {
+            Log.i(TAG, "백엔드 토큰이 없어 Todo 등록을 건너뜁니다.")
+            return false
+        }
+
+        return runCatching {
+            accessToken = apiRepository.requestJwtToken(loginData.id, loginData.pw).accessToken
+            loginRepository.updateLoginData(loginData.copy(accessToken = accessToken))
+        }.onFailure { exception ->
+            Log.e(TAG, "백엔드 토큰 갱신에 실패했습니다.", exception)
+        }.isSuccess
     }
 
     private suspend fun loginIfNeeded(source: RefreshSource, loginData: LoginData) {
@@ -198,12 +286,10 @@ class LmsRefreshRepository(
 
     private fun buildTodoData(
         subjects: List<Subject>,
+        subjectInfos: List<SubjectInfo>,
         previousData: TodoData,
         loadedAt: String,
     ): TodoData {
-        val subjectInfos = subjects
-            .map { SubjectInfo(it.id, it.name, it.professor) }
-            .distinctBy { it.id }
         val subjectInfoById = subjectInfos.associateBy { it.id }
         val newTodos = subjects.flatMap { subject ->
             subject.todoList.map { todo ->
@@ -237,6 +323,10 @@ class LmsRefreshRepository(
             loadedAt = loadedAt,
         )
     }
+
+    private fun buildSubjectInfos(subjects: List<Subject>): List<SubjectInfo> = subjects
+        .map { SubjectInfo(it.id, it.name, it.professor) }
+        .distinctBy { it.id }
 
     private suspend fun markBackgroundRefreshStarted(startedAt: Instant, requestId: String?) {
         mainRepository.updateTodoData { currentData ->
@@ -301,6 +391,8 @@ sealed interface TodoRefreshResult {
 
 private val LoginData.hasAutoLoginCredentials: Boolean
     get() = isAutoLogin && id.isNotBlank() && pw.isNotBlank()
+
+private const val TAG = "LmsRefreshRepository"
 
 private fun String.toInstantOrNull(): Instant? = runCatching {
     Instant.parse(this)

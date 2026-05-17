@@ -46,6 +46,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -77,6 +78,7 @@ fun MyPageScreen(
         isPersistent = true
     )
     val coroutine = rememberCoroutineScope()
+    val context = LocalContext.current
     val alertState by viewModel.uiState.collectAsStateWithLifecycle()
     var alertData by remember { mutableStateOf<AlertData>(AlertData(valid = false, false, false, -1)) }
 
@@ -203,6 +205,13 @@ fun MyPageScreen(
                 }
             )
         }
+
+        Spacer(Modifier.height(28.dp))
+
+        NotificationDebugSection(
+            onScheduleCallAlert = { viewModel.scheduleDebugCallAlert(context) },
+            onScheduleNormalAlert = { viewModel.scheduleDebugNormalAlert(context) },
+        )
 
         Spacer(Modifier.height(28.dp))
 

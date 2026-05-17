@@ -1,12 +1,12 @@
 package com.yourssu.ssutime.v2.screen.my
 
+import android.content.Context
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.google.firebase.messaging.FirebaseMessaging
 import com.yourssu.data.AlertData
 import com.yourssu.data.UiState
-import com.yourssu.ssutime.v2.LMS_REFRESH_TOPIC
+import com.yourssu.ssutime.v2.accessToken
 import com.yourssu.ssutime.v2.network.ApiRepository
 import com.yourssu.ssutime.v2.screen.login.LoginRepository
 import com.yourssu.ssutime.v2.screen.main.MainRepository
@@ -16,6 +16,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import com.yourssu.ssutime.v2.notification.scheduleDebugCallAlert as scheduleDebugCallAlertTest
+import com.yourssu.ssutime.v2.notification.scheduleDebugNormalAlert as scheduleDebugNormalAlertTest
 
 class MyViewModel(
     private val loginRepository: LoginRepository,
@@ -48,11 +50,29 @@ class MyViewModel(
         }
     }
 
+    fun scheduleDebugCallAlert(context: Context) {
+        val appContext = context.applicationContext
+        viewModelScope.launch {
+            scheduleDebugCallAlertTest(appContext) {
+                mainRepository.getTodoData().todos
+            }
+        }
+    }
+
+    fun scheduleDebugNormalAlert(context: Context) {
+        val appContext = context.applicationContext
+        viewModelScope.launch {
+            scheduleDebugNormalAlertTest(appContext) {
+                mainRepository.getTodoData().todos
+            }
+        }
+    }
+
     fun logout() {
         viewModelScope.launch {
             mainRepository.clearTodoData()
             loginRepository.logout()
-            FirebaseMessaging.getInstance().unsubscribeFromTopic(LMS_REFRESH_TOPIC)
+            accessToken = ""
             isLogout.value = true
         }
     }
