@@ -21,7 +21,9 @@ import java.time.Duration
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.LocalTime
+import java.time.OffsetDateTime
 import java.time.ZoneId
+import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
@@ -183,11 +185,19 @@ private fun Context.mainActivityPendingIntent(requestCode: Int) = android.app.Pe
 )
 
 private fun String.toInstantOrNull(): Instant? = runCatching {
-    Instant.parse(this)
-}.recoverCatching {
-    LocalDateTime.parse(removeSuffix("Z"))
-        .atZone(DEADLINE_ZONE_ID)
-        .toInstant()
+    val parsedTime = DateTimeFormatter.ISO_DATE_TIME.parseBest(
+        this,
+        ZonedDateTime::from,
+        OffsetDateTime::from,
+        LocalDateTime::from,
+    )
+
+    when (parsedTime) {
+        is ZonedDateTime -> parsedTime.toInstant()
+        is OffsetDateTime -> parsedTime.toInstant()
+        is LocalDateTime -> parsedTime.atZone(DEADLINE_ZONE_ID).toInstant()
+        else -> error("Unsupported deadline time format: $this")
+    }
 }.getOrNull()
 
 internal fun String.toDeadlineText(): String = toInstantOrNull()

@@ -32,7 +32,9 @@ import java.io.InputStream
 import java.io.OutputStream
 import java.time.Instant
 import java.time.LocalDateTime
+import java.time.OffsetDateTime
 import java.time.ZoneId
+import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
 import java.util.Locale
@@ -177,12 +179,19 @@ fun getRemainingTimeText(targetTime: String, now: Instant = Instant.now()): Stri
 }
 
 private fun parseTargetInstant(targetTime: String): Instant {
-    val normalizedTime = targetTime.removeSuffix("Z")
+    val parsedTime = DateTimeFormatter.ISO_DATE_TIME.parseBest(
+        targetTime,
+        ZonedDateTime::from,
+        OffsetDateTime::from,
+        LocalDateTime::from,
+    )
 
-    return LocalDateTime
-        .parse(normalizedTime)
-        .atZone(ZoneId.of("Asia/Seoul"))
-        .toInstant()
+    return when (parsedTime) {
+        is ZonedDateTime -> parsedTime.toInstant()
+        is OffsetDateTime -> parsedTime.toInstant()
+        is LocalDateTime -> parsedTime.atZone(ZoneId.of("Asia/Seoul")).toInstant()
+        else -> error("Unsupported target time format: $targetTime")
+    }
 }
 
 fun getStringDate(targetTime: String): String {

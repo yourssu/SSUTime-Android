@@ -280,7 +280,7 @@ fun MainFragment(
     ) {
         Column(
             modifier = Modifier
-                .fillMaxSize()
+                .fillMaxWidth()
                 .padding(vertical = 32.dp, horizontal = 16.dp)
                 .verticalScroll(scrollState),
         ) {
@@ -325,8 +325,7 @@ fun MainFragment(
 
             TodoList(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .weight(1f),
+                    .fillMaxWidth(),
                 todos = todos,
                 onClickSubmitted = onClickSubmitted,
                 submittedSize = submitted.size,
