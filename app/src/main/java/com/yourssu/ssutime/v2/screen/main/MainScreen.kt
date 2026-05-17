@@ -281,8 +281,8 @@ fun MainFragment(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 32.dp, horizontal = 16.dp)
-                .verticalScroll(scrollState),
+                .verticalScroll(scrollState)
+                .padding(vertical = 32.dp, horizontal = 16.dp),
         ) {
 
             Text(
