@@ -284,7 +284,6 @@ fun MainFragment(
                 .verticalScroll(scrollState)
                 .padding(vertical = 32.dp, horizontal = 16.dp),
         ) {
-
             Text(
                 text = "완료하면 자동으로 사라져요",
                 style = SSUType.H4SemiBold
@@ -557,6 +556,8 @@ fun TodoItem(
                             Spacer(Modifier.width(6.dp))
 
                             Text(
+                                modifier = Modifier.fillMaxWidth(0.8f),
+                                maxLines = 1,
                                 text = todoInfo.subject?.name ?: "알 수 없는 과목",
                                 style = SSUType.H5SemiBold
                             )
@@ -571,6 +572,8 @@ fun TodoItem(
                     Spacer(Modifier.height(4.dp))
 
                     Text(
+                        modifier = Modifier.fillMaxWidth(0.8f),
+                        maxLines = 1,
                         text = todoInfo.title,
                         style = SSUType.H4SemiBold
                     )
@@ -631,6 +634,8 @@ fun SubmittedItem(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(
+                            modifier = Modifier.fillMaxWidth(0.8f),
+                            maxLines = 1,
                             text = todoInfo.subject?.name ?: "알 수 없는 과목",
                             style = SSUType.Caption1SemiBold
                         )
@@ -639,6 +644,8 @@ fun SubmittedItem(
                     Spacer(Modifier.height(4.dp))
 
                     Text(
+                        modifier = Modifier.fillMaxWidth(0.8f),
+                        maxLines = 1,
                         text = todoInfo.title,
                         style = SSUType.H5SemiBold
                     )

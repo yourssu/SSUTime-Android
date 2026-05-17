@@ -315,10 +315,12 @@ fun ComboOption(
                 Spacer(
                     modifier = Modifier.weight(1f)
                 )
-                Icon(
-                    imageVector = Icons.Outlined.KeyboardArrowDown,
-                    contentDescription = "전화알림 시간 펼치기"
-                )
+                Box {
+                    Icon(
+                        imageVector = Icons.Outlined.KeyboardArrowDown,
+                        contentDescription = "전화알림 시간 펼치기"
+                    )
+                }
             }
             DropdownMenu(
                 containerColor = WHITE,
