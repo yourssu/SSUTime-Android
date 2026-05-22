@@ -57,6 +57,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.yourssu.data.AlertData
 import com.yourssu.data.UiState
 import com.yourssu.ssutime.v2.R
+import com.yourssu.ssutime.v2.notification.fullScreenIntentSettingsIntent
 import com.yourssu.ssutime.v2.ui.theme.N100
 import com.yourssu.ssutime.v2.ui.theme.N200
 import com.yourssu.ssutime.v2.ui.theme.N300
@@ -82,6 +83,7 @@ fun MyPageScreen(
     val coroutine = rememberCoroutineScope()
     val context = LocalContext.current
     val alertState by viewModel.uiState.collectAsStateWithLifecycle()
+    val fcmDebugRecords by viewModel.fcmDebugRecords.collectAsStateWithLifecycle()
     var alertData by remember { mutableStateOf<AlertData>(AlertData(valid = false, false, false, -1)) }
 
 
@@ -218,6 +220,13 @@ fun MyPageScreen(
         NotificationDebugSection(
             onScheduleCallAlert = { viewModel.scheduleDebugCallAlert(context) },
             onScheduleNormalAlert = { viewModel.scheduleDebugNormalAlert(context) },
+            onOpenFullScreenIntentSettings = {
+                runCatching {
+                    context.startActivity(context.fullScreenIntentSettingsIntent())
+                }
+            },
+            fcmRecords = fcmDebugRecords,
+            onClearFcmHistory = { viewModel.clearFcmDebugHistory() },
         )
 
         Spacer(Modifier.height(28.dp))

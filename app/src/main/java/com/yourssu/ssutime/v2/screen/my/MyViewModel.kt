@@ -7,6 +7,8 @@ import androidx.lifecycle.viewModelScope
 import com.yourssu.data.AlertData
 import com.yourssu.data.UiState
 import com.yourssu.ssutime.v2.accessToken
+import com.yourssu.ssutime.v2.fcm.FcmDebugHistoryRepository
+import com.yourssu.ssutime.v2.fcm.FcmDebugRecord
 import com.yourssu.ssutime.v2.lms.getLmsLoginInfo
 import com.yourssu.ssutime.v2.network.ApiRepository
 import com.yourssu.ssutime.v2.screen.login.LoginRepository
@@ -14,8 +16,11 @@ import com.yourssu.ssutime.v2.screen.main.MainRepository
 import io.github.chlwhdtn03.LmsApi
 import io.github.chlwhdtn03.data.Lms.Info
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import com.yourssu.ssutime.v2.notification.scheduleDebugCallAlert as scheduleDebugCallAlertTest
 import com.yourssu.ssutime.v2.notification.scheduleDebugNormalAlert as scheduleDebugNormalAlertTest
@@ -23,13 +28,21 @@ import com.yourssu.ssutime.v2.notification.scheduleDebugNormalAlert as scheduleD
 class MyViewModel(
     private val loginRepository: LoginRepository,
     private val mainRepository: MainRepository,
-    private val apiRepository: ApiRepository
+    private val apiRepository: ApiRepository,
+    private val fcmDebugHistoryRepository: FcmDebugHistoryRepository,
 ) : ViewModel() {
     var loginInfo = mutableStateOf<Info?>(null)
     var isLogout = mutableStateOf(false)
 
     private val _uiState = MutableStateFlow<UiState<AlertData>>(UiState.Loading)
     val uiState: StateFlow<UiState<AlertData>> = _uiState.asStateFlow()
+    val fcmDebugRecords: StateFlow<List<FcmDebugRecord>> = fcmDebugHistoryRepository.history
+        .map { it.records }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5_000),
+            initialValue = emptyList(),
+        )
 
     init {
         viewModelScope.launch {
@@ -66,6 +79,12 @@ class MyViewModel(
             scheduleDebugNormalAlertTest(appContext) {
                 mainRepository.getTodoData().todos
             }
+        }
+    }
+
+    fun clearFcmDebugHistory() {
+        viewModelScope.launch {
+            fcmDebugHistoryRepository.clear()
         }
     }
 

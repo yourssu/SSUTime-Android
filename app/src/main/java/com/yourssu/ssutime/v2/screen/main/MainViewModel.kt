@@ -11,11 +11,13 @@ import com.yourssu.data.TodoData
 import com.yourssu.data.TodoInfo
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
+import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 
 private val REFRESH_DATE_ZONE_ID: ZoneId = ZoneId.of("Asia/Seoul")
+private val SUBMITTED_VISIBLE_WINDOW: Duration = Duration.ofHours(24)
 
 class MainViewModel(
     private val mainRepository: MainRepository,
@@ -102,13 +104,17 @@ class MainViewModel(
 
         submitted.apply {
             clear()
-            addAll(todoData.submitted)
+            addAll(todoData.submitted.filterRecentlySubmitted())
         }
 
         loadedAt.value = todoData.loadedAt
     }
 
     private fun shouldRefreshOnOpen(todoData: TodoData): Boolean {
+        if (todoData.submitted.any { it.submittedAt.isBlank() }) {
+            return true
+        }
+
         val loadedDate = todoData.loadedAt.toLocalDateOrNull()
             ?: return true
         val today = LocalDate.now(REFRESH_DATE_ZONE_ID)
@@ -122,3 +128,14 @@ class MainViewModel(
     }.getOrNull()
 
 }
+
+private fun List<TodoInfo>.filterRecentlySubmitted(
+    now: Instant = Instant.now(),
+): List<TodoInfo> = filter { todo ->
+    val submittedAt = todo.submittedAt.toInstantOrNull() ?: return@filter false
+    Duration.between(submittedAt, now) <= SUBMITTED_VISIBLE_WINDOW
+}
+
+private fun String.toInstantOrNull(): Instant? = runCatching {
+    Instant.parse(this)
+}.getOrNull()

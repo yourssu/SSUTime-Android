@@ -9,6 +9,7 @@ data class TodoInfo(
     val due_date: String, // 마감 기한
     val type: TodoType, // 제목
     val subject: SubjectInfo?, // 과목 정보
+    val submittedAt: String = "", // 제출 시각
 ) {
     var subjectId = 0
 }

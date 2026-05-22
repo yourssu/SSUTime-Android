@@ -9,6 +9,9 @@ import androidx.datastore.dataStore
 import com.yourssu.data.AlertData
 import com.yourssu.data.LoginData
 import com.yourssu.data.TodoData
+import com.yourssu.ssutime.v2.fcm.FcmDebugHistoryData
+import com.yourssu.ssutime.v2.fcm.FcmDebugHistoryRepository
+import com.yourssu.ssutime.v2.fcm.fcmDebugHistoryDataStore
 import com.yourssu.ssutime.v2.network.ApiRepository
 import com.yourssu.ssutime.v2.screen.login.LoginRepository
 import com.yourssu.ssutime.v2.screen.login.LoginViewModel
@@ -41,6 +44,7 @@ import java.util.Locale
 import kotlin.math.max
 
 const val CHANNEL_ID = "ASSIGNMENT"
+const val CALL_CHANNEL_ID = "ASSIGNMENT_CALL_V2"
 
 internal var accessToken = ""
 
@@ -49,8 +53,10 @@ val appModule = module {
     single<DataStore<TodoData>>(named("todoDataStore")) { androidContext().todoDataStore }
     single<DataStore<OnBoardingData>>(named("onBoardingDataStore")) { androidContext().onBoardingDataStore }
     single<DataStore<AlertData>>(named("alertDataStore")) { androidContext().notificationStore }
+    single<DataStore<FcmDebugHistoryData>>(named("fcmDebugHistoryDataStore")) { androidContext().fcmDebugHistoryDataStore }
 
     single { LoginRepository(get()) }
+    single { FcmDebugHistoryRepository(get(named("fcmDebugHistoryDataStore"))) }
     single {
         MainRepository(
             get(named("todoDataStore")),
@@ -76,7 +82,7 @@ val appModule = module {
             )
         )
     }
-    viewModel { MyViewModel(get(), get(), get()) }
+    viewModel { MyViewModel(get(), get(), get(), get()) }
     viewModel { LoginViewModel(get(), get()) }
     viewModel {
         OnBoardingViewModel(
@@ -93,8 +99,10 @@ val previewModule = module {
     single<DataStore<TodoData>>(named("todoDataStore")) { androidContext().todoDataStore }
     single<DataStore<OnBoardingData>>(named("onBoardingDataStore")) { androidContext().onBoardingDataStore }
     single<DataStore<AlertData>>(named("alertDataStore")) { androidContext().notificationStore }
+    single<DataStore<FcmDebugHistoryData>>(named("fcmDebugHistoryDataStore")) { androidContext().fcmDebugHistoryDataStore }
 
     single { LoginRepository(get()) }
+    single { FcmDebugHistoryRepository(get(named("fcmDebugHistoryDataStore"))) }
     single {
         ApiRepository()
     }
@@ -120,7 +128,7 @@ val previewModule = module {
             )
         )
     }
-    viewModel { MyViewModel(get(), get(), get()) }
+    viewModel { MyViewModel(get(), get(), get(), get()) }
     viewModel { LoginViewModel(get(), get()) }
     viewModel {
         OnBoardingViewModel(

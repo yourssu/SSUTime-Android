@@ -316,6 +316,7 @@ class LmsRefreshRepository(
                         todo.cached_due_date ?: "",
                         if (todo.late == true) TodoType.SUBMITTED_LATE else TodoType.SUBMITTED,
                         subjectInfoById[subject.id],
+                        submittedAt = todo.submitted_at.orEmpty(),
                     )
                 }
         }.sortedByDescending { it.due_date }
