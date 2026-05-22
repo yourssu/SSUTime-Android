@@ -8,8 +8,8 @@ import androidx.lifecycle.viewModelScope
 import com.yourssu.data.LoginData
 import com.yourssu.data.network.FcmRequest
 import com.yourssu.ssutime.v2.accessToken
+import com.yourssu.ssutime.v2.lms.loginLms
 import com.yourssu.ssutime.v2.network.ApiRepository
-import io.github.chlwhdtn03.LmsApi.loginLMS
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -54,7 +54,7 @@ class LoginViewModel(
                 val pw = pwState.text.toString()
                 Log.d(javaClass.name, "id : ${idState.text} || pw : ${pwState.text}")
 
-                loginLMS(id, pw).apply {
+                loginLms(id, pw).apply {
                     if(this)
                         accessToken = apiRepository.requestJwtToken(id, pw).accessToken
                 }

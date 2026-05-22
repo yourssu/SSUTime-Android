@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.yourssu.data.AlertData
 import com.yourssu.data.UiState
 import com.yourssu.ssutime.v2.accessToken
+import com.yourssu.ssutime.v2.lms.getLmsLoginInfo
 import com.yourssu.ssutime.v2.network.ApiRepository
 import com.yourssu.ssutime.v2.screen.login.LoginRepository
 import com.yourssu.ssutime.v2.screen.main.MainRepository
@@ -36,7 +37,7 @@ class MyViewModel(
                 mainRepository.getAlertData()
             )
             if(LmsApi.isLoggined)
-                loginInfo.value = LmsApi.getLoginInfo()
+                loginInfo.value = getLmsLoginInfo()
         }
     }
 

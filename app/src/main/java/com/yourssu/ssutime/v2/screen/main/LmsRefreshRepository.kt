@@ -9,6 +9,9 @@ import com.yourssu.data.TodoType
 import com.yourssu.data.network.toAddEnrollmentRequest
 import com.yourssu.data.network.toAddTodoRequest
 import com.yourssu.ssutime.v2.accessToken
+import com.yourssu.ssutime.v2.lms.getLmsTerms
+import com.yourssu.ssutime.v2.lms.getLmsTodoList
+import com.yourssu.ssutime.v2.lms.loginLms
 import com.yourssu.ssutime.v2.network.ApiRepository
 import com.yourssu.ssutime.v2.screen.login.LoginRepository
 import io.github.chlwhdtn03.LmsApi
@@ -132,10 +135,10 @@ class LmsRefreshRepository(
     ): TodoRefreshResult.Success = withContext(Dispatchers.IO) {
         loginIfNeeded(source, loginData)
 
-        val terms = LmsApi.getTerms()
+        val terms = getLmsTerms()
         val currentTerm = terms.firstOrNull()
             ?: throw IllegalStateException("학기 정보를 불러오지 못했어요.")
-        val subjects = LmsApi.getTodoList(term = currentTerm, loadingState = loadingState)
+        val subjects = getLmsTodoList(term = currentTerm, loadingState = loadingState)
         val subjectInfos = buildSubjectInfos(subjects)
         val completedAt = Instant.now()
         val previousData = mainRepository.getTodoData()
@@ -271,7 +274,7 @@ class LmsRefreshRepository(
 
         while (true) {
             try {
-                return LmsApi.loginLMS(loginData.id, loginData.pw)
+                return loginLms(loginData.id, loginData.pw)
             } catch (e: Exception) {
                 val shouldRetry = source == RefreshSource.FCM &&
                     e.message == LMS_API_TOKEN_ERROR_MESSAGE &&
