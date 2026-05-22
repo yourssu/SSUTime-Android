@@ -1,11 +1,13 @@
 package com.yourssu.ssutime.v2
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.navigation.compose.NavHost
@@ -21,9 +23,12 @@ import com.yourssu.ssutime.v2.ui.theme.SSUTimeTheme
 import com.yourssu.ssutime.v2.ui.theme.WHITE
 
 class MainActivity : ComponentActivity() {
+    private val skipInitialLmsRefresh = mutableStateOf(false)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
         super.onCreate(savedInstanceState)
+        skipInitialLmsRefresh.value = intent.shouldSkipInitialLmsRefresh()
         enableEdgeToEdge()
         setContent {
             val navController = rememberNavController()
@@ -63,6 +68,10 @@ class MainActivity : ComponentActivity() {
 
                     composable(route = Screens.MAIN.name) {
                         MainScreen(
+                            skipInitialLmsRefresh = skipInitialLmsRefresh.value,
+                            onInitialLmsRefreshSkipConsumed = {
+                                skipInitialLmsRefresh.value = false
+                            },
                             onProfileClick = {
                                 navController.navigate(Screens.MY.name)
                             })
@@ -86,4 +95,17 @@ class MainActivity : ComponentActivity() {
 
         }
     }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        skipInitialLmsRefresh.value = intent.shouldSkipInitialLmsRefresh()
+    }
+
+    companion object {
+        const val EXTRA_SKIP_INITIAL_LMS_REFRESH = "extra_skip_initial_lms_refresh"
+    }
 }
+
+private fun Intent?.shouldSkipInitialLmsRefresh(): Boolean =
+    this?.getBooleanExtra(MainActivity.EXTRA_SKIP_INITIAL_LMS_REFRESH, false) == true

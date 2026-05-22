@@ -73,7 +73,7 @@ class CallAlertActivity : ComponentActivity() {
                     onDecline = {
                         notificationManager.cancel(state.notificationId)
                         CallAlertRinger.stop(this)
-                        closeCallScreenOnly()
+                        closeAppAfterDecline()
                     },
                     onAnswer = {
                         notificationManager.cancel(state.notificationId)
@@ -81,6 +81,7 @@ class CallAlertActivity : ComponentActivity() {
                         startActivity(
                             Intent(this, MainActivity::class.java).apply {
                                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                                putExtra(MainActivity.EXTRA_SKIP_INITIAL_LMS_REFRESH, true)
                             }
                         )
                         finish()
@@ -104,12 +105,9 @@ class CallAlertActivity : ComponentActivity() {
         }
     }
 
-    private fun closeCallScreenOnly() {
-        if (isTaskRoot) {
-            finishAndRemoveTask()
-        } else {
-            finish()
-        }
+    private fun closeAppAfterDecline() {
+        moveTaskToBack(true)
+        finishAffinity()
     }
 
     override fun onDestroy() {

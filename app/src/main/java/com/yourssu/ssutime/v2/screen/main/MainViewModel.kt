@@ -46,7 +46,7 @@ class MainViewModel(
         requiredShowAlertBottomSheet.value = false
     }
 
-    suspend fun loadTodos(forceRefresh: Boolean = false) {
+    suspend fun loadTodos(forceRefresh: Boolean = false, allowRefresh: Boolean = true) {
         if(isLoading.value) {
             return
         }
@@ -59,6 +59,10 @@ class MainViewModel(
             val hasCachedTodoData = cachedTodoData.loadedAt.isNotEmpty()
             if(hasCachedTodoData) {
                 updateTodoState(cachedTodoData)
+            }
+
+            if (!allowRefresh) {
+                return
             }
 
             if (!forceRefresh && !shouldRefreshOnOpen(cachedTodoData)) {

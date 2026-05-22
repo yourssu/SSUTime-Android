@@ -92,12 +92,17 @@ import java.time.Instant
 fun MainScreen(
     viewModel: MainViewModel = koinViewModel(),
     coroutine: CoroutineScope = rememberCoroutineScope(),
+    skipInitialLmsRefresh: Boolean = false,
+    onInitialLmsRefreshSkipConsumed: () -> Unit = {},
     onProfileClick: () -> Unit = {},
 ) {
     val context = LocalContext.current
     var showSubmittedBottomSheet by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) {
-        viewModel.loadTodos()
+        viewModel.loadTodos(allowRefresh = !skipInitialLmsRefresh)
+        if (skipInitialLmsRefresh) {
+            onInitialLmsRefreshSkipConsumed()
+        }
     }
 
     val sheetState = rememberModalBottomSheetState(
@@ -324,7 +329,7 @@ fun MainFragment(
 
             TodoList(
                 modifier = Modifier
-                    .fillMaxSize(),
+                    .fillMaxWidth(),
                 todos = todos,
                 onClickSubmitted = onClickSubmitted,
                 submittedSize = submitted.size,
