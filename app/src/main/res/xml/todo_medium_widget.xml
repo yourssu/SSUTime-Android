@@ -1,0 +1,10 @@
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:initialLayout="@layout/todo_summary_widget_empty"
+    android:minWidth="250dp"
+    android:minHeight="100dp"
+    android:previewLayout="@layout/todo_summary_widget_empty"
+    android:targetCellWidth="4"
+    android:targetCellHeight="2"
+    android:resizeMode="none"
+    android:updatePeriodMillis="1800000"
+    android:widgetCategory="home_screen" />

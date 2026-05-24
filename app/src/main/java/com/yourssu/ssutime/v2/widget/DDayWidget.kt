@@ -23,7 +23,6 @@ import androidx.glance.appwidget.action.ActionCallback
 import androidx.glance.appwidget.action.actionRunCallback
 import androidx.glance.appwidget.action.actionStartActivity
 import androidx.glance.appwidget.provideContent
-import androidx.glance.appwidget.updateAll
 import androidx.glance.background
 import androidx.glance.color.ColorProvider
 import androidx.glance.layout.Alignment
@@ -35,6 +34,7 @@ import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.height
 import androidx.glance.layout.padding
 import androidx.glance.layout.size
+import androidx.glance.layout.width
 import androidx.glance.preview.ExperimentalGlancePreviewApi
 import androidx.glance.preview.Preview
 import androidx.glance.text.Text
@@ -163,15 +163,23 @@ private fun DDayTodoContent(
                 text = "마감까지",
                 style = SSUType.G_Caption2Medium,
             )
-            Text(
-                text = uiState.dDayText,
-                maxLines = 1,
-                style = if (uiState.isRemainingTimeText) {
-                    SSUType.G_H3SemiBold
-                } else {
-                    SSUType.G_H1SemiBold
-                },
-            )
+            if (uiState.isRemainingTimeText) {
+                LiveCountdownText(
+                    targetEpochMillis = uiState.countdownTargetEpochMillis,
+                    fallbackText = uiState.dDayText,
+                    fontSizeSp = 18,
+                    color = LiveCountdownColor.White,
+                    modifier = GlanceModifier
+                        .width(96.dp)
+                        .height(24.dp),
+                )
+            } else {
+                Text(
+                    text = uiState.dDayText,
+                    maxLines = 1,
+                    style = SSUType.G_H1SemiBold,
+                )
+            }
 
             Text(
                 text = uiState.updatedAtText,
@@ -230,15 +238,21 @@ private data class DDayWidgetUiState(
     val isRemainingTimeText: Boolean,
     val updatedAtText: String,
     val backgroundResId: Int?,
+    val countdownTargetEpochMillis: Long?,
 )
 
 private fun TodoData.toWidgetUiState(context: Context): DDayWidgetUiState {
     val selectedTodo = todos.selectMostUrgentTodo()
     val now = Instant.now()
+    val targetInstant = selectedTodo?.let {
+        parseWidgetTargetInstant(it.due_date)
+    }
     val remainingDays = selectedTodo?.let {
         getRemainingDays(it.due_date, now)
     } ?: Long.MAX_VALUE
-    val remainingSeconds = selectedTodo?.secondsUntil(now) ?: Long.MAX_VALUE
+    val remainingSeconds = targetInstant?.let {
+        ChronoUnit.SECONDS.between(now, it)
+    } ?: Long.MAX_VALUE
     val displayRemainingSeconds = remainingSeconds.coerceAtLeast(0L)
     val isRemainingTimeText = selectedTodo != null && displayRemainingSeconds <= SECONDS_PER_DAY
 
@@ -257,6 +271,11 @@ private fun TodoData.toWidgetUiState(context: Context): DDayWidgetUiState {
                 remainingDays = remainingDays,
                 remainingSeconds = remainingSeconds,
             )
+        },
+        countdownTargetEpochMillis = if (remainingSeconds in 1..SECONDS_PER_DAY) {
+            targetInstant?.toEpochMilli()
+        } else {
+            null
         },
     )
 }
@@ -277,9 +296,6 @@ private fun TodoInfo?.toDdayText(remainingDays: Long, remainingSeconds: Long): S
         "D-$remainingDays"
     }
 }
-
-private fun TodoInfo.secondsUntil(now: Instant): Long =
-    ChronoUnit.SECONDS.between(now, parseWidgetTargetInstant(due_date))
 
 private fun Long.toWidgetRemainingTimeText(): String {
     val hours = this / 3600
@@ -346,6 +362,7 @@ private fun DDayWidgetEmptyPreview() {
             isRemainingTimeText = false,
             updatedAtText = "",
             backgroundResId = null,
+            countdownTargetEpochMillis = null,
         ),
     )
 }
@@ -363,6 +380,7 @@ private fun DDayWidgetDdayPreview() {
             isRemainingTimeText = false,
             updatedAtText = "업데이트 05.24 10:30",
             backgroundResId = R.drawable.oth_1,
+            countdownTargetEpochMillis = null,
         ),
     )
 }
@@ -380,6 +398,7 @@ private fun DDayWidgetRemainingTimePreview() {
             isRemainingTimeText = true,
             updatedAtText = "업데이트 05.24 10:30",
             backgroundResId = R.drawable.d1_1,
+            countdownTargetEpochMillis = null,
         ),
     )
 }
@@ -408,6 +427,6 @@ class DDayWidgetRefreshAction : ActionCallback, KoinComponent {
             Log.e(TAG, "위젯 새로고침을 실행하지 못했습니다.", exception)
         }
 
-        DDayWidget().updateAll(context)
+        updateAllTodoWidgets(context)
     }
 }

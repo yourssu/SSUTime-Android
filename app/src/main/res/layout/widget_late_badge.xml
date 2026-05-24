@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TextView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_late_badge"
+    android:layout_width="wrap_content"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_late_badge_background"
+    android:fontFamily="sans"
+    android:gravity="center"
+    android:includeFontPadding="false"
+    android:maxLines="1"
+    android:paddingHorizontal="6dp"
+    android:textColor="@color/todo_widget_accent"
+    android:textSize="10sp"
+    android:textStyle="bold" />

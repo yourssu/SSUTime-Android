@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Chronometer xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_live_countdown"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fontFamily="sans"
+    android:gravity="center_vertical"
+    android:includeFontPadding="false"
+    android:maxLines="1"
+    android:textColor="@color/todo_widget_accent"
+    android:textSize="34sp"
+    android:textStyle="bold" />

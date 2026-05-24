@@ -3,13 +3,12 @@ package com.yourssu.ssutime.v2.screen.main
 import android.content.Context
 import android.util.Log
 import androidx.datastore.core.DataStore
-import androidx.glance.appwidget.updateAll
 import com.yourssu.data.AlertData
 import com.yourssu.data.TodoData
 import com.yourssu.ssutime.v2.network.ApiRepository
 import com.yourssu.ssutime.v2.notification.cancelDeadlineNotifications
 import com.yourssu.ssutime.v2.notification.sendDeadlineNotificationsIfNeeded
-import com.yourssu.ssutime.v2.widget.DDayWidget
+import com.yourssu.ssutime.v2.widget.updateAllTodoWidgets
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 
@@ -24,7 +23,7 @@ class MainRepository(
 
     suspend fun updateTodoData(todoData: TodoData) {
         todoDataStore.updateData { todoData }
-        DDayWidget().updateAll(context)
+        updateAllTodoWidgets(context)
         updateDeadlineNotifications(todoData)
     }
 
@@ -42,7 +41,7 @@ class MainRepository(
 
     suspend fun updateTodoData(transform: (TodoData) -> TodoData) {
         val updatedTodoData = todoDataStore.updateData(transform)
-        DDayWidget().updateAll(context)
+        updateAllTodoWidgets(context)
         updateDeadlineNotifications(updatedTodoData)
     }
 

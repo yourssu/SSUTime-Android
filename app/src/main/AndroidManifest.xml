@@ -40,6 +40,30 @@
         </receiver>
 
         <receiver
+            android:name=".widget.TodoMediumWidgetReceiver"
+            android:exported="true"
+            android:label="@string/todo_medium_widget_name">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/todo_medium_widget" />
+        </receiver>
+
+        <receiver
+            android:name=".widget.TodoLargeWidgetReceiver"
+            android:exported="true"
+            android:label="@string/todo_large_widget_name">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/todo_large_widget" />
+        </receiver>
+
+        <receiver
             android:name=".notification.CallNotificationActionReceiver"
             android:exported="false" />
 
