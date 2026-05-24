@@ -84,6 +84,7 @@ fun MyPageScreen(
     val context = LocalContext.current
     val alertState by viewModel.uiState.collectAsStateWithLifecycle()
     val fcmToken by viewModel.fcmToken.collectAsStateWithLifecycle()
+    val fcmTokenRegistrationStatus by viewModel.fcmTokenRegistrationStatus.collectAsStateWithLifecycle()
     val fcmDebugRecords by viewModel.fcmDebugRecords.collectAsStateWithLifecycle()
     var alertData by remember { mutableStateOf<AlertData>(AlertData(valid = false, false, false, -1)) }
 
@@ -227,7 +228,9 @@ fun MyPageScreen(
                 }
             },
             fcmToken = fcmToken,
+            fcmTokenRegistrationStatus = fcmTokenRegistrationStatus,
             onRefreshFcmToken = { viewModel.refreshFcmToken() },
+            onRegisterFcmToken = { viewModel.registerCurrentFcmToken() },
             fcmRecords = fcmDebugRecords,
             onClearFcmHistory = { viewModel.clearFcmDebugHistory() },
         )

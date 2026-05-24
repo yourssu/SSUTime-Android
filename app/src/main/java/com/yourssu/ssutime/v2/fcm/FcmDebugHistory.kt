@@ -37,6 +37,7 @@ data class FcmDebugRecord(
     val id: String = "",
     val receivedAt: String = "",
     val handledAt: String = "",
+    val rawRemoteMessage: String = "",
     val messageId: String = "",
     val messageType: String = "",
     val from: String = "",
@@ -45,11 +46,6 @@ data class FcmDebugRecord(
     val originalPriority: String = "",
     val priority: String = "",
     val ttlSeconds: Int = 0,
-    val serverType: String = "",
-    val serverReason: String = "",
-    val serverRequestId: String = "",
-    val serverSentAt: String = "",
-    val action: String = "",
     val handledAs: String = "",
     val status: String = "",
     val detail: String = "",
@@ -148,6 +144,7 @@ private fun RemoteMessage.toDebugRecord(handledAs: String): FcmDebugRecord {
     return FcmDebugRecord(
         id = UUID.randomUUID().toString(),
         receivedAt = Instant.now().toString(),
+        rawRemoteMessage = toRawRemoteMessageText(),
         messageId = messageId.orEmpty(),
         messageType = messageType.orEmpty(),
         from = from.orEmpty(),
@@ -156,11 +153,6 @@ private fun RemoteMessage.toDebugRecord(handledAs: String): FcmDebugRecord {
         originalPriority = originalPriority.toPriorityText(),
         priority = priority.toPriorityText(),
         ttlSeconds = ttl,
-        serverType = data["type"].orEmpty(),
-        serverReason = data["reason"].orEmpty(),
-        serverRequestId = data["requestId"].orEmpty(),
-        serverSentAt = data["sentAt"].orEmpty(),
-        action = data["action"].orEmpty(),
         handledAs = handledAs,
         status = "received",
         notificationTitle = notification?.title.orEmpty(),
@@ -168,6 +160,35 @@ private fun RemoteMessage.toDebugRecord(handledAs: String): FcmDebugRecord {
         data = data.toSortedMap(),
     )
 }
+
+private fun RemoteMessage.toRawRemoteMessageText(): String {
+    val notification = notification
+    return buildString {
+        appendLine("from=${from.orEmpty().ifBlank { "-" }}")
+        appendLine("messageId=${messageId.orEmpty().ifBlank { "-" }}")
+        appendLine("messageType=${messageType.orEmpty().ifBlank { "-" }}")
+        appendLine("collapseKey=${collapseKey.orEmpty().ifBlank { "-" }}")
+        appendLine("sentTime=$sentTime")
+        appendLine("ttl=$ttl")
+        appendLine("priority=${priority.toPriorityText()}")
+        appendLine("originalPriority=${originalPriority.toPriorityText()}")
+        appendLine(
+            "notification=${if (notification == null) "null" else "{title=${notification.title.orEmpty().quote()}, body=${notification.body.orEmpty().quote()}}"}"
+        )
+        append("data=${data.toSortedMap().toRawMapText()}")
+    }
+}
+
+private fun Map<String, String>.toRawMapText(): String =
+    if (isEmpty()) {
+        "{}"
+    } else {
+        entries.joinToString(prefix = "{", postfix = "}") { (key, value) ->
+            "${key.quote()}: ${value.quote()}"
+        }
+    }
+
+private fun String.quote(): String = "\"${replace("\\", "\\\\").replace("\"", "\\\"")}\""
 
 private fun Int.toPriorityText(): String =
     when (this) {
@@ -178,4 +199,4 @@ private fun Int.toPriorityText(): String =
     }
 
 private fun FcmDebugRecord.toLogText(): String =
-    "id=$id, messageId=$messageId, serverType=$serverType, action=$action, handledAs=$handledAs, from=$from, data=$data"
+    "id=$id, messageId=$messageId, handledAs=$handledAs, from=$from, data=$data"

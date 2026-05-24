@@ -30,7 +30,9 @@ fun NotificationDebugSection(
     onScheduleNormalAlert: () -> Unit,
     onOpenFullScreenIntentSettings: () -> Unit,
     fcmToken: String,
+    fcmTokenRegistrationStatus: String,
     onRefreshFcmToken: () -> Unit,
+    onRegisterFcmToken: () -> Unit,
     fcmRecords: List<FcmDebugRecord>,
     onClearFcmHistory: () -> Unit,
     modifier: Modifier = Modifier,
@@ -76,6 +78,15 @@ fun NotificationDebugSection(
             OptionButton(
                 text = "FCM 토큰 다시 불러오기",
                 onClick = onRefreshFcmToken,
+            )
+            OptionButton(
+                text = "현재 FCM 토큰 서버 재등록",
+                onClick = onRegisterFcmToken,
+            )
+            Text(
+                text = fcmTokenRegistrationStatus,
+                style = SSUType.Caption1Medium,
+                color = N500,
             )
 
             Text(
@@ -134,53 +145,19 @@ private fun FcmDebugRecordItem(record: FcmDebugRecord) {
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         Text(
-            text = "${record.receivedAt.toDebugTimeText()} · ${record.status}",
+            text = "${record.receivedAt.toDebugTimeText()} · 상태=${record.status}",
             style = SSUType.H5SemiBold,
             color = record.status.toStatusColor(),
         )
-        Text(
-            text = "서버 Push: ${record.toServerPushLabel()}",
-            style = SSUType.Caption1Medium,
-            color = N500,
-        )
-        Text(
-            text = "처리=${record.handledAs.ifBlank { "-" }}, type=${record.serverTypeOrPayload().ifBlank { "-" }}, action=${record.action.ifBlank { "-" }}",
-            style = SSUType.Caption1Medium,
-            color = N500,
-        )
-        Text(
-            text = "messageId=${record.messageId.ifBlank { record.id.take(8) }}",
-            style = SSUType.Caption1Medium,
-            color = N500,
-        )
-        Text(
-            text = "from=${record.from.ifBlank { "-" }}, priority=${record.priority.ifBlank { "-" }}, ttl=${record.ttlSeconds}s",
-            style = SSUType.Caption1Medium,
-            color = N500,
-        )
-        if (record.serverRequestIdOrPayload().isNotBlank() || record.serverSentAtOrPayload().isNotBlank()) {
+        SelectionContainer {
             Text(
-                text = "serverRequest=${record.serverRequestIdOrPayload().ifBlank { "-" }}, serverSentAt=${record.serverSentAtOrPayload().toServerSentAtText()}",
-                style = SSUType.Caption1Medium,
-                color = N500,
-            )
-        }
-        if (record.detail.isNotBlank()) {
-            Text(
-                text = record.detail,
-                style = SSUType.Caption1Medium,
-                color = N500,
-            )
-        }
-        if (record.notificationTitle.isNotBlank() || record.notificationBody.isNotBlank()) {
-            Text(
-                text = "notification=${listOf(record.notificationTitle, record.notificationBody).filter { it.isNotBlank() }.joinToString(" / ")}",
+                text = "RemoteMessage\n${record.rawRemoteMessage.ifBlank { record.toRawRemoteMessageFallbackText() }}",
                 style = SSUType.Caption1Medium,
                 color = N500,
             )
         }
         Text(
-            text = "data=${record.data.toPayloadText()}",
+            text = "처리 결과: handledAs=${record.handledAs.ifBlank { "-" }}, detail=${record.detail.ifBlank { "-" }}",
             style = SSUType.Caption1Medium,
             color = N500,
         )
@@ -194,54 +171,29 @@ private fun String.toDebugTimeText(): String =
         )
     }.getOrElse { this.ifBlank { "-" } }
 
-private fun Map<String, String>.toPayloadText(): String =
+private fun FcmDebugRecord.toRawRemoteMessageFallbackText(): String = buildString {
+    appendLine("from=${from.ifBlank { "-" }}")
+    appendLine("messageId=${messageId.ifBlank { id.take(8) }}")
+    appendLine("messageType=${messageType.ifBlank { "-" }}")
+    appendLine("collapseKey=${collapseKey.ifBlank { "-" }}")
+    appendLine("sentTime=$sentTimeMillis")
+    appendLine("ttl=$ttlSeconds")
+    appendLine("priority=${priority.ifBlank { "-" }}")
+    appendLine("originalPriority=${originalPriority.ifBlank { "-" }}")
+    appendLine("notification=${if (notificationTitle.isBlank() && notificationBody.isBlank()) "null" else "{title=${notificationTitle.quote()}, body=${notificationBody.quote()}}"}")
+    append("data=${data.toRawMapText()}")
+}
+
+private fun Map<String, String>.toRawMapText(): String =
     if (isEmpty()) {
-        "-"
+        "{}"
     } else {
-        entries.joinToString(", ") { "${it.key}=${it.value}" }
+        entries.joinToString(prefix = "{", postfix = "}") { (key, value) ->
+            "${key.quote()}: ${value.quote()}"
+        }
     }
 
-private fun FcmDebugRecord.toServerPushLabel(): String {
-    val type = serverTypeOrPayload()
-    val reason = serverReasonOrPayload()
-    return when {
-        type.isNotBlank() && reason.isNotBlank() -> "$type ($reason)"
-        type.isNotBlank() -> type
-        action.isNotBlank() -> "action=$action"
-        data.isNotEmpty() -> "data-only"
-        notificationTitle.isNotBlank() || notificationBody.isNotBlank() -> "notification"
-        else -> "-"
-    }
-}
-
-private fun FcmDebugRecord.serverTypeOrPayload(): String = serverType.ifBlank { data["type"].orEmpty() }
-
-private fun FcmDebugRecord.serverReasonOrPayload(): String = serverReason.ifBlank { data["reason"].orEmpty() }
-
-private fun FcmDebugRecord.serverRequestIdOrPayload(): String =
-    serverRequestId.ifBlank { data["requestId"].orEmpty() }
-
-private fun FcmDebugRecord.serverSentAtOrPayload(): String =
-    serverSentAt.ifBlank { data["sentAt"].orEmpty() }
-
-private fun String.toServerSentAtText(): String {
-    if (isBlank()) return "-"
-
-    val epochMillis = toLongOrNull()
-    if (epochMillis != null) {
-        return runCatching {
-            DEBUG_TIME_FORMATTER.format(
-                Instant.ofEpochMilli(epochMillis).atZone(ZoneId.of("Asia/Seoul"))
-            )
-        }.getOrElse { this }
-    }
-
-    return runCatching {
-        DEBUG_TIME_FORMATTER.format(
-            Instant.parse(this).atZone(ZoneId.of("Asia/Seoul"))
-        )
-    }.getOrElse { this }
-}
+private fun String.quote(): String = "\"${replace("\\", "\\\\").replace("\"", "\\\"")}\""
 
 private fun String.toStatusColor(): Color =
     when (this) {

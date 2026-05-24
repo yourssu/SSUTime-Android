@@ -225,6 +225,7 @@ class LmsRefreshRepository(
 
                 if (status.value !in 200..299) {
                     Log.w(TAG, "Todo 백엔드 등록 실패: ${todo.title}, status=$status")
+                    Log.w(TAG, todo.toAddTodoRequest().toString())
                 }
             }.onFailure { exception ->
                 Log.e(TAG, "Todo 백엔드 등록 중 오류가 발생했습니다: ${todo.title}", exception)

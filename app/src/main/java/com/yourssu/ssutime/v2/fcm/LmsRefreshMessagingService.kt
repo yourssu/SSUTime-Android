@@ -1,17 +1,23 @@
 package com.yourssu.ssutime.v2.fcm
 
+import android.Manifest
+import android.app.PendingIntent
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Build
 import android.util.Log
+import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationManagerCompat
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
-import com.yourssu.data.TodoInfo
 import com.yourssu.data.network.FcmRequest
+import com.yourssu.ssutime.v2.CHANNEL_ID
+import com.yourssu.ssutime.v2.MainActivity
+import com.yourssu.ssutime.v2.R
 import com.yourssu.ssutime.v2.accessToken
-import com.yourssu.ssutime.v2.getRemainingDays
 import com.yourssu.ssutime.v2.network.ApiRepository
-import com.yourssu.ssutime.v2.notification.showCallAlert
 import com.yourssu.ssutime.v2.screen.login.LoginRepository
 import com.yourssu.ssutime.v2.screen.main.LmsRefreshRepository
-import com.yourssu.ssutime.v2.screen.main.MainRepository
 import com.yourssu.ssutime.v2.screen.main.RefreshSource
 import com.yourssu.ssutime.v2.screen.main.TodoRefreshResult
 import kotlinx.coroutines.CoroutineScope
@@ -25,37 +31,28 @@ import java.time.Instant
 
 private const val TAG = "LmsRefreshFCM"
 private const val ACTION_CRAWL_LMS = "crawl_lms"
-private const val TYPE_LMS_REFRESH = "lms_refresh"
-private const val TYPE_DEADLINE_CALL_ALERT = "deadline_call_alert"
-private const val TYPE_CALL_ALERT = "call_alert"
-private const val HANDLE_LMS_REFRESH = "lms_refresh"
-private const val HANDLE_CALL_ALERT = "deadline_call_alert"
-private const val HANDLE_UNKNOWN = "unknown"
 private const val REFRESH_TIMEOUT_MILLIS = 30_000L
+private const val FCM_NOTIFICATION_FALLBACK_TITLE = "SSUTime"
 
 class LmsRefreshMessagingService : FirebaseMessagingService(), KoinComponent {
     private val lmsRefreshRepository: LmsRefreshRepository by inject()
     private val loginRepository: LoginRepository by inject()
     private val apiRepository: ApiRepository by inject()
-    private val mainRepository: MainRepository by inject()
     private val fcmDebugHistoryRepository: FcmDebugHistoryRepository by inject()
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     override fun onMessageReceived(message: RemoteMessage) {
-        val messageType = message.toLmsMessageType()
-        val handledAs = messageType.debugName
+        val handledAs = message.handledAsLabel()
         val debugRecordId = runBlocking {
             fcmDebugHistoryRepository.recordReceived(message, handledAs)
         }
 
-        val result = when (messageType) {
-            LmsFcmMessageType.LmsRefresh -> refreshTodos(message).toDebugHandleResult()
-            LmsFcmMessageType.DeadlineCallAlert -> showDeadlineCallAlert()
-            LmsFcmMessageType.Unknown -> {
-                val detail = "처리하지 않는 FCM입니다. data=${message.data}"
-                Log.i(TAG, detail)
-                FcmDebugHandleResult("skipped", detail)
-            }
+        val result = runCatching {
+            handleBackendMessage(message)
+        }.getOrElse { exception ->
+            val detail = "FCM 처리 중 예외가 발생했습니다: ${exception.message ?: exception::class.java.simpleName}"
+            Log.e(TAG, detail, exception)
+            FcmHandleResult(status = "failure", detail = detail)
         }
 
         runBlocking {
@@ -68,14 +65,33 @@ class LmsRefreshMessagingService : FirebaseMessagingService(), KoinComponent {
     }
 
     override fun onNewToken(token: String) {
-        Log.d(TAG, "FCM token refreshed.")
+        Log.i(TAG, "FCM token refreshed.")
         registerTokenIfLoggedIn(token)
     }
 
+    private fun handleBackendMessage(message: RemoteMessage): FcmHandleResult {
+        val action = message.data["action"].orEmpty()
+        if (action == ACTION_CRAWL_LMS) {
+            return refreshTodos(message).toHandleResult()
+        }
+
+        val notification = message.notification
+        if (notification != null) {
+            showForegroundNotification(message)
+            return FcmHandleResult(status = "success", detail = "notification payload 표시 완료")
+        }
+
+        val actualAction = action.ifBlank { "-" }
+        val detail = "지원하지 않는 FCM action입니다. expected=$ACTION_CRAWL_LMS, actual=$actualAction"
+        Log.i(TAG, "$detail, data=${message.data}")
+        return FcmHandleResult(status = "skipped", detail = detail)
+    }
+
     private fun refreshTodos(message: RemoteMessage): TodoRefreshResult {
-        val requestId = message.data["requestId"]
-            ?: message.messageId
+        val requestId = message.messageId
+            ?: message.sentTime.takeIf { it > 0L }?.let { "fcm-$it" }
             ?: Instant.now().toString()
+
         val refreshResult = runBlocking {
             lmsRefreshRepository.refreshTodos(
                 source = RefreshSource.FCM,
@@ -92,31 +108,10 @@ class LmsRefreshMessagingService : FirebaseMessagingService(), KoinComponent {
         return refreshResult
     }
 
-    private fun showDeadlineCallAlert(): FcmDebugHandleResult {
-        val todo = runBlocking {
-            mainRepository.getTodoData().todos.selectMostUrgentTodo()
-        }
-        if (todo == null) {
-            val detail = "전화 알림을 표시할 Todo가 없습니다."
-            Log.i(TAG, detail)
-            return FcmDebugHandleResult("skipped", detail)
-        }
-
-        showCallAlert(this, todo)
-        return FcmDebugHandleResult("success", "전화 알림 표시: ${todo.title}")
-    }
-
-    private fun List<TodoInfo>.selectMostUrgentTodo(): TodoInfo? = minWithOrNull(
-        compareBy<TodoInfo> { getRemainingDays(it.due_date) }
-            .thenBy { it.due_date },
-    )
-
     private fun registerTokenIfLoggedIn(token: String) {
         serviceScope.launch {
             val loginData = loginRepository.getLoginData()
-            val bearerToken = accessToken.ifBlank {
-                loginData.accessToken.takeIf { loginData.isAutoLogin }.orEmpty()
-            }
+            val bearerToken = accessToken.ifBlank { loginData.accessToken }
             if (bearerToken.isBlank()) {
                 Log.i(TAG, "로그인 정보가 없어 FCM 토큰 등록을 건너뜁니다.")
                 return@launch
@@ -125,60 +120,76 @@ class LmsRefreshMessagingService : FirebaseMessagingService(), KoinComponent {
             accessToken = bearerToken
             runCatching {
                 apiRepository.registerFCMToken(FcmRequest(token))
-            }.onSuccess {
-                Log.i(TAG, "FCM 토큰이 등록되었습니다.")
+            }.onSuccess { status ->
+                Log.i(TAG, "FCM 토큰이 등록되었습니다. status=$status")
             }.onFailure { exception ->
                 Log.e(TAG, "FCM 토큰 등록에 실패했습니다.", exception)
             }
         }
     }
 
-}
+    private fun showForegroundNotification(message: RemoteMessage) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+        ) {
+            Log.i(TAG, "알림 권한이 없어 foreground FCM notification을 표시하지 않습니다.")
+            return
+        }
 
-private enum class LmsFcmMessageType(
-    val debugName: String,
-) {
-    LmsRefresh(HANDLE_LMS_REFRESH),
-    DeadlineCallAlert(HANDLE_CALL_ALERT),
-    Unknown(HANDLE_UNKNOWN),
-}
+        val notification = message.notification ?: return
+        val notificationId = message.messageId?.hashCode()
+            ?: (System.currentTimeMillis() % Int.MAX_VALUE).toInt()
+        val title = notification.title.orEmpty().ifBlank { FCM_NOTIFICATION_FALLBACK_TITLE }
+        val body = notification.body.orEmpty()
+        val appOpenIntent = PendingIntent.getActivity(
+            this,
+            notificationId,
+            Intent(this, MainActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            },
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
 
-private fun RemoteMessage.toLmsMessageType(): LmsFcmMessageType {
-    val action = data["action"]
-    val type = data["type"]
+        val builder = NotificationCompat.Builder(this, CHANNEL_ID)
+            .setSmallIcon(R.drawable.ssutime_launcher_foreground)
+            .setContentTitle(title)
+            .setContentText(body)
+            .setContentIntent(appOpenIntent)
+            .setAutoCancel(true)
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+        if (body.isNotBlank()) {
+            builder.setStyle(NotificationCompat.BigTextStyle().bigText(body))
+        }
 
-    return when {
-        type == TYPE_LMS_REFRESH || action == TYPE_LMS_REFRESH || action == ACTION_CRAWL_LMS ->
-            LmsFcmMessageType.LmsRefresh
-
-        type == TYPE_DEADLINE_CALL_ALERT ||
-            action == TYPE_DEADLINE_CALL_ALERT ||
-            type == TYPE_CALL_ALERT ||
-            action == TYPE_CALL_ALERT ->
-            LmsFcmMessageType.DeadlineCallAlert
-
-        else -> LmsFcmMessageType.Unknown
+        NotificationManagerCompat.from(this).notify(notificationId, builder.build())
     }
 }
 
-private data class FcmDebugHandleResult(
+private data class FcmHandleResult(
     val status: String,
     val detail: String,
 )
 
-private fun TodoRefreshResult.toDebugHandleResult(): FcmDebugHandleResult =
+private fun RemoteMessage.handledAsLabel(): String =
+    when {
+        data["action"] == ACTION_CRAWL_LMS -> ACTION_CRAWL_LMS
+        notification != null -> "notification"
+        else -> "unsupported"
+    }
+
+private fun TodoRefreshResult.toHandleResult(): FcmHandleResult =
     when (this) {
-        is TodoRefreshResult.Success -> FcmDebugHandleResult(
+        is TodoRefreshResult.Success -> FcmHandleResult(
             status = "success",
             detail = "백그라운드 새로고침 완료: todos=${summary.todoCount}, submitted=${summary.submittedCount}, semesters=${summary.semesterCount}",
         )
 
-        is TodoRefreshResult.Failure -> FcmDebugHandleResult(
+        is TodoRefreshResult.Failure -> FcmHandleResult(
             status = "failure",
             detail = message,
         )
 
-        is TodoRefreshResult.Skipped -> FcmDebugHandleResult(
+        is TodoRefreshResult.Skipped -> FcmHandleResult(
             status = "skipped",
             detail = reason,
         )

@@ -50,7 +50,7 @@ class ApiRepository {
         return response.body()
     }
 
-    suspend fun registerFCMToken(fcmRequest: FcmRequest) {
+    suspend fun registerFCMToken(fcmRequest: FcmRequest): HttpStatusCode {
         val response = client.post(
             urlString = "https://ssutimev2-api-dev.yourssu.com/auth/devices"
         ) {
@@ -59,6 +59,7 @@ class ApiRepository {
             setBody(fcmRequest)
         }
         Log.i("ApiRepository", "FCM token registered: ${response.status}")
+        return response.status
     }
 
     suspend fun setNotificationSetting(enabled: Boolean, minutes: Long): NotificationSetting {
