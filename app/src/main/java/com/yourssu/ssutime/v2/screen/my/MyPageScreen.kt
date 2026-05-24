@@ -83,6 +83,7 @@ fun MyPageScreen(
     val coroutine = rememberCoroutineScope()
     val context = LocalContext.current
     val alertState by viewModel.uiState.collectAsStateWithLifecycle()
+    val fcmToken by viewModel.fcmToken.collectAsStateWithLifecycle()
     val fcmDebugRecords by viewModel.fcmDebugRecords.collectAsStateWithLifecycle()
     var alertData by remember { mutableStateOf<AlertData>(AlertData(valid = false, false, false, -1)) }
 
@@ -225,6 +226,8 @@ fun MyPageScreen(
                     context.startActivity(context.fullScreenIntentSettingsIntent())
                 }
             },
+            fcmToken = fcmToken,
+            onRefreshFcmToken = { viewModel.refreshFcmToken() },
             fcmRecords = fcmDebugRecords,
             onClearFcmHistory = { viewModel.clearFcmDebugHistory() },
         )

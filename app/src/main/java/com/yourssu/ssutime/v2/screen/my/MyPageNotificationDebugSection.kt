@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -28,6 +29,8 @@ fun NotificationDebugSection(
     onScheduleCallAlert: () -> Unit,
     onScheduleNormalAlert: () -> Unit,
     onOpenFullScreenIntentSettings: () -> Unit,
+    fcmToken: String,
+    onRefreshFcmToken: () -> Unit,
     fcmRecords: List<FcmDebugRecord>,
     onClearFcmHistory: () -> Unit,
     modifier: Modifier = Modifier,
@@ -61,6 +64,22 @@ fun NotificationDebugSection(
         if (FCM_DEBUG_HISTORY_ENABLED) {
             Text(
                 modifier = Modifier.padding(top = 16.dp),
+                text = "내 FCM 토큰",
+                style = SSUType.H5SemiBold,
+            )
+            Text(
+                text = "현재 설치된 앱 인스턴스에 발급된 토큰입니다.",
+                style = SSUType.Caption1Medium,
+                color = N300,
+            )
+            FcmTokenCard(fcmToken)
+            OptionButton(
+                text = "FCM 토큰 다시 불러오기",
+                onClick = onRefreshFcmToken,
+            )
+
+            Text(
+                modifier = Modifier.padding(top = 8.dp),
                 text = "FCM 수신 기록",
                 style = SSUType.H5SemiBold,
             )
@@ -85,6 +104,22 @@ fun NotificationDebugSection(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun FcmTokenCard(token: String) {
+    SelectionContainer {
+        Text(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(12.dp))
+                .background(N100)
+                .padding(14.dp),
+            text = token,
+            style = SSUType.Caption1Medium,
+            color = N500,
+        )
     }
 }
 
