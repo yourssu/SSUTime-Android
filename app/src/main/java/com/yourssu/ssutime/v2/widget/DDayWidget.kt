@@ -60,7 +60,6 @@ import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
 import kotlin.math.abs
-import kotlin.math.max
 
 private const val TAG = "DDayWidget"
 private const val SECONDS_PER_DAY = 24 * 60 * 60L
@@ -109,8 +108,12 @@ private fun DDayContent(uiState: DDayWidgetUiState) {
                 .size(squareSize)
                 .clickable(openAppAction),
         ) {
-            if (uiState.hasTodo) {
-                DDayTodoContent(uiState = uiState)
+            val backgroundResId = uiState.backgroundResId
+            if (uiState.hasTodo && backgroundResId != null) {
+                DDayTodoContent(
+                    uiState = uiState,
+                    backgroundResId = backgroundResId,
+                )
             } else {
                 DDayEmptyContent()
             }
@@ -120,9 +123,12 @@ private fun DDayContent(uiState: DDayWidgetUiState) {
 
 @Composable
 @GlanceComposable
-private fun DDayTodoContent(uiState: DDayWidgetUiState) {
+private fun DDayTodoContent(
+    uiState: DDayWidgetUiState,
+    backgroundResId: Int,
+) {
     Image(
-        provider = ImageProvider(uiState.backgroundResId),
+        provider = ImageProvider(backgroundResId),
         contentDescription = null,
         contentScale = ContentScale.Crop,
         modifier = GlanceModifier.fillMaxSize(),
@@ -223,7 +229,7 @@ private data class DDayWidgetUiState(
     val dDayText: String,
     val isRemainingTimeText: Boolean,
     val updatedAtText: String,
-    val backgroundResId: Int,
+    val backgroundResId: Int?,
 )
 
 private fun TodoData.toWidgetUiState(context: Context): DDayWidgetUiState {
@@ -232,18 +238,26 @@ private fun TodoData.toWidgetUiState(context: Context): DDayWidgetUiState {
     val remainingDays = selectedTodo?.let {
         getRemainingDays(it.due_date, now)
     } ?: Long.MAX_VALUE
-    val remainingSeconds = selectedTodo?.remainingSecondsUntil(now) ?: Long.MAX_VALUE
-    val isRemainingTimeText = selectedTodo != null && remainingSeconds <= SECONDS_PER_DAY
+    val remainingSeconds = selectedTodo?.secondsUntil(now) ?: Long.MAX_VALUE
+    val displayRemainingSeconds = remainingSeconds.coerceAtLeast(0L)
+    val isRemainingTimeText = selectedTodo != null && displayRemainingSeconds <= SECONDS_PER_DAY
 
     return DDayWidgetUiState(
         hasTodo = selectedTodo != null,
         subjectName = selectedTodo?.subject?.name ?: "표시할 과제가 없어요",
         type = selectedTodo?.type?.kor
             ?: "앱에서 새로고침해 주세요",
-        dDayText = selectedTodo.toDdayText(remainingDays, remainingSeconds),
+        dDayText = selectedTodo.toDdayText(remainingDays, displayRemainingSeconds),
         isRemainingTimeText = isRemainingTimeText,
         updatedAtText = loadedAt.toUpdatedAtText(context),
-        backgroundResId = backgroundFor(selectedTodo, loadedAt, remainingDays),
+        backgroundResId = selectedTodo?.let {
+            backgroundFor(
+                todo = it,
+                loadedAt = loadedAt,
+                remainingDays = remainingDays,
+                remainingSeconds = remainingSeconds,
+            )
+        },
     )
 }
 
@@ -264,10 +278,8 @@ private fun TodoInfo?.toDdayText(remainingDays: Long, remainingSeconds: Long): S
     }
 }
 
-private fun TodoInfo.remainingSecondsUntil(now: Instant): Long = max(
-    0L,
-    ChronoUnit.SECONDS.between(now, parseWidgetTargetInstant(due_date)),
-)
+private fun TodoInfo.secondsUntil(now: Instant): Long =
+    ChronoUnit.SECONDS.between(now, parseWidgetTargetInstant(due_date))
 
 private fun Long.toWidgetRemainingTimeText(): String {
     val hours = this / 3600
@@ -299,9 +311,18 @@ private fun String.toUpdatedAtText(context: Context): String {
     return "업데이트 ${getStringSimpleDate(context, this)}"
 }
 
-private fun backgroundFor(todo: TodoInfo?, loadedAt: String, remainingDays: Long): Int {
-    if (todo == null) {
-        return R.drawable.oth_1
+private fun backgroundFor(
+    todo: TodoInfo,
+    loadedAt: String,
+    remainingDays: Long,
+    remainingSeconds: Long,
+): Int {
+    if (remainingSeconds < 0) {
+        return R.drawable.dlate
+    }
+
+    if (remainingSeconds <= SECONDS_PER_DAY) {
+        return R.drawable.d0
     }
 
     val urgentBackgrounds = intArrayOf(R.drawable.d1_1, R.drawable.d1_2)
@@ -324,7 +345,7 @@ private fun DDayWidgetEmptyPreview() {
             dDayText = "",
             isRemainingTimeText = false,
             updatedAtText = "",
-            backgroundResId = R.drawable.oth_1,
+            backgroundResId = null,
         ),
     )
 }
