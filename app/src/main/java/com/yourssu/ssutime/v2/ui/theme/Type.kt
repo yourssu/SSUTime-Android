@@ -304,6 +304,12 @@ internal object SSUType {
         letterSpacing = (-0.18).sp
     )
 
+    val G_Caption2SemiBold = androidx.glance.text.TextStyle(
+        fontWeight = androidx.glance.text.FontWeight.Bold,
+        fontSize = 10.sp,
+        color = White
+    )
+
     val Caption3Regular = TextStyle(
         fontFamily = FontFamily.Default,
         fontWeight = FontWeight.W400,

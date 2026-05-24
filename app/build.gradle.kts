@@ -52,6 +52,8 @@ android {
 }
 
 dependencies {
+    val glanceVersion = "1.1.1"
+
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.compose.material3)
@@ -70,9 +72,10 @@ dependencies {
     implementation("com.google.firebase:firebase-inappmessaging")
     implementation("com.google.firebase:firebase-inappmessaging-display")
 
-    implementation("androidx.glance:glance-appwidget:1.1.1")
-    implementation("androidx.glance:glance-material3:1.1.1")
-    implementation("androidx.glance:glance-material:1.1.1")
+    implementation("androidx.glance:glance-appwidget:$glanceVersion")
+    implementation("androidx.glance:glance-material3:$glanceVersion")
+    implementation("androidx.glance:glance-material:$glanceVersion")
+    compileOnly("androidx.glance:glance-preview:$glanceVersion")
     implementation(libs.androidx.work.runtime.ktx)
 
     implementation(libs.ktor.client.core)
@@ -103,8 +106,8 @@ dependencies {
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(libs.androidx.junit)
-    debugImplementation("androidx.glance:glance-preview:1.1.1")
-    debugImplementation("androidx.glance:glance-appwidget-preview:1.1.1")
+    debugImplementation("androidx.glance:glance-preview:$glanceVersion")
+    debugImplementation("androidx.glance:glance-appwidget-preview:$glanceVersion")
     debugImplementation(libs.androidx.compose.ui.test.manifest)
     debugImplementation(libs.androidx.compose.ui.tooling)
 }
