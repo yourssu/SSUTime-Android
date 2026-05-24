@@ -62,6 +62,7 @@ import java.time.temporal.ChronoUnit
 import java.util.Locale
 
 private const val SUMMARY_EMPTY_TEXT = "모든 할 일을 수행했어요!"
+private const val SUMMARY_SECONDS_PER_DAY = 24 * 60 * 60L
 
 private val summaryBackground = ColorProvider(day = Color.White, night = Color(0xFF1C1C1E))
 private val summaryCardBackground = ColorProvider(day = Color(0xFFFFE8E8), night = Color(0xFF3A2528))
@@ -677,16 +678,21 @@ private fun TodoInfo.toTodoSummaryItem(now: Instant): TodoSummaryItem {
     val rawRemainingSeconds = ChronoUnit.SECONDS.between(now, dueInstant)
     val remainingSeconds = rawRemainingSeconds.coerceAtLeast(0L)
     val remainingDays = ChronoUnit.DAYS.between(now, dueInstant).coerceAtLeast(0L)
+    val dDayText = "D-$remainingDays"
 
     return TodoSummaryItem(
         subjectName = subject?.name.toWidgetSubjectName(),
         title = title.takeIf { it.isNotBlank() } ?: type.kor,
         type = type.kor,
-        countdownText = remainingSeconds.toSummaryCountdownText(),
+        countdownText = if (remainingSeconds <= SUMMARY_SECONDS_PER_DAY) {
+            remainingSeconds.toSummaryCountdownText()
+        } else {
+            dDayText
+        },
         countdownTargetEpochMillis = dueInstant
             .toEpochMilli()
-            .takeIf { remainingSeconds > 0L },
-        dDayText = "D-$remainingDays",
+            .takeIf { remainingSeconds in 1..SUMMARY_SECONDS_PER_DAY },
+        dDayText = dDayText,
         isLate = rawRemainingSeconds < 0L,
     )
 }
