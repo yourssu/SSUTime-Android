@@ -10,7 +10,6 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
-import android.provider.Settings
 import android.util.Log
 import androidx.annotation.RequiresApi
 import com.yourssu.data.TodoInfo
@@ -109,17 +108,6 @@ private fun Context.logFullScreenIntentPermission() {
         )
     }
 }
-
-internal fun Context.fullScreenIntentSettingsIntent(): Intent =
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-        Intent(Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT).apply {
-            data = android.net.Uri.parse("package:$packageName")
-        }
-    } else {
-        Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-            data = android.net.Uri.parse("package:$packageName")
-        }
-    }
 
 private fun Context.callActionIntent(notificationId: Int, action: String): PendingIntent = PendingIntent.getBroadcast(
     this,

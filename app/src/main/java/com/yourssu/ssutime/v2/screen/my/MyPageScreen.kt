@@ -48,7 +48,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -57,7 +56,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.yourssu.data.AlertData
 import com.yourssu.data.UiState
 import com.yourssu.ssutime.v2.R
-import com.yourssu.ssutime.v2.notification.fullScreenIntentSettingsIntent
 import com.yourssu.ssutime.v2.ui.theme.N100
 import com.yourssu.ssutime.v2.ui.theme.N200
 import com.yourssu.ssutime.v2.ui.theme.N300
@@ -81,11 +79,7 @@ fun MyPageScreen(
         isPersistent = true
     )
     val coroutine = rememberCoroutineScope()
-    val context = LocalContext.current
     val alertState by viewModel.uiState.collectAsStateWithLifecycle()
-    val fcmToken by viewModel.fcmToken.collectAsStateWithLifecycle()
-    val fcmTokenRegistrationStatus by viewModel.fcmTokenRegistrationStatus.collectAsStateWithLifecycle()
-    val fcmDebugRecords by viewModel.fcmDebugRecords.collectAsStateWithLifecycle()
     var alertData by remember { mutableStateOf<AlertData>(AlertData(valid = false, false, false, -1)) }
 
 
@@ -216,24 +210,6 @@ fun MyPageScreen(
                 }
             )
         }
-
-        Spacer(Modifier.height(28.dp))
-
-        NotificationDebugSection(
-            onScheduleCallAlert = { viewModel.scheduleDebugCallAlert(context) },
-            onScheduleNormalAlert = { viewModel.scheduleDebugNormalAlert(context) },
-            onOpenFullScreenIntentSettings = {
-                runCatching {
-                    context.startActivity(context.fullScreenIntentSettingsIntent())
-                }
-            },
-            fcmToken = fcmToken,
-            fcmTokenRegistrationStatus = fcmTokenRegistrationStatus,
-            onRefreshFcmToken = { viewModel.refreshFcmToken() },
-            onRegisterFcmToken = { viewModel.registerCurrentFcmToken() },
-            fcmRecords = fcmDebugRecords,
-            onClearFcmHistory = { viewModel.clearFcmDebugHistory() },
-        )
 
         Spacer(Modifier.height(28.dp))
 

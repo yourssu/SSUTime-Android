@@ -38,29 +38,14 @@ class LmsRefreshMessagingService : FirebaseMessagingService(), KoinComponent {
     private val lmsRefreshRepository: LmsRefreshRepository by inject()
     private val loginRepository: LoginRepository by inject()
     private val apiRepository: ApiRepository by inject()
-    private val fcmDebugHistoryRepository: FcmDebugHistoryRepository by inject()
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     override fun onMessageReceived(message: RemoteMessage) {
-        val handledAs = message.handledAsLabel()
-        val debugRecordId = runBlocking {
-            fcmDebugHistoryRepository.recordReceived(message, handledAs)
-        }
-
-        val result = runCatching {
+        runCatching {
             handleBackendMessage(message)
-        }.getOrElse { exception ->
+        }.onFailure { exception ->
             val detail = "FCM 처리 중 예외가 발생했습니다: ${exception.message ?: exception::class.java.simpleName}"
             Log.e(TAG, detail, exception)
-            FcmHandleResult(status = "failure", detail = detail)
-        }
-
-        runBlocking {
-            fcmDebugHistoryRepository.markHandled(
-                recordId = debugRecordId,
-                status = result.status,
-                detail = result.detail,
-            )
         }
     }
 
@@ -69,25 +54,25 @@ class LmsRefreshMessagingService : FirebaseMessagingService(), KoinComponent {
         registerTokenIfLoggedIn(token)
     }
 
-    private fun handleBackendMessage(message: RemoteMessage): FcmHandleResult {
+    private fun handleBackendMessage(message: RemoteMessage) {
         val action = message.data["action"].orEmpty()
         if (action == ACTION_CRAWL_LMS) {
-            return refreshTodos(message).toHandleResult()
+            refreshTodos(message)
+            return
         }
 
         val notification = message.notification
         if (notification != null) {
             showForegroundNotification(message)
-            return FcmHandleResult(status = "success", detail = "notification payload 표시 완료")
+            return
         }
 
         val actualAction = action.ifBlank { "-" }
         val detail = "지원하지 않는 FCM action입니다. expected=$ACTION_CRAWL_LMS, actual=$actualAction"
         Log.i(TAG, "$detail, data=${message.data}")
-        return FcmHandleResult(status = "skipped", detail = detail)
     }
 
-    private fun refreshTodos(message: RemoteMessage): TodoRefreshResult {
+    private fun refreshTodos(message: RemoteMessage) {
         val requestId = message.messageId
             ?: message.sentTime.takeIf { it > 0L }?.let { "fcm-$it" }
             ?: Instant.now().toString()
@@ -105,7 +90,6 @@ class LmsRefreshMessagingService : FirebaseMessagingService(), KoinComponent {
             is TodoRefreshResult.Failure -> Log.e(TAG, refreshResult.message, refreshResult.throwable)
             is TodoRefreshResult.Skipped -> Log.i(TAG, refreshResult.reason)
         }
-        return refreshResult
     }
 
     private fun registerTokenIfLoggedIn(token: String) {
@@ -164,33 +148,3 @@ class LmsRefreshMessagingService : FirebaseMessagingService(), KoinComponent {
         NotificationManagerCompat.from(this).notify(notificationId, builder.build())
     }
 }
-
-private data class FcmHandleResult(
-    val status: String,
-    val detail: String,
-)
-
-private fun RemoteMessage.handledAsLabel(): String =
-    when {
-        data["action"] == ACTION_CRAWL_LMS -> ACTION_CRAWL_LMS
-        notification != null -> "notification"
-        else -> "unsupported"
-    }
-
-private fun TodoRefreshResult.toHandleResult(): FcmHandleResult =
-    when (this) {
-        is TodoRefreshResult.Success -> FcmHandleResult(
-            status = "success",
-            detail = "백그라운드 새로고침 완료: todos=${summary.todoCount}, submitted=${summary.submittedCount}, semesters=${summary.semesterCount}",
-        )
-
-        is TodoRefreshResult.Failure -> FcmHandleResult(
-            status = "failure",
-            detail = message,
-        )
-
-        is TodoRefreshResult.Skipped -> FcmHandleResult(
-            status = "skipped",
-            detail = reason,
-        )
-    }
