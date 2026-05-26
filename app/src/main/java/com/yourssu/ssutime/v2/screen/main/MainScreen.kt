@@ -1,7 +1,10 @@
 package com.yourssu.ssutime.v2.screen.main
 
 import android.Manifest
+import android.content.Context
 import android.content.pm.PackageManager
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -57,6 +60,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
@@ -75,6 +79,7 @@ import com.yourssu.ssutime.v2.getStringSimpleDate
 import com.yourssu.ssutime.v2.ui.theme.G100
 import com.yourssu.ssutime.v2.ui.theme.G400
 import com.yourssu.ssutime.v2.ui.theme.N100
+import com.yourssu.ssutime.v2.ui.theme.N200
 import com.yourssu.ssutime.v2.ui.theme.N300
 import com.yourssu.ssutime.v2.ui.theme.R100
 import com.yourssu.ssutime.v2.ui.theme.R400
@@ -99,7 +104,11 @@ fun MainScreen(
     val context = LocalContext.current
     var showSubmittedBottomSheet by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) {
-        viewModel.loadTodos(allowRefresh = !skipInitialLmsRefresh)
+        if (context.isNetworkConnected()) {
+            viewModel.loadTodos(allowRefresh = !skipInitialLmsRefresh)
+        } else {
+            viewModel.showNetworkErrorScreen()
+        }
         if (skipInitialLmsRefresh) {
             onInitialLmsRefreshSkipConsumed()
         }
@@ -122,20 +131,39 @@ fun MainScreen(
             )
         }
     ) { innerPadding ->
-        MainFragment(
-            innerPadding = innerPadding,
-            todos = viewModel.todos,
-            submitted = viewModel.submitted,
-            loadedAt = viewModel.loadedAt.value,
-            onClickRefresh = {
-                coroutine.launch {
-                    viewModel.loadTodos(forceRefresh = true)
+        if (viewModel.showNetworkError.value) {
+            NetworkErrorFragment(
+                modifier = Modifier.padding(innerPadding),
+                onRefreshClick = {
+                    coroutine.launch {
+                        if (context.isNetworkConnected()) {
+                            viewModel.loadTodos(forceRefresh = true)
+                        } else {
+                            viewModel.showNetworkErrorScreen()
+                        }
+                    }
                 }
-            },
-            onClickSubmitted = {
-                showSubmittedBottomSheet = true
-            }
-        )
+            )
+        } else {
+            MainFragment(
+                innerPadding = innerPadding,
+                todos = viewModel.todos,
+                submitted = viewModel.submitted,
+                loadedAt = viewModel.loadedAt.value,
+                onClickRefresh = {
+                    coroutine.launch {
+                        if (context.isNetworkConnected()) {
+                            viewModel.loadTodos(forceRefresh = true)
+                        } else {
+                            viewModel.showNetworkErrorScreen()
+                        }
+                    }
+                },
+                onClickSubmitted = {
+                    showSubmittedBottomSheet = true
+                }
+            )
+        }
 
         if(viewModel.requiredShowAlertBottomSheet.value) {
             CallingAlertBottomSheet(
@@ -263,6 +291,52 @@ fun MainScreen(
             }
 
     }
+}
+
+@Preview
+@Composable
+fun NetworkErrorFragment(
+    modifier: Modifier = Modifier,
+    onRefreshClick: () -> Unit = {}
+) {
+    Column(
+        modifier = modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            text = "인터넷 연결이 불안정해요",
+            style = SSUType.H3Medium
+        )
+        Text(
+            textAlign = TextAlign.Center,
+            text = "Wi-Fi나 셀룰러 데이터 연결 상태를\n" +
+                    "확인하고 다시 시도해주세요.",
+            style = SSUType.Body2Regular
+        )
+
+        Spacer(modifier = Modifier.height(20.dp))
+        Box(
+            modifier = Modifier
+                .clip(RoundedCornerShape(8.dp))
+                .clickable { onRefreshClick() }
+                .background(N200)
+                .padding(horizontal = 24.dp, vertical = 8.dp)
+        ) {
+            Text(
+                text = "재시도",
+                style = SSUType.Label2Medium,
+            )
+        }
+    }
+}
+
+private fun Context.isNetworkConnected(): Boolean {
+    val connectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+    val activeNetwork = connectivityManager.activeNetwork ?: return false
+    val capabilities = connectivityManager.getNetworkCapabilities(activeNetwork) ?: return false
+    return capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
+        capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
 }
 
 @Composable
@@ -574,7 +648,7 @@ fun TodoItem(
                             Spacer(Modifier.width(6.dp))
 
                             Text(
-                                modifier = Modifier.fillMaxWidth(0.8f),
+                                modifier = Modifier.fillMaxWidth(0.9f),
                                 maxLines = 1,
                                 text = todoInfo.subject?.name ?: "알 수 없는 과목",
                                 style = SSUType.H5SemiBold
@@ -590,7 +664,7 @@ fun TodoItem(
                     Spacer(Modifier.height(4.dp))
 
                     Text(
-                        modifier = Modifier.fillMaxWidth(0.8f),
+                        modifier = Modifier.fillMaxWidth(0.9f),
                         maxLines = 1,
                         text = todoInfo.title,
                         style = SSUType.H4SemiBold
@@ -652,7 +726,7 @@ fun SubmittedItem(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(
-                            modifier = Modifier.fillMaxWidth(0.8f),
+                            modifier = Modifier.fillMaxWidth(0.9f),
                             maxLines = 1,
                             text = todoInfo.subject?.name ?: "알 수 없는 과목",
                             style = SSUType.Caption1SemiBold
@@ -662,7 +736,7 @@ fun SubmittedItem(
                     Spacer(Modifier.height(4.dp))
 
                     Text(
-                        modifier = Modifier.fillMaxWidth(0.8f),
+                        modifier = Modifier.fillMaxWidth(0.9f),
                         maxLines = 1,
                         text = todoInfo.title,
                         style = SSUType.H5SemiBold

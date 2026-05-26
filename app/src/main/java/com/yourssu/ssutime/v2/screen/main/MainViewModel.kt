@@ -29,6 +29,7 @@ class MainViewModel(
     var showLoading = mutableStateOf(false)
     var loadingProgress = mutableFloatStateOf(0f)
     var loadedAt = mutableStateOf("")
+    var showNetworkError = mutableStateOf(false)
 
     var requiredShowAlertBottomSheet = mutableStateOf(false)
 
@@ -46,6 +47,10 @@ class MainViewModel(
         requiredShowAlertBottomSheet.value = false
     }
 
+    fun showNetworkErrorScreen() {
+        showNetworkError.value = true
+    }
+
     suspend fun loadTodos(forceRefresh: Boolean = false, allowRefresh: Boolean = true) {
         if(isLoading.value) {
             return
@@ -53,6 +58,7 @@ class MainViewModel(
 
         isLoading.value = true
         loadingProgress.value = 0f
+        showNetworkError.value = false
 
         try {
             val cachedTodoData = mainRepository.getTodoData()
@@ -80,6 +86,7 @@ class MainViewModel(
             )) {
                 is TodoRefreshResult.Success -> {
                     loadingProgress.value = 1f
+                    showNetworkError.value = false
                     updateTodoState(refreshResult.todoData)
                 }
 
@@ -89,11 +96,13 @@ class MainViewModel(
 
                 is TodoRefreshResult.Failure -> {
                     Log.e(javaClass.name, refreshResult.message, refreshResult.throwable)
+                    showNetworkError.value = true
                 }
             }
         } catch(e: Exception) {
             if(e is CancellationException) throw e
             Log.e(javaClass.name, "과제 정보를 갱신하지 못했습니다.", e)
+            showNetworkError.value = true
         } finally {
             isLoading.value = false
             showLoading.value = false
