@@ -553,8 +553,15 @@ fun TodoItem(
                             Text(
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(6.dp))
-                                    .background(Color(0xFFF7DBF7))
-                                    .padding(6.dp),
+                                    .background(
+                                        when(todoInfo.type) {
+                                            TodoType.COMMONS -> Color(0xFFF7DBF7)
+                                            TodoType.QUIZ -> Color(0xFFFFD7C2)
+                                            TodoType.ASSIGNMENT -> Color(0xFFD8E5F7)
+                                            else -> Color(0xFFF7DBF7)
+                                        }
+                                    )
+                                    .padding(horizontal = 6.dp, vertical = 3.dp),
                                 text = todoInfo.type.kor,
                                 style = SSUType.Caption1SemiBold
                             )
