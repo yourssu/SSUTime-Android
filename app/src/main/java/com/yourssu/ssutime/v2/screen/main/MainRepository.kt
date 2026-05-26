@@ -7,7 +7,9 @@ import com.yourssu.data.AlertData
 import com.yourssu.data.TodoData
 import com.yourssu.ssutime.v2.network.ApiRepository
 import com.yourssu.ssutime.v2.notification.cancelDeadlineNotifications
+import com.yourssu.ssutime.v2.notification.scheduleDeadlineNotifications
 import com.yourssu.ssutime.v2.notification.sendDeadlineNotificationsIfNeeded
+import com.yourssu.ssutime.v2.notification.withSentDeadlineReminderKeys
 import com.yourssu.ssutime.v2.widget.updateAllTodoWidgets
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
@@ -59,22 +61,15 @@ class MainRepository(
 
     private suspend fun updateDeadlineNotifications(todoData: TodoData) {
         if (getAlertData().allowSystemAlert) {
+            scheduleDeadlineNotifications(context)
             val result = sendDeadlineNotificationsIfNeeded(context, todoData)
             if (result.sentKeys.isNotEmpty()) {
                 todoDataStore.updateData { currentData ->
-                    currentData.copy(
-                        sentDeadlineReminderKeys = (currentData.sentDeadlineReminderKeys + result.sentKeys)
-                            .distinct()
-                            .takeLast(MAX_SENT_DEADLINE_REMINDER_KEYS),
-                    )
+                    currentData.withSentDeadlineReminderKeys(result.sentKeys)
                 }
             }
         } else {
             cancelDeadlineNotifications(context)
         }
-    }
-
-    private companion object {
-        const val MAX_SENT_DEADLINE_REMINDER_KEYS = 500
     }
 }

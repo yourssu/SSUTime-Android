@@ -1,7 +1,9 @@
 package com.yourssu.ssutime.v2.notification
 
 import android.Manifest
+import android.app.AlarmManager
 import android.app.PendingIntent
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -14,6 +16,13 @@ import com.yourssu.data.TodoInfo
 import com.yourssu.ssutime.v2.CHANNEL_ID
 import com.yourssu.ssutime.v2.MainActivity
 import com.yourssu.ssutime.v2.R
+import com.yourssu.ssutime.v2.screen.main.notificationStore
+import com.yourssu.ssutime.v2.screen.main.todoDataStore
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import java.time.Duration
 import java.time.Instant
 import java.time.LocalDateTime
@@ -25,6 +34,10 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 private const val DEADLINE_REMINDER_TAG = "deadline_reminder"
+private const val MORNING_REMINDER_REQUEST_CODE = 90_000
+private const val EVENING_REMINDER_REQUEST_CODE = 180_000
+private const val EXTRA_DEADLINE_REMINDER_TRIGGER_AT_MILLIS = "extra_deadline_reminder_trigger_at_millis"
+private const val MAX_SENT_DEADLINE_REMINDER_KEYS = 500
 
 private val DEADLINE_ZONE_ID: ZoneId = ZoneId.of("Asia/Seoul")
 private val D_DAY_NOTIFY_TIME: LocalTime = LocalTime.of(9, 0)
@@ -37,13 +50,25 @@ data class DeadlineReminderSendResult(
     val sentKeys: List<String> = emptyList(),
 )
 
+fun scheduleDeadlineNotifications(context: Context) {
+    cancelLegacyDeadlineWorkers(context)
+    scheduleDeadlineReminderAlarm(
+        context = context.applicationContext,
+        requestCode = MORNING_REMINDER_REQUEST_CODE,
+        triggerTime = D_DAY_NOTIFY_TIME,
+    )
+    scheduleDeadlineReminderAlarm(
+        context = context.applicationContext,
+        requestCode = EVENING_REMINDER_REQUEST_CODE,
+        triggerTime = UPCOMING_NOTIFY_TIME,
+    )
+}
+
 fun sendDeadlineNotificationsIfNeeded(
     context: Context,
     todoData: TodoData,
     now: Instant = Instant.now(),
 ): DeadlineReminderSendResult {
-    cancelLegacyDeadlineWorkers(context)
-
     if (!context.canPostNotifications()) {
         return DeadlineReminderSendResult()
     }
@@ -64,6 +89,7 @@ fun sendDeadlineNotificationsIfNeeded(
                 reminders.forEach { reminder ->
                     context.showDeadlineNotification(
                         key = reminder.key,
+                        title = buildDeadlineNotificationTitle(reminder.daysBefore),
                         message = buildDdayDeadlineMessage(reminder.todo),
                         representativeTodo = reminder.todo,
                     )
@@ -75,6 +101,7 @@ fun sendDeadlineNotificationsIfNeeded(
                 val notificationKey = sortedReminders.joinToString(separator = "|") { it.key }
                 context.showDeadlineNotification(
                     key = notificationKey,
+                    title = buildDeadlineNotificationTitle(daysBefore),
                     message = message,
                     representativeTodo = sortedReminders.first().todo,
                 )
@@ -86,7 +113,26 @@ fun sendDeadlineNotificationsIfNeeded(
 }
 
 fun cancelDeadlineNotifications(context: Context) {
+    val alarmManager = context.getSystemService(AlarmManager::class.java)
+    listOf(MORNING_REMINDER_REQUEST_CODE, EVENING_REMINDER_REQUEST_CODE).forEach { requestCode ->
+        getExistingDeadlineReminderPendingIntent(context.applicationContext, requestCode)?.let { pendingIntent ->
+            alarmManager.cancel(pendingIntent)
+            pendingIntent.cancel()
+        }
+    }
     cancelLegacyDeadlineWorkers(context)
+}
+
+internal fun TodoData.withSentDeadlineReminderKeys(sentKeys: List<String>): TodoData {
+    if (sentKeys.isEmpty()) {
+        return this
+    }
+
+    return copy(
+        sentDeadlineReminderKeys = (sentDeadlineReminderKeys + sentKeys)
+            .distinct()
+            .takeLast(MAX_SENT_DEADLINE_REMINDER_KEYS),
+    )
 }
 
 internal fun buildDeadlineNotificationTitle(subjectName: String, title: String): String = listOf(
@@ -166,15 +212,19 @@ private fun buildUpcomingDeadlineMessage(
 private fun buildDdayDeadlineMessage(todo: TodoInfo): String =
     "${todo.toNotificationItemName()} 오늘 마감이에요!"
 
+private fun buildDeadlineNotificationTitle(daysBefore: Int): String =
+    if (daysBefore == 0) "오늘 마감, 아직 안 했죠?" else "마감이 다가오고 있어요!"
+
 private fun Context.showDeadlineNotification(
     key: String,
+    title: String,
     message: String,
     representativeTodo: TodoInfo,
 ) {
     val notificationId = key.hashCode()
     val notification = NotificationCompat.Builder(this, CHANNEL_ID)
         .setSmallIcon(R.drawable.ssutime_launcher_foreground)
-        .setContentTitle("마감 알림")
+        .setContentTitle(title)
         .setContentText(message)
         .setStyle(NotificationCompat.BigTextStyle().bigText(message))
         .setSubText(representativeTodo.subject?.name?.takeIf { it.isNotBlank() })
@@ -203,6 +253,71 @@ private fun Instant.isInRefreshWindowAfter(target: Instant): Boolean =
 private fun Context.canPostNotifications(): Boolean =
     Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
         checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
+
+private fun scheduleDeadlineReminderAlarm(
+    context: Context,
+    requestCode: Int,
+    triggerTime: LocalTime,
+) {
+    val alarmManager = context.getSystemService(AlarmManager::class.java)
+    val triggerAtMillis = nextDeadlineReminderTriggerTime(
+        now = ZonedDateTime.now(DEADLINE_ZONE_ID),
+        triggerTime = triggerTime,
+    ).toInstant().toEpochMilli()
+    val pendingIntent = deadlineReminderPendingIntent(
+        context = context,
+        requestCode = requestCode,
+        triggerAtMillis = triggerAtMillis,
+    )
+
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+        alarmManager.setAndAllowWhileIdle(
+            AlarmManager.RTC_WAKEUP,
+            triggerAtMillis,
+            pendingIntent,
+        )
+    } else {
+        alarmManager.set(
+            AlarmManager.RTC_WAKEUP,
+            triggerAtMillis,
+            pendingIntent,
+        )
+    }
+}
+
+internal fun nextDeadlineReminderTriggerTime(
+    now: ZonedDateTime,
+    triggerTime: LocalTime,
+): ZonedDateTime {
+    val seoulNow = now.withZoneSameInstant(DEADLINE_ZONE_ID)
+    val todayTrigger = seoulNow.toLocalDate()
+        .atTime(triggerTime)
+        .atZone(DEADLINE_ZONE_ID)
+    return if (todayTrigger.isAfter(seoulNow)) todayTrigger else todayTrigger.plusDays(1)
+}
+
+private fun deadlineReminderPendingIntent(
+    context: Context,
+    requestCode: Int,
+    triggerAtMillis: Long,
+): PendingIntent = PendingIntent.getBroadcast(
+    context,
+    requestCode,
+    Intent(context, DeadlineReminderReceiver::class.java).apply {
+        putExtra(EXTRA_DEADLINE_REMINDER_TRIGGER_AT_MILLIS, triggerAtMillis)
+    },
+    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+)
+
+private fun getExistingDeadlineReminderPendingIntent(
+    context: Context,
+    requestCode: Int,
+): PendingIntent? = PendingIntent.getBroadcast(
+    context,
+    requestCode,
+    Intent(context, DeadlineReminderReceiver::class.java),
+    PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE,
+)
 
 private fun cancelLegacyDeadlineWorkers(context: Context) {
     WorkManager.getInstance(context).cancelAllWorkByTag(DEADLINE_REMINDER_TAG)
@@ -243,3 +358,77 @@ private data class DeadlineReminderCandidate(
     val daysBefore: Int,
     val key: String,
 )
+
+class DeadlineReminderReceiver : BroadcastReceiver() {
+    override fun onReceive(context: Context, intent: Intent) {
+        val pendingResult = goAsync()
+        CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
+            try {
+                sendScheduledDeadlineReminders(
+                    context = context.applicationContext,
+                    now = intent.getDeadlineReminderTriggerInstant(),
+                )
+            } finally {
+                pendingResult.finish()
+            }
+        }
+    }
+}
+
+class DeadlineReminderRescheduleReceiver : BroadcastReceiver() {
+    override fun onReceive(context: Context, intent: Intent) {
+        val pendingResult = goAsync()
+        CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
+            try {
+                rescheduleDeadlineNotificationsIfAllowed(context.applicationContext)
+            } finally {
+                pendingResult.finish()
+            }
+        }
+    }
+}
+
+private suspend fun sendScheduledDeadlineReminders(
+    context: Context,
+    now: Instant,
+) {
+    val alertData = context.notificationStore.data.first()
+    if (!alertData.allowSystemAlert) {
+        cancelDeadlineNotifications(context)
+        return
+    }
+
+    try {
+        val todoData = context.todoDataStore.data.first()
+        val result = sendDeadlineNotificationsIfNeeded(
+            context = context,
+            todoData = todoData,
+            now = now,
+        )
+        if (result.sentKeys.isNotEmpty()) {
+            context.todoDataStore.updateData { currentData ->
+                currentData.withSentDeadlineReminderKeys(result.sentKeys)
+            }
+        }
+    } finally {
+        scheduleDeadlineNotifications(context)
+    }
+}
+
+private suspend fun rescheduleDeadlineNotificationsIfAllowed(context: Context) {
+    val alertData = context.notificationStore.data.first()
+    if (alertData.allowSystemAlert) {
+        scheduleDeadlineNotifications(context)
+    } else {
+        cancelDeadlineNotifications(context)
+    }
+}
+
+private fun Intent.getDeadlineReminderTriggerInstant(): Instant {
+    val triggerAtMillis = getLongExtra(EXTRA_DEADLINE_REMINDER_TRIGGER_AT_MILLIS, 0L)
+    return if (triggerAtMillis > 0L) {
+        Instant.ofEpochMilli(triggerAtMillis)
+    } else {
+        Instant.now()
+    }
+}
