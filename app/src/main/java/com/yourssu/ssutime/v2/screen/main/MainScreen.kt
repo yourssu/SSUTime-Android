@@ -33,6 +33,7 @@ import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.KeyboardArrowDown
 import androidx.compose.material.icons.outlined.KeyboardArrowUp
 import androidx.compose.material.icons.outlined.Refresh
@@ -63,6 +64,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
 import androidx.core.content.ContextCompat
 import com.yourssu.data.AlertData
 import com.yourssu.data.TodoInfo
@@ -103,6 +105,7 @@ fun MainScreen(
 ) {
     val context = LocalContext.current
     var showSubmittedBottomSheet by remember { mutableStateOf(false) }
+    var showWidgetHelperDialog by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) {
         if (context.isNetworkConnected()) {
             viewModel.loadTodos(allowRefresh = !skipInitialLmsRefresh)
@@ -150,6 +153,7 @@ fun MainScreen(
                 todos = viewModel.todos,
                 submitted = viewModel.submitted,
                 loadedAt = viewModel.loadedAt.value,
+                showWidgetBadge = viewModel.showWidgetBadge.value,
                 onClickRefresh = {
                     coroutine.launch {
                         if (context.isNetworkConnected()) {
@@ -161,8 +165,36 @@ fun MainScreen(
                 },
                 onClickSubmitted = {
                     showSubmittedBottomSheet = true
+                },
+                onClickWidgetBadge = {
+                    showWidgetHelperDialog = true
+                },
+                onDismissWidgetBadge = {
+                    viewModel.dismissWidgetHelperBadge()
                 }
             )
+        }
+
+        if (showWidgetHelperDialog) {
+            Dialog(
+                onDismissRequest = {
+                    showWidgetHelperDialog = false
+                },
+            ) {
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(WHITE)
+                        .padding(vertical = 20.dp),
+                ) {
+                    WidgetHelperDialogContent(
+                        onDismissClick = {
+                            showWidgetHelperDialog = false
+                            viewModel.dismissWidgetHelperBadge()
+                        },
+                    )
+                }
+            }
         }
 
         if(viewModel.requiredShowAlertBottomSheet.value) {
@@ -346,8 +378,11 @@ fun MainFragment(
     todos: List<TodoInfo> = emptyList(),
     submitted: List<TodoInfo> = emptyList(),
     loadedAt: String = "",
+    showWidgetBadge: Boolean = false,
     onClickRefresh: () -> Unit = {},
     onClickSubmitted: () -> Unit = {},
+    onClickWidgetBadge: () -> Unit = {},
+    onDismissWidgetBadge: () -> Unit = {},
 ) {
     val context = LocalContext.current
     val scrollState = rememberScrollState()
@@ -399,7 +434,13 @@ fun MainFragment(
                 )
             }
 
-            Spacer(Modifier.height(28.dp))
+            Spacer(Modifier.height(12.dp))
+            if(showWidgetBadge)
+                WidgetHelperBadge(
+                    onClickBadge = onClickWidgetBadge,
+                    onClickDismiss = onDismissWidgetBadge,
+                )
+            Spacer(Modifier.height(12.dp))
 
             TodoList(
                 modifier = Modifier
@@ -409,6 +450,55 @@ fun MainFragment(
                 submittedSize = submitted.size,
             )
         }
+    }
+}
+
+@Composable
+@Preview
+fun WidgetHelperBadge(
+    onClickBadge: () -> Unit = {},
+    onClickDismiss: () -> Unit = {}
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(10.dp))
+            .clickable { onClickBadge() }
+            .background(R100)
+            .padding(16.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Row(
+            modifier = Modifier
+                .weight(1f),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Image(
+                painter = painterResource(R.drawable.checkbox),
+                contentDescription = "chkbox"
+            )
+
+            Spacer(Modifier.width(10.dp))
+
+            Column {
+                Text(
+                    text = "슈타임 위젯 등록하기",
+                    style = SSUType.H4SemiBold,
+                    color = R500
+                )
+
+                Text(
+                    text = "마감 D-day를 보여드려요",
+                    style = SSUType.Body2Medium,
+                )
+            }
+        }
+
+        Image(
+            imageVector = Icons.Outlined.Close,
+            contentDescription = "close",
+            modifier = Modifier.clickable { onClickDismiss() }
+        )
     }
 }
 
@@ -628,7 +718,7 @@ fun TodoItem(
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(6.dp))
                                     .background(
-                                        when(todoInfo.type) {
+                                        when (todoInfo.type) {
                                             TodoType.COMMONS -> Color(0xFFF7DBF7)
                                             TodoType.QUIZ -> Color(0xFFFFD7C2)
                                             TodoType.ASSIGNMENT -> Color(0xFFD8E5F7)

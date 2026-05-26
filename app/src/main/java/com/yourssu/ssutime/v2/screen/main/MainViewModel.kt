@@ -9,6 +9,7 @@ import androidx.lifecycle.viewModelScope
 import com.yourssu.data.AlertData
 import com.yourssu.data.TodoData
 import com.yourssu.data.TodoInfo
+import com.yourssu.data.TodoType
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 import java.time.Duration
@@ -30,6 +31,7 @@ class MainViewModel(
     var loadingProgress = mutableFloatStateOf(0f)
     var loadedAt = mutableStateOf("")
     var showNetworkError = mutableStateOf(false)
+    var showWidgetBadge = mutableStateOf(false)
 
     var requiredShowAlertBottomSheet = mutableStateOf(false)
 
@@ -37,6 +39,7 @@ class MainViewModel(
         viewModelScope.launch {
             val alertData = mainRepository.getAlertData()
             requiredShowAlertBottomSheet.value = !alertData.valid
+            showWidgetBadge.value = alertData.showWidgetHelperBadge
         }
     }
 
@@ -49,6 +52,13 @@ class MainViewModel(
 
     fun showNetworkErrorScreen() {
         showNetworkError.value = true
+    }
+
+    fun dismissWidgetHelperBadge() {
+        showWidgetBadge.value = false
+        viewModelScope.launch {
+            mainRepository.dismissWidgetHelperBadge()
+        }
     }
 
     suspend fun loadTodos(forceRefresh: Boolean = false, allowRefresh: Boolean = true) {
@@ -145,6 +155,9 @@ class MainViewModel(
 private fun List<TodoInfo>.filterRecentlySubmitted(
     now: Instant = Instant.now(),
 ): List<TodoInfo> = filter { todo ->
+    if (todo.type != TodoType.SUBMITTED && todo.type != TodoType.SUBMITTED_LATE) {
+        return@filter false
+    }
     val submittedAt = todo.submittedAt.toInstantOrNull() ?: return@filter false
     Duration.between(submittedAt, now) <= SUBMITTED_VISIBLE_WINDOW
 }

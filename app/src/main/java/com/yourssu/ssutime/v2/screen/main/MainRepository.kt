@@ -31,14 +31,21 @@ class MainRepository(
 
     suspend fun updateAlertData(alertData: AlertData) {
         Log.i("AlertData", "Update AlertData : $alertData")
-        alertData.valid = true
-        alertDataStore.updateData { alertData }
-        if (alertData.allowSystemAlert) {
+        val currentAlertData = getAlertData()
+        val updatedAlertData = alertData.copy(
+            valid = true,
+            showWidgetHelperBadge = currentAlertData.showWidgetHelperBadge,
+        )
+        alertDataStore.updateData { updatedAlertData }
+        if (updatedAlertData.allowSystemAlert) {
             updateDeadlineNotifications(getTodoData())
         } else {
             cancelDeadlineNotifications(context)
         }
-        apiRepository.setNotificationSetting(alertData.allowCallAlert, alertData.callingAlertThresholdMinutes)
+        apiRepository.setNotificationSetting(
+            updatedAlertData.allowCallAlert,
+            updatedAlertData.callingAlertThresholdMinutes,
+        )
     }
 
     suspend fun updateTodoData(transform: (TodoData) -> TodoData) {
@@ -58,6 +65,12 @@ class MainRepository(
 
     suspend fun getTodoData(): TodoData = todoDataStore.data.first()
     suspend fun getAlertData(): AlertData = alertDataStore.data.first().apply { Log.i("AlertData", "get AlertData : $this") }
+
+    suspend fun dismissWidgetHelperBadge() {
+        alertDataStore.updateData { currentData ->
+            currentData.copy(showWidgetHelperBadge = false)
+        }
+    }
 
     private suspend fun updateDeadlineNotifications(todoData: TodoData) {
         if (getAlertData().allowSystemAlert) {

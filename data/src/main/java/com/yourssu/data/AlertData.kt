@@ -7,5 +7,6 @@ data class AlertData(
     var valid: Boolean = false,
     val allowSystemAlert: Boolean,
     val allowCallAlert: Boolean,
-    val callingAlertThresholdMinutes: Long
+    val callingAlertThresholdMinutes: Long,
+    val showWidgetHelperBadge: Boolean = true,
 )

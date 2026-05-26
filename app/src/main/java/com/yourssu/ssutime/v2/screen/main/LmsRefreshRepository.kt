@@ -8,6 +8,7 @@ import com.yourssu.data.TodoInfo
 import com.yourssu.data.TodoType
 import com.yourssu.data.network.toAddEnrollmentRequest
 import com.yourssu.data.network.toAddTodoRequest
+import com.yourssu.data.network.toCompleteTodoRequest
 import com.yourssu.ssutime.v2.accessToken
 import com.yourssu.ssutime.v2.lms.getLmsTerms
 import com.yourssu.ssutime.v2.lms.getLmsTodoList
@@ -175,6 +176,7 @@ class LmsRefreshRepository(
         mainRepository.updateTodoData(todoData)
         reportEnrollmentsToBackend(subjectInfos, currentTerm.toString(), loginData)
         reportTodosToBackend(todoData.todos, loginData)
+        reportCompletedTodosToBackend(todoData.submitted, loginData)
         TodoRefreshResult.Success(todoData, summary)
     }
 
@@ -229,6 +231,33 @@ class LmsRefreshRepository(
                 }
             }.onFailure { exception ->
                 Log.e(TAG, "Todo 백엔드 등록 중 오류가 발생했습니다: ${todo.title}", exception)
+            }
+        }
+    }
+
+    private suspend fun reportCompletedTodosToBackend(submittedTodos: List<TodoInfo>, loginData: LoginData) {
+        val completedTodos = submittedTodos.filter { it.isCompletedSubmission }
+        if (completedTodos.isEmpty() || !prepareBackendToken(loginData)) {
+            return
+        }
+
+        var tokenRefreshAttempted = false
+        completedTodos.forEach { todo ->
+            runCatching {
+                var status = apiRepository.completeTodo(todo.toCompleteTodoRequest())
+                if (status == HttpStatusCode.Unauthorized && !tokenRefreshAttempted) {
+                    tokenRefreshAttempted = true
+                    if (refreshBackendToken(loginData)) {
+                        status = apiRepository.completeTodo(todo.toCompleteTodoRequest())
+                    }
+                }
+
+                if (status.value !in 200..299) {
+                    Log.w(TAG, "Todo 완료 백엔드 등록 실패: ${todo.title}, status=$status")
+                    Log.w(TAG, todo.toCompleteTodoRequest().toString())
+                }
+            }.onFailure { exception ->
+                Log.e(TAG, "Todo 완료 백엔드 등록 중 오류가 발생했습니다: ${todo.title}", exception)
             }
         }
     }
@@ -396,6 +425,10 @@ sealed interface TodoRefreshResult {
 
 private val LoginData.hasAutoLoginCredentials: Boolean
     get() = isAutoLogin && id.isNotBlank() && pw.isNotBlank()
+
+private val TodoInfo.isCompletedSubmission: Boolean
+    get() = submittedAt.isNotBlank() &&
+        (type == TodoType.SUBMITTED || type == TodoType.SUBMITTED_LATE)
 
 private const val TAG = "LmsRefreshRepository"
 

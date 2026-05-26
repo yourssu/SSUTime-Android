@@ -45,7 +45,7 @@ fun SplashScreen(
     }
 
     LaunchedEffect(Unit) {
-        delay(1000)
+        delay(100)
         navigateToLogin()
     }
 }

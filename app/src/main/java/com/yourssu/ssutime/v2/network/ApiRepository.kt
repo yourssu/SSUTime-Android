@@ -3,6 +3,7 @@ package com.yourssu.ssutime.v2.network
 import android.util.Log
 import com.yourssu.data.network.AddEnrollmentRequest
 import com.yourssu.data.network.AddTodoRequest
+import com.yourssu.data.network.CompleteTodoRequest
 import com.yourssu.data.network.DeleteEnrollmentRequest
 import com.yourssu.data.network.EnrollmentResponse
 import com.yourssu.data.network.FcmRequest
@@ -123,6 +124,18 @@ class ApiRepository {
             setBody(todo)
         }
         Log.i("ApiRepository", todo.title + " Add Reqeust Status Code : ${response.status.value}")
+        return response.status
+    }
+
+    suspend fun completeTodo(todo: CompleteTodoRequest): HttpStatusCode {
+        val response = client.put(
+            urlString = "https://ssutimev2-api-dev.yourssu.com/todo/report"
+        ) {
+            bearerAuth(accessToken)
+            contentType(ContentType.Application.Json)
+            setBody(todo)
+        }
+        Log.i("ApiRepository", todo.title + " Complete Reqeust Status Code : ${response.status.value}")
         return response.status
     }
 

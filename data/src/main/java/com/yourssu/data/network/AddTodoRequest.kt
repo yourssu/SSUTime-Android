@@ -12,6 +12,8 @@ data class AddTodoRequest(
     val title: String,
 )
 
+
+
 fun TodoInfo.toAddTodoRequest(): AddTodoRequest
     = AddTodoRequest(
         subjectId = (this.subject?.id ?: this.subjectId).toLong(),
