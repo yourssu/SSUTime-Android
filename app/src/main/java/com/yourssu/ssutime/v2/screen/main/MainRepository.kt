@@ -5,6 +5,10 @@ import android.util.Log
 import androidx.datastore.core.DataStore
 import com.yourssu.data.AlertData
 import com.yourssu.data.TodoData
+import com.yourssu.data.TodoInfo
+import com.yourssu.data.network.LmsSessionRequest
+import com.yourssu.data.network.UserTodoStatusResponse
+import com.yourssu.data.network.toReportWithAnalysisRequestOrNull
 import com.yourssu.ssutime.v2.network.ApiRepository
 import com.yourssu.ssutime.v2.notification.cancelDeadlineNotifications
 import com.yourssu.ssutime.v2.notification.scheduleDeadlineNotifications
@@ -65,6 +69,17 @@ class MainRepository(
 
     suspend fun getTodoData(): TodoData = todoDataStore.data.first()
     suspend fun getAlertData(): AlertData = alertDataStore.data.first().apply { Log.i("AlertData", "get AlertData : $this") }
+
+    suspend fun getReportedTodos(): List<UserTodoStatusResponse> =
+        apiRepository.getTodos()
+
+    suspend fun reportTodoWithAnalysis(
+        todo: TodoInfo,
+        lmsSession: LmsSessionRequest,
+    ) {
+        val request = todo.toReportWithAnalysisRequestOrNull(lmsSession) ?: return
+        apiRepository.reportTodoWithAnalysis(request)
+    }
 
     suspend fun dismissWidgetHelperBadge() {
         alertDataStore.updateData { currentData ->

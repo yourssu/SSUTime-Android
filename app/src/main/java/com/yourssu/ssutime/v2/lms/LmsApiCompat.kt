@@ -2,6 +2,7 @@ package com.yourssu.ssutime.v2.lms
 
 import io.github.chlwhdtn03.LmsApi
 import io.github.chlwhdtn03.data.Lms.Info
+import io.github.chlwhdtn03.data.Lms.LmsSession
 import io.github.chlwhdtn03.data.Lms.Subject
 import io.github.chlwhdtn03.data.Lms.Term
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -73,6 +74,21 @@ suspend fun getLmsLoginInfo(): Info =
             } else {
                 continuation.resumeWithException(
                     IllegalStateException(result.errorMessage ?: "로그인 정보를 불러오지 못했어요.")
+                )
+            }
+        }
+    }
+
+suspend fun getLmsCookies(): LmsSession =
+    suspendCancellableCoroutine { continuation ->
+        LmsApi.getCookies { result ->
+            if (!continuation.isActive) return@getCookies
+
+            if (result.success) {
+                continuation.resume(result.lmsSession)
+            } else {
+                continuation.resumeWithException(
+                    IllegalStateException(result.errorMessage ?: "LMS 세션 정보를 불러오지 못했어요.")
                 )
             }
         }

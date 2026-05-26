@@ -33,11 +33,13 @@ import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.KeyboardArrowDown
 import androidx.compose.material.icons.outlined.KeyboardArrowUp
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.ModalBottomSheetProperties
@@ -155,6 +157,7 @@ fun MainScreen(
                 submitted = viewModel.submitted,
                 loadedAt = viewModel.loadedAt.value,
                 showWidgetBadge = viewModel.showWidgetBadge.value,
+                aiSummaryStates = viewModel.aiSummaryStates,
                 onClickRefresh = {
                     Analytics.refreshClick()
                     coroutine.launch {
@@ -175,7 +178,8 @@ fun MainScreen(
                 onDismissWidgetBadge = {
                     Analytics.widgetBannerDismiss()
                     viewModel.dismissWidgetHelperBadge()
-                }
+                },
+                onExpandTodo = viewModel::loadAiSummary,
             )
         }
 
@@ -383,10 +387,12 @@ fun MainFragment(
     submitted: List<TodoInfo> = emptyList(),
     loadedAt: String = "",
     showWidgetBadge: Boolean = false,
+    aiSummaryStates: Map<String, AiSummaryUiState> = emptyMap(),
     onClickRefresh: () -> Unit = {},
     onClickSubmitted: () -> Unit = {},
     onClickWidgetBadge: () -> Unit = {},
     onDismissWidgetBadge: () -> Unit = {},
+    onExpandTodo: (TodoInfo) -> Unit = {},
 ) {
     val context = LocalContext.current
     val scrollState = rememberScrollState()
@@ -450,10 +456,12 @@ fun MainFragment(
                 modifier = Modifier
                     .fillMaxWidth(),
                 todos = todos,
+                aiSummaryStates = aiSummaryStates,
                 onClickSubmitted = {
                     Analytics.submitCompleteClick()
                     onClickSubmitted()
                 },
+                onExpandTodo = onExpandTodo,
                 submittedSize = submitted.size,
             )
         }
@@ -513,7 +521,9 @@ fun WidgetHelperBadge(
 fun TodoList(
     modifier: Modifier = Modifier,
     todos: List<TodoInfo>,
+    aiSummaryStates: Map<String, AiSummaryUiState> = emptyMap(),
     onClickSubmitted: () -> Unit,
+    onExpandTodo: (TodoInfo) -> Unit = {},
     submittedSize: Int
 ) {
     val immediateTodos = todos.filter { getRemainingDays(it.due_date) <= 1 }
@@ -546,7 +556,11 @@ fun TodoList(
             immediateTodos.forEach {
                 key(it.todoId) {
                     Spacer(Modifier.height(8.dp))
-                    TodoItem(todoInfo = it)
+                    TodoItem(
+                        todoInfo = it,
+                        aiSummaryState = aiSummaryStates[it.aiSummaryKey()],
+                        onExpandTodo = onExpandTodo,
+                    )
                 }
             }
 
@@ -560,7 +574,11 @@ fun TodoList(
             freeTodos.forEach {
                 key(it.todoId) {
                     Spacer(Modifier.height(8.dp))
-                    TodoItem(todoInfo = it)
+                    TodoItem(
+                        todoInfo = it,
+                        aiSummaryState = aiSummaryStates[it.aiSummaryKey()],
+                        onExpandTodo = onExpandTodo,
+                    )
                 }
             }
         } else if (freeTodos.isNotEmpty()) {
@@ -585,7 +603,11 @@ fun TodoList(
             freeTodos.forEach {
                 key(it.todoId) {
                     Spacer(Modifier.height(8.dp))
-                    TodoItem(todoInfo = it)
+                    TodoItem(
+                        todoInfo = it,
+                        aiSummaryState = aiSummaryStates[it.aiSummaryKey()],
+                        onExpandTodo = onExpandTodo,
+                    )
                 }
             }
         } else {
@@ -629,7 +651,9 @@ fun TodoList(
 
 @Composable
 fun TodoItem(
-    todoInfo: TodoInfo
+    todoInfo: TodoInfo,
+    aiSummaryState: AiSummaryUiState? = null,
+    onExpandTodo: (TodoInfo) -> Unit = {},
 ) {
     var expanded by remember { mutableStateOf(false) }
     var isLate by remember { mutableStateOf(false) }
@@ -776,7 +800,9 @@ fun TodoItem(
                             Analytics.taskDetailExpand(
                                 todo = todoInfo,
                                 dDay = leftDay.toInt(),
+                                hasAiSummary = aiSummaryState is AiSummaryUiState.Success,
                             )
+                            onExpandTodo(todoInfo)
                         } else {
                             Analytics.taskDetailCollapse()
                         }
@@ -788,24 +814,78 @@ fun TodoItem(
             }
 
             AnimatedVisibility(expanded) {
-                Row(
-                    modifier = Modifier
-                        .padding(top = 12.dp)
-                ) {
-                    Text(
-                        text = "마감기한",
-                        style = SSUType.H5SemiBold
-                    )
-                    Spacer(Modifier.weight(1f))
-                    Text(
-                        text = getStringDateWithTime(todoInfo.due_date) + "까지",
-                        style = SSUType.H5SemiBold
-                    )
-                }
+                Column {
+                    Row(
+                        modifier = Modifier
+                            .padding(top = 12.dp)
+                    ) {
+                        Text(
+                            text = "마감기한",
+                            style = SSUType.H5SemiBold
+                        )
+                        Spacer(Modifier.weight(1f))
+                        Text(
+                            text = getStringDateWithTime(todoInfo.due_date) + "까지",
+                            style = SSUType.H5SemiBold
+                        )
+                    }
 
-                // TODO AI 요약
+                    if (todoInfo.canRequestAiSummary()) {
+                        AiSummaryBlock(aiSummaryState = aiSummaryState)
+                    }
+                }
             }
         }
+    }
+}
+
+@Composable
+private fun AiSummaryBlock(
+    aiSummaryState: AiSummaryUiState?,
+) {
+    Column(
+        modifier = Modifier
+            .padding(top = 14.dp)
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .background(WHITE)
+            .padding(14.dp),
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.AutoAwesome,
+                contentDescription = null,
+                tint = Color.Black,
+            )
+            Spacer(Modifier.width(8.dp))
+            Text(
+                text = "AI 요약",
+                style = SSUType.H4SemiBold,
+                color = Color.Black,
+            )
+            Spacer(Modifier.weight(1f))
+            Text(
+                text = "예상 소요시간 알 수 없음",
+                style = SSUType.H5SemiBold,
+                color = Color(0xFF4F555D),
+            )
+        }
+
+        Spacer(Modifier.height(12.dp))
+
+        Text(
+            text = when (aiSummaryState) {
+                is AiSummaryUiState.Success -> aiSummaryState.summary
+                AiSummaryUiState.Loading -> "AI 요약을 불러오는 중이에요."
+                AiSummaryUiState.Empty -> "AI 요약을 준비 중이에요."
+                AiSummaryUiState.Error -> "AI 요약을 불러오지 못했어요."
+                null -> "AI 요약을 불러오는 중이에요."
+            },
+            style = SSUType.Body1Medium,
+            color = Color(0xFF4F555D),
+        )
     }
 }
 

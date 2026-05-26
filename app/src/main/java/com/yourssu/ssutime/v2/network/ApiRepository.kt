@@ -3,13 +3,16 @@ package com.yourssu.ssutime.v2.network
 import android.util.Log
 import com.yourssu.data.network.AddEnrollmentRequest
 import com.yourssu.data.network.AddTodoRequest
+import com.yourssu.data.network.AssignmentAnalysisResponse
 import com.yourssu.data.network.CompleteTodoRequest
 import com.yourssu.data.network.DeleteEnrollmentRequest
 import com.yourssu.data.network.EnrollmentResponse
 import com.yourssu.data.network.FcmRequest
 import com.yourssu.data.network.NotificationSetting
+import com.yourssu.data.network.TodoReportWithAnalysisRequest
 import com.yourssu.data.network.TokenRequest
 import com.yourssu.data.network.TokenResponse
+import com.yourssu.data.network.UserTodoStatusResponse
 import com.yourssu.ssutime.v2.accessToken
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
@@ -139,4 +142,30 @@ class ApiRepository {
         return response.status
     }
 
+    suspend fun getTodos(): List<UserTodoStatusResponse> {
+        val response = client.get(
+            urlString = "https://ssutimev2-api-dev.yourssu.com/todo/todos"
+        ) {
+            bearerAuth(accessToken)
+            contentType(ContentType.Application.Json)
+        }
+        Log.i("ApiRepository", "Get Todos Status Code : ${response.status.value}")
+        return response.body()
+    }
+
+    suspend fun reportTodoWithAnalysis(todo: TodoReportWithAnalysisRequest): AssignmentAnalysisResponse {
+        val response = client.post(
+            urlString = "https://ssutimev2-api-dev.yourssu.com/todo/report-with-analysis"
+        ) {
+            bearerAuth(accessToken)
+            contentType(ContentType.Application.Json)
+            setBody(todo)
+        }
+        Log.i("ApiRepository", todo.title + " Analysis Reqeust Status Code : ${response.status.value}")
+        Json.encodeToString(todo).chunked(3000).forEachIndexed { index, chunk ->
+            Log.d("AI_REQUEST", "$chunk")
+        }
+        Log.i("ApiRepository RES", response.bodyAsText())
+        return response.body()
+    }
 }

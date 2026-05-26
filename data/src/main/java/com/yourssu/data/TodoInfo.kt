@@ -10,6 +10,8 @@ data class TodoInfo(
     val type: TodoType, // 제목
     val subject: SubjectInfo?, // 과목 정보
     val submittedAt: String = "", // 제출 시각
+    val description: String = "", // 과제 설명
+    val aiSummary: String = "", // AI 요약
 ) {
     var subjectId = 0
 }

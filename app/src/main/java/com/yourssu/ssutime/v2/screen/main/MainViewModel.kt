@@ -3,6 +3,7 @@ package com.yourssu.ssutime.v2.screen.main
 import android.util.Log
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -10,6 +11,7 @@ import com.yourssu.data.AlertData
 import com.yourssu.data.TodoData
 import com.yourssu.data.TodoInfo
 import com.yourssu.data.TodoType
+import com.yourssu.data.network.matches
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 import java.time.Duration
@@ -32,6 +34,7 @@ class MainViewModel(
     var loadedAt = mutableStateOf("")
     var showNetworkError = mutableStateOf(false)
     var showWidgetBadge = mutableStateOf(false)
+    val aiSummaryStates = mutableStateMapOf<String, AiSummaryUiState>()
 
     var requiredShowAlertBottomSheet = mutableStateOf(false)
 
@@ -58,6 +61,73 @@ class MainViewModel(
         showWidgetBadge.value = false
         viewModelScope.launch {
             mainRepository.dismissWidgetHelperBadge()
+        }
+    }
+
+    fun loadAiSummary(todo: TodoInfo) {
+        if (!todo.canRequestAiSummary()) {
+            return
+        }
+
+        val key = todo.aiSummaryKey()
+        if (aiSummaryStates[key] == AiSummaryUiState.Loading) {
+            return
+        }
+
+        viewModelScope.launch {
+            val analysisAlreadyRequested = aiSummaryStates[key] == AiSummaryUiState.Empty
+            aiSummaryStates[key] = AiSummaryUiState.Loading
+
+            val reportedTodoResult = runCatching {
+                mainRepository.getReportedTodos()
+                    .firstOrNull { response -> response.todo.matches(todo) }
+                    ?.todo
+            }
+
+            val reportedTodo = reportedTodoResult.getOrNull()
+            if (reportedTodo != null) {
+                val aiSummary = reportedTodo.aiSummary.orEmpty()
+                if (aiSummary.isNotBlank()) {
+                    aiSummaryStates[key] =
+                        AiSummaryUiState.Success(aiSummary)
+                    return@launch
+                }
+
+                if (analysisAlreadyRequested) {
+                    aiSummaryStates[key] = AiSummaryUiState.Empty
+                    return@launch
+                }
+            }
+
+            if (analysisAlreadyRequested && reportedTodoResult.isFailure) {
+                aiSummaryStates[key] = AiSummaryUiState.Error
+                return@launch
+            }
+
+            runCatching {
+                val lmsSession = lmsRefreshRepository.getLmsSessionRequest()
+                mainRepository.reportTodoWithAnalysis(
+                    todo = todo,
+                    lmsSession = lmsSession,
+                )
+            }.onSuccess {
+                val aiSummary = runCatching {
+                    mainRepository.getReportedTodos()
+                        .firstOrNull { response -> response.todo.matches(todo) }
+                        ?.todo
+                        ?.aiSummary
+                        .orEmpty()
+                }.getOrDefault("")
+
+                aiSummaryStates[key] = if (aiSummary.isNotBlank()) {
+                    AiSummaryUiState.Success(aiSummary)
+                } else {
+                    AiSummaryUiState.Empty
+                }
+            }.onFailure { exception ->
+                Log.e(javaClass.name, "AI 요약 요청에 실패했습니다: ${todo.title}", exception)
+                aiSummaryStates[key] = AiSummaryUiState.Error
+            }
         }
     }
 
@@ -151,6 +221,19 @@ class MainViewModel(
     }.getOrNull()
 
 }
+
+sealed interface AiSummaryUiState {
+    data object Loading : AiSummaryUiState
+    data object Empty : AiSummaryUiState
+    data class Success(val summary: String) : AiSummaryUiState
+    data object Error : AiSummaryUiState
+}
+
+fun TodoInfo.aiSummaryKey(): String =
+    "${subject?.id ?: subjectId}:$todoId:${type.name}"
+
+fun TodoInfo.canRequestAiSummary(): Boolean =
+    type == TodoType.ASSIGNMENT && description.isNotBlank()
 
 private fun List<TodoInfo>.filterRecentlySubmitted(
     now: Instant = Instant.now(),

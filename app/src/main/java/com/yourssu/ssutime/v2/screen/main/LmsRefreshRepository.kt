@@ -6,10 +6,13 @@ import com.yourssu.data.SubjectInfo
 import com.yourssu.data.TodoData
 import com.yourssu.data.TodoInfo
 import com.yourssu.data.TodoType
+import com.yourssu.data.network.LmsSessionCookieRequest
+import com.yourssu.data.network.LmsSessionRequest
 import com.yourssu.data.network.toAddEnrollmentRequest
 import com.yourssu.data.network.toAddTodoRequest
 import com.yourssu.data.network.toCompleteTodoRequest
 import com.yourssu.ssutime.v2.accessToken
+import com.yourssu.ssutime.v2.lms.getLmsCookies
 import com.yourssu.ssutime.v2.lms.getLmsTerms
 import com.yourssu.ssutime.v2.lms.getLmsTodoList
 import com.yourssu.ssutime.v2.lms.loginLms
@@ -41,6 +44,30 @@ class LmsRefreshRepository(
     private val apiRepository: ApiRepository,
 ) {
     private val isRefreshing = AtomicBoolean(false)
+
+    suspend fun getLmsSessionRequest(): LmsSessionRequest {
+        val loginData = loginRepository.getLoginData()
+        loginIfNeeded(RefreshSource.MANUAL, loginData)
+        val lmsSession = getLmsCookies()
+
+        return LmsSessionRequest(
+            cookies = lmsSession.cookies
+                .filter { cookie ->
+                    cookie.name.isNotBlank() &&
+                        cookie.value.isNotBlank() &&
+                        cookie.domain.isNotBlank() &&
+                        cookie.path.isNotBlank()
+                }
+                .map { cookie ->
+                    LmsSessionCookieRequest(
+                        name = cookie.name,
+                        value = cookie.value,
+                        domain = cookie.domain,
+                        path = cookie.path,
+                    )
+                },
+        )
+    }
 
     suspend fun refreshTodos(
         source: RefreshSource,
@@ -332,6 +359,7 @@ class LmsRefreshRepository(
                     todo.due_date,
                     TodoType.valueOf(todo.component_type.uppercase()),
                     subjectInfoById[subject.id],
+                    description = todo.description.orEmpty(),
                 )
             }
         }.sortedBy { it.due_date }
