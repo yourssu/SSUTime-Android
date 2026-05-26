@@ -32,7 +32,8 @@ import java.time.Instant
 private const val TAG = "LmsRefreshFCM"
 private const val ACTION_CRAWL_LMS = "crawl_lms"
 private const val REFRESH_TIMEOUT_MILLIS = 30_000L
-private const val FCM_NOTIFICATION_FALLBACK_TITLE = "SSUTime"
+private const val DEADLINE_IMMINENT_NOTIFICATION_TITLE = "마감 직전 알림"
+private const val DEADLINE_IMMINENT_NOTIFICATION_BODY = "마감 직전이에요."
 
 class LmsRefreshMessagingService : FirebaseMessagingService(), KoinComponent {
     private val lmsRefreshRepository: LmsRefreshRepository by inject()
@@ -61,9 +62,8 @@ class LmsRefreshMessagingService : FirebaseMessagingService(), KoinComponent {
             return
         }
 
-        val notification = message.notification
-        if (notification != null) {
-            showForegroundNotification(message)
+        if (message.notification != null || message.data.isNotEmpty()) {
+            showDeadlineImminentNotification(message)
             return
         }
 
@@ -112,19 +112,22 @@ class LmsRefreshMessagingService : FirebaseMessagingService(), KoinComponent {
         }
     }
 
-    private fun showForegroundNotification(message: RemoteMessage) {
+    private fun showDeadlineImminentNotification(message: RemoteMessage) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
             checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
         ) {
-            Log.i(TAG, "알림 권한이 없어 foreground FCM notification을 표시하지 않습니다.")
+            Log.i(TAG, "알림 권한이 없어 FCM 마감 직전 알림을 표시하지 않습니다.")
             return
         }
 
-        val notification = message.notification ?: return
         val notificationId = message.messageId?.hashCode()
             ?: (System.currentTimeMillis() % Int.MAX_VALUE).toInt()
-        val title = notification.title.orEmpty().ifBlank { FCM_NOTIFICATION_FALLBACK_TITLE }
-        val body = notification.body.orEmpty()
+        val title = message.notification?.title
+            ?: message.data["title"]
+            ?: DEADLINE_IMMINENT_NOTIFICATION_TITLE
+        val body = message.notification?.body
+            ?: message.data["body"]
+            ?: DEADLINE_IMMINENT_NOTIFICATION_BODY
         val appOpenIntent = PendingIntent.getActivity(
             this,
             notificationId,
