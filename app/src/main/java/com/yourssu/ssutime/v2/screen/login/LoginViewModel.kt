@@ -8,6 +8,7 @@ import androidx.lifecycle.viewModelScope
 import com.yourssu.data.LoginData
 import com.yourssu.data.network.FcmRequest
 import com.yourssu.ssutime.v2.accessToken
+import com.yourssu.ssutime.v2.analytics.Analytics
 import com.yourssu.ssutime.v2.lms.loginLms
 import com.yourssu.ssutime.v2.network.ApiRepository
 import kotlinx.coroutines.Dispatchers
@@ -37,8 +38,11 @@ class LoginViewModel(
             autoLoginState.value = info.isAutoLogin
 
             if(autoLoginState.value && idState.text.isNotEmpty() && pwState.text.isNotEmpty()) {
+                Analytics.loginAttempt(autoLogin = true)
                 if(login()) {
                     isAutoLogined.value = true
+                } else {
+                    Analytics.loginFailIfKnown(errorMessage.value)
                 }
             }
         }

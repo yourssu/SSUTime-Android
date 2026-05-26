@@ -76,6 +76,7 @@ class DDayWidget : GlanceAppWidget() {
         context: Context,
         id: GlanceId,
     ) {
+        context.captureWidgetDisplayOnceDaily(WidgetAnalyticsSize.Small)
         val initialTodoData = context.todoDataStore.data.first()
 
         provideContent {

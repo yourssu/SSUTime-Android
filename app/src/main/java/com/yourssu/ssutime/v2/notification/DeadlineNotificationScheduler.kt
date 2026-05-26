@@ -16,6 +16,7 @@ import com.yourssu.data.TodoInfo
 import com.yourssu.ssutime.v2.CHANNEL_ID
 import com.yourssu.ssutime.v2.MainActivity
 import com.yourssu.ssutime.v2.R
+import com.yourssu.ssutime.v2.analytics.Analytics
 import com.yourssu.ssutime.v2.screen.main.notificationStore
 import com.yourssu.ssutime.v2.screen.main.todoDataStore
 import kotlinx.coroutines.CoroutineScope
@@ -93,6 +94,11 @@ fun sendDeadlineNotificationsIfNeeded(
                         message = buildDdayDeadlineMessage(reminder.todo),
                         representativeTodo = reminder.todo,
                     )
+                    Analytics.notificationReceived(
+                        dDay = reminder.daysBefore,
+                        notificationTaskCount = 1,
+                        representativeTodo = reminder.todo,
+                    )
                     sentKeys += reminder.key
                 }
             } else {
@@ -103,6 +109,11 @@ fun sendDeadlineNotificationsIfNeeded(
                     key = notificationKey,
                     title = buildDeadlineNotificationTitle(daysBefore),
                     message = message,
+                    representativeTodo = sortedReminders.first().todo,
+                )
+                Analytics.notificationReceived(
+                    dDay = daysBefore,
+                    notificationTaskCount = sortedReminders.size,
                     representativeTodo = sortedReminders.first().todo,
                 )
                 sentKeys += sortedReminders.map { it.key }

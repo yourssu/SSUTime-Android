@@ -28,6 +28,7 @@ import androidx.compose.ui.unit.dp
 import com.google.android.gms.tasks.OnCompleteListener
 import com.google.firebase.messaging.FirebaseMessaging
 import com.yourssu.ssutime.v2.R
+import com.yourssu.ssutime.v2.analytics.Analytics
 import com.yourssu.ssutime.v2.component.SButton
 import com.yourssu.ssutime.v2.component.SCheckBox
 import com.yourssu.ssutime.v2.component.SSecureTextField
@@ -54,8 +55,13 @@ fun LoginScreen(
     val isLoading by remember { viewModel.isLoading }
     val isAutoLogined by remember { viewModel.isAutoLogined }
 
+    LaunchedEffect(Unit) {
+        Analytics.viewLogin()
+    }
+
     LaunchedEffect(isAutoLogined) {
         if (isAutoLogined) {
+            Analytics.loginSuccess()
             registerFCMTokenAndContinue(viewModel, coroutine, successLogin)
         }
 
@@ -111,8 +117,12 @@ fun LoginScreen(
             enable = idState.text.isNotEmpty() && pwState.text.isNotEmpty(),
             onClick = {
                 coroutine.launch {
+                    Analytics.loginAttempt(autoLogin = viewModel.autoLoginState.value)
                     if (viewModel.login()) {
+                        Analytics.loginSuccess()
                         registerFCMTokenAndContinue(viewModel, coroutine, successLogin)
+                    } else {
+                        Analytics.loginFailIfKnown(errorMessage.value)
                     }
                 }
             }

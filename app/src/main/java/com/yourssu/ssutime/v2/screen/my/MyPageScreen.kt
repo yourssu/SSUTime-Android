@@ -56,6 +56,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.yourssu.data.AlertData
 import com.yourssu.data.UiState
 import com.yourssu.ssutime.v2.R
+import com.yourssu.ssutime.v2.analytics.Analytics
 import com.yourssu.ssutime.v2.ui.theme.N100
 import com.yourssu.ssutime.v2.ui.theme.N200
 import com.yourssu.ssutime.v2.ui.theme.N300
@@ -82,6 +83,9 @@ fun MyPageScreen(
     val alertState by viewModel.uiState.collectAsStateWithLifecycle()
     var alertData by remember { mutableStateOf<AlertData>(AlertData(valid = false, false, false, -1)) }
 
+    LaunchedEffect(Unit) {
+        Analytics.viewMyPage()
+    }
 
     when (val state = alertState) {
         is UiState.Success -> {
@@ -97,8 +101,14 @@ fun MyPageScreen(
     if (showLogoutPopup) {
         Dialog(onDismissRequest = { showLogoutPopup = false }) {
             LogoutPopup(
-                onCancel = { showLogoutPopup = false },
-                onConfirm = { viewModel.logout() }
+                onCancel = {
+                    Analytics.logoutCancel()
+                    showLogoutPopup = false
+                },
+                onConfirm = {
+                    Analytics.logoutConfirm()
+                    viewModel.logout()
+                }
             )
         }
     }
@@ -184,6 +194,7 @@ fun MyPageScreen(
                 text = "시스템 알림",
                 value = alertData.allowSystemAlert,
                 onValueChanged = {
+                    Analytics.settingSystemAlarm(isEnabled = !alertData.allowSystemAlert)
                     viewModel.updateAlertData(
                         alertData.copy(allowSystemAlert = !alertData.allowSystemAlert)
                     )
@@ -194,8 +205,20 @@ fun MyPageScreen(
                 text = "전화 알림",
                 value = alertData.allowCallAlert,
                 onValueChanged = {
+                    val nextEnabled = !alertData.allowCallAlert
+                    val selectedTime = if (nextEnabled) {
+                        Analytics.selectedTimeFromMinutes(alertData.callingAlertThresholdMinutes)
+                    } else {
+                        "reject"
+                    }
+                    if (selectedTime != null) {
+                        Analytics.settingCallAlarm(
+                            isEnabled = nextEnabled,
+                            selectedTime = selectedTime,
+                        )
+                    }
                     viewModel.updateAlertData(
-                        alertData.copy(allowCallAlert = !alertData.allowCallAlert)
+                        alertData.copy(allowCallAlert = nextEnabled)
                     )
                 },
                 childOption = {
@@ -203,6 +226,12 @@ fun MyPageScreen(
                         text = "시간",
                         value = "${(alertData.callingAlertThresholdMinutes / 60).toInt()}시간 전"
                     ) { hours ->
+                        Analytics.selectedTimeFromMinutes(hours * 60L)?.let { selectedTime ->
+                            Analytics.settingCallAlarm(
+                                isEnabled = alertData.allowCallAlert,
+                                selectedTime = selectedTime,
+                            )
+                        }
                         viewModel.updateAlertData(
                             alertData.copy(callingAlertThresholdMinutes = hours * 60L)
                         )
@@ -216,6 +245,7 @@ fun MyPageScreen(
         OptionButton(
             text = "로그아웃"
         ) {
+            Analytics.logoutClick()
             showLogoutPopup = true
         }
     }

@@ -78,6 +78,7 @@ class TodoMediumWidget : GlanceAppWidget() {
         context: Context,
         id: GlanceId,
     ) {
+        context.captureWidgetDisplayOnceDaily(WidgetAnalyticsSize.Medium)
         val initialTodoData = context.todoDataStore.data.first()
 
         provideContent {
@@ -97,6 +98,7 @@ class TodoLargeWidget : GlanceAppWidget() {
         context: Context,
         id: GlanceId,
     ) {
+        context.captureWidgetDisplayOnceDaily(WidgetAnalyticsSize.Large)
         val initialTodoData = context.todoDataStore.data.first()
 
         provideContent {

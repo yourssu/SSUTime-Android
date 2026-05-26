@@ -1,9 +1,21 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.koin.compiler)
     id("org.jetbrains.kotlin.plugin.serialization")
     id("com.google.gms.google-services")
+}
+
+fun String.toBuildConfigString(): String =
+    "\"${replace("\\", "\\\\").replace("\"", "\\\"")}\""
+
+val localProperties = Properties().apply {
+    val localPropertiesFile = rootProject.file("local.properties")
+    if (localPropertiesFile.exists()) {
+        localPropertiesFile.inputStream().use(::load)
+    }
 }
 
 koinCompiler {
@@ -29,6 +41,11 @@ android {
         versionName = "1.0.3"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        buildConfigField(
+            "String",
+            "POSTHOG_API_KEY",
+            localProperties.getProperty("posthog").orEmpty().toBuildConfigString(),
+        )
     }
 
     buildTypes {
@@ -48,6 +65,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 
@@ -100,6 +118,8 @@ dependencies {
     implementation(libs.androidx.core.splashscreen)
 
     implementation(project(":data"))
+
+    implementation("com.posthog:posthog-android:3.+")
 
     testImplementation(libs.junit)
     androidTestImplementation(platform(libs.androidx.compose.bom))

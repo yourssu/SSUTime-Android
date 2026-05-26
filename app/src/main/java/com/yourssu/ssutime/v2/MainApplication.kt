@@ -5,6 +5,7 @@ import android.app.NotificationManager
 import android.media.AudioAttributes
 import android.media.RingtoneManager
 import android.os.Build
+import com.yourssu.ssutime.v2.analytics.Analytics
 import org.koin.android.ext.koin.androidContext
 import org.koin.android.ext.koin.androidLogger
 import org.koin.core.context.startKoin
@@ -13,6 +14,7 @@ class MainApplication : android.app.Application() {
 
     override fun onCreate() {
         super.onCreate()
+        Analytics.setup(this)
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager

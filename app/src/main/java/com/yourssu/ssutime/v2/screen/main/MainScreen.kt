@@ -70,6 +70,7 @@ import com.yourssu.data.AlertData
 import com.yourssu.data.TodoInfo
 import com.yourssu.data.TodoType
 import com.yourssu.ssutime.v2.R
+import com.yourssu.ssutime.v2.analytics.Analytics
 import com.yourssu.ssutime.v2.component.OutlinedButton
 import com.yourssu.ssutime.v2.component.SButton
 import com.yourssu.ssutime.v2.component.SCheckBox
@@ -155,6 +156,7 @@ fun MainScreen(
                 loadedAt = viewModel.loadedAt.value,
                 showWidgetBadge = viewModel.showWidgetBadge.value,
                 onClickRefresh = {
+                    Analytics.refreshClick()
                     coroutine.launch {
                         if (context.isNetworkConnected()) {
                             viewModel.loadTodos(forceRefresh = true)
@@ -167,9 +169,11 @@ fun MainScreen(
                     showSubmittedBottomSheet = true
                 },
                 onClickWidgetBadge = {
+                    Analytics.widgetBannerClick()
                     showWidgetHelperDialog = true
                 },
                 onDismissWidgetBadge = {
+                    Analytics.widgetBannerDismiss()
                     viewModel.dismissWidgetHelperBadge()
                 }
             )
@@ -446,7 +450,10 @@ fun MainFragment(
                 modifier = Modifier
                     .fillMaxWidth(),
                 todos = todos,
-                onClickSubmitted = onClickSubmitted,
+                onClickSubmitted = {
+                    Analytics.submitCompleteClick()
+                    onClickSubmitted()
+                },
                 submittedSize = submitted.size,
             )
         }
@@ -764,7 +771,16 @@ fun TodoItem(
 
                 Image(
                     modifier = Modifier.clickable {
-                        expanded = !expanded
+                        val nextExpanded = !expanded
+                        if (nextExpanded) {
+                            Analytics.taskDetailExpand(
+                                todo = todoInfo,
+                                dDay = leftDay.toInt(),
+                            )
+                        } else {
+                            Analytics.taskDetailCollapse()
+                        }
+                        expanded = nextExpanded
                     },
                     imageVector = if (!expanded) Icons.Outlined.KeyboardArrowDown else Icons.Outlined.KeyboardArrowUp,
                     contentDescription = "과제 정보 확장"
