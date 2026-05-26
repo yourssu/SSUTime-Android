@@ -33,7 +33,6 @@ import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.KeyboardArrowDown
 import androidx.compose.material.icons.outlined.KeyboardArrowUp
@@ -86,6 +85,7 @@ import com.yourssu.ssutime.v2.ui.theme.G400
 import com.yourssu.ssutime.v2.ui.theme.N100
 import com.yourssu.ssutime.v2.ui.theme.N200
 import com.yourssu.ssutime.v2.ui.theme.N300
+import com.yourssu.ssutime.v2.ui.theme.N500
 import com.yourssu.ssutime.v2.ui.theme.R100
 import com.yourssu.ssutime.v2.ui.theme.R400
 import com.yourssu.ssutime.v2.ui.theme.R500
@@ -855,21 +855,21 @@ private fun AiSummaryBlock(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(
-                imageVector = Icons.Outlined.AutoAwesome,
+                painter = painterResource(R.drawable.ai),
                 contentDescription = null,
                 tint = Color.Black,
             )
             Spacer(Modifier.width(8.dp))
             Text(
                 text = "AI 요약",
-                style = SSUType.H4SemiBold,
+                style = SSUType.H5SemiBold,
                 color = Color.Black,
             )
             Spacer(Modifier.weight(1f))
             Text(
                 text = "예상 소요시간 알 수 없음",
-                style = SSUType.H5SemiBold,
-                color = Color(0xFF4F555D),
+                style = SSUType.Caption1SemiBold,
+                color = N500,
             )
         }
 
@@ -884,7 +884,7 @@ private fun AiSummaryBlock(
                 null -> "AI 요약을 불러오는 중이에요."
             },
             style = SSUType.Body1Medium,
-            color = Color(0xFF4F555D),
+            color = N500,
         )
     }
 }
