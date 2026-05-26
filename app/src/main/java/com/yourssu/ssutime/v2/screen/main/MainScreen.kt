@@ -563,7 +563,13 @@ fun TodoItem(
                                     )
                                     .padding(horizontal = 6.dp, vertical = 3.dp),
                                 text = todoInfo.type.kor,
-                                style = SSUType.Caption1SemiBold
+                                style = SSUType.Caption1SemiBold,
+                                color = when(todoInfo.type) {
+                                    TodoType.COMMONS -> Color(0xFFFF39D0)
+                                    TodoType.QUIZ -> Color(0xFFFF5F0B)
+                                    TodoType.ASSIGNMENT -> Color(0xFF007BFF)
+                                    else -> Color(0xFFFF39D0)
+                                }
                             )
                             Spacer(Modifier.width(6.dp))
 
