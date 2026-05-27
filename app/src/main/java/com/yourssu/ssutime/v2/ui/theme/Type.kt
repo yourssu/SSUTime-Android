@@ -58,7 +58,11 @@ internal object SSUType {
     val G_H1SemiBold = androidx.glance.text.TextStyle(
         fontWeight = androidx.glance.text.FontWeight.Bold,
         fontSize = 24.sp,
-        color = White
+    )
+
+    val G_H4SemiBold = androidx.glance.text.TextStyle(
+        fontWeight = androidx.glance.text.FontWeight.Bold,
+        fontSize = 16.sp,
     )
 
     val H2Medium = TextStyle(
@@ -96,7 +100,6 @@ internal object SSUType {
     val G_H3SemiBold = androidx.glance.text.TextStyle(
         fontWeight = androidx.glance.text.FontWeight.Bold,
         fontSize = 18.sp,
-        color = White
     )
 
     val H4Medium = TextStyle(
@@ -278,8 +281,6 @@ internal object SSUType {
     val G_Caption1SemiBold = androidx.glance.text.TextStyle(
         fontWeight = androidx.glance.text.FontWeight.Bold,
         fontSize = 12.sp,
-
-        color = White
     )
 
     val Caption2Medium = TextStyle(
@@ -293,7 +294,6 @@ internal object SSUType {
     val G_Caption2Medium = androidx.glance.text.TextStyle(
         fontWeight = androidx.glance.text.FontWeight.Medium,
         fontSize = 10.sp,
-        color = White
     )
 
     val Caption2SemiBold = TextStyle(
@@ -307,7 +307,6 @@ internal object SSUType {
     val G_Caption2SemiBold = androidx.glance.text.TextStyle(
         fontWeight = androidx.glance.text.FontWeight.Bold,
         fontSize = 10.sp,
-        color = White
     )
 
     val Caption3Regular = TextStyle(
@@ -321,6 +320,5 @@ internal object SSUType {
     val G_Caption3Regular = androidx.glance.text.TextStyle(
         fontWeight = androidx.glance.text.FontWeight.Normal,
         fontSize = 8.sp,
-        color = White
     )
 }

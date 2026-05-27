@@ -8,6 +8,6 @@
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
     <color name="todo_widget_background">#FFFFFFFF</color>
-    <color name="todo_widget_accent">#FFEB5757</color>
+    <color name="todo_widget_accent">#FFFE4F4C</color>
     <color name="todo_widget_text_primary">#FF4B515B</color>
 </resources>

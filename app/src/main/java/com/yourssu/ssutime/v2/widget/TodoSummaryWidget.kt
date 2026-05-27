@@ -51,6 +51,7 @@ import com.yourssu.ssutime.v2.MainActivity
 import com.yourssu.ssutime.v2.R
 import com.yourssu.ssutime.v2.getStringSimpleDate
 import com.yourssu.ssutime.v2.screen.main.todoDataStore
+import com.yourssu.ssutime.v2.ui.theme.SSUType
 import kotlinx.coroutines.flow.first
 import java.time.Instant
 import java.time.LocalDateTime
@@ -64,12 +65,34 @@ import java.util.Locale
 private const val SUMMARY_EMPTY_TEXT = "모든 할 일을 수행했어요!"
 private const val SUMMARY_SECONDS_PER_DAY = 24 * 60 * 60L
 
-private val summaryBackground = ColorProvider(day = Color.White, night = Color(0xFF1C1C1E))
-private val summaryCardBackground = ColorProvider(day = Color(0xFFFFE8E8), night = Color(0xFF3A2528))
-private val summaryAccent = ColorProvider(day = Color(0xFFEB5757), night = Color(0xFFFF6B6B))
-private val summaryAccentSoft = ColorProvider(day = Color(0xFFFFA6A6), night = Color(0xFF8A3C42))
-private val summaryPrimaryText = ColorProvider(day = Color(0xFF4B515B), night = Color(0xFFF2F2F7))
-private val summarySecondaryText = ColorProvider(day = Color(0xFF9BA5B1), night = Color(0xFF9A9AA0))
+private val summaryBackground = ColorProvider(
+    day = Color.White,
+    night = Color.Black
+)
+private val summaryCardBackground = ColorProvider(
+    day = Color(0xFFFFEAE9),
+    night = Color(0xFF222222)
+)
+private val headlineTextColor = ColorProvider(
+    day = Color(0xFFFE4F4C),
+    night = Color(0xFFFE4F4C)
+)
+private val summaryAccent = ColorProvider(
+    day = Color(0xFFFE4F4C),
+    night = Color(0xFFF6F7F8)
+)
+private val summaryAccentSoft = ColorProvider(
+    day = Color(0xFFFFA8A6),
+    night = Color(0xFFADB5BD)
+)
+private val summaryPrimaryText = ColorProvider(
+    day = Color(0xFF4B515B),
+    night = Color(0xFFF2F2F7)
+)
+private val summarySecondaryText = ColorProvider(
+    day = Color(0xFF9BA5B1),
+    night = Color(0xFF9A9AA0)
+)
 
 class TodoMediumWidget : GlanceAppWidget() {
     override val sizeMode = SizeMode.Exact
@@ -244,8 +267,8 @@ private fun TodoMediumContent(
                 subjectFontSize = 9,
                 typeFontSize = 14,
                 dDayFontSize = 16,
-                dDayContainerWidth = 42.dp,
-                dDayTextWidth = 40.dp,
+                dDayContainerWidth = 52.dp,
+                dDayTextWidth = 50.dp,
             )
             Spacer(modifier = GlanceModifier.height(8.dp))
             CompactTodoSlot(
@@ -254,8 +277,8 @@ private fun TodoMediumContent(
                 subjectFontSize = 9,
                 typeFontSize = 14,
                 dDayFontSize = 16,
-                dDayContainerWidth = 42.dp,
-                dDayTextWidth = 40.dp,
+                dDayContainerWidth = 52.dp,
+                dDayTextWidth = 50.dp,
             )
             Spacer(modifier = GlanceModifier.height(8.dp))
             MoreTodosText(
@@ -315,9 +338,9 @@ private fun TodoLargeContent(uiState: TodoSummaryUiState) {
                     dDayContainerWidth = if (item?.isLate == true) {
                         74.dp
                     } else {
-                        42.dp
+                        52.dp
                     },
-                    dDayTextWidth = 40.dp,
+                    dDayTextWidth = 50.dp,
                 )
                 if (index != 3) {
                     Spacer(modifier = GlanceModifier.height(4.dp))
@@ -355,11 +378,8 @@ private fun TodoSummaryEmptyContent(size: TodoSummarySize) {
         Text(
             text = SUMMARY_EMPTY_TEXT,
             maxLines = 1,
-            style = summaryTextStyle(
-                fontSize = if (size == TodoSummarySize.Medium) 11 else 13,
-                fontWeight = FontWeight.Bold,
-                color = summaryPrimaryText,
-            ),
+            style = SSUType.G_Caption2SemiBold
+                .copy(color = summaryPrimaryText),
         )
     }
 }
@@ -385,11 +405,8 @@ private fun PrimaryCountdown(
             Text(
                 text = "마감까지",
                 maxLines = 1,
-                style = summaryTextStyle(
-                    fontSize = 12,
-                    fontWeight = FontWeight.Bold,
-                    color = summaryAccent,
-                ),
+                style = SSUType.G_Caption2Medium
+                    .copy(color = headlineTextColor),
             )
         }
         LiveCountdownText(
@@ -442,32 +459,23 @@ private fun PrimaryTodoCard(
                 Text(
                     text = item.subjectName,
                     maxLines = 1,
-                    style = summaryTextStyle(
-                        fontSize = subjectFontSize,
-                        fontWeight = FontWeight.Bold,
-                        color = summaryPrimaryText,
-                    ),
+                    style = SSUType.G_Caption2Medium
+                        .copy(color = summaryPrimaryText),
                 )
             }
             if (showTitle) {
                 Text(
                     text = item.title,
                     maxLines = 1,
-                    style = summaryTextStyle(
-                        fontSize = titleFontSize,
-                        fontWeight = FontWeight.Bold,
-                        color = summaryPrimaryText,
-                    ),
+                    style = SSUType.G_Caption2Medium
+                        .copy(color = summaryPrimaryText),
                 )
             }
             Text(
                 text = item.type,
                 maxLines = 1,
-                style = summaryTextStyle(
-                    fontSize = typeFontSize,
-                    fontWeight = FontWeight.Bold,
-                    color = summaryAccent,
-                ),
+                style = SSUType.G_Caption1SemiBold
+                    .copy(color = summaryAccent),
             )
         }
     }
@@ -514,20 +522,14 @@ private fun CompactTodoSlot(
             Text(
                 text = item.subjectName,
                 maxLines = 1,
-                style = summaryTextStyle(
-                    fontSize = subjectFontSize,
-                    fontWeight = FontWeight.Bold,
-                    color = summaryPrimaryText,
-                ),
+                style = SSUType.G_Caption2Medium
+                    .copy(color = summaryPrimaryText),
             )
             Text(
                 text = item.type,
                 maxLines = 1,
-                style = summaryTextStyle(
-                    fontSize = typeFontSize,
-                    fontWeight = FontWeight.Bold,
-                    color = summaryPrimaryText,
-                ),
+                style = SSUType.G_Caption1SemiBold
+                    .copy(color = summaryPrimaryText),
             )
         }
         Row(
@@ -539,12 +541,8 @@ private fun CompactTodoSlot(
                 text = item.dDayText,
                 modifier = GlanceModifier.width(dDayTextWidth),
                 maxLines = 1,
-                style = summaryTextStyle(
-                    fontSize = dDayFontSize,
-                    fontWeight = FontWeight.Bold,
-                    color = summaryPrimaryText,
-                    textAlign = TextAlign.End,
-                ),
+                style = SSUType.G_H4SemiBold
+                    .copy(color = summaryPrimaryText, textAlign = TextAlign.End),
             )
             if (item.isLate) {
                 Spacer(modifier = GlanceModifier.width(4.dp))
@@ -573,11 +571,8 @@ private fun WidgetUpdatedAt(
         Text(
             text = text,
             maxLines = 1,
-            style = summaryTextStyle(
-                fontSize = fontSize,
-                fontWeight = FontWeight.Medium,
-                color = summaryPrimaryText,
-            ),
+            style = SSUType.G_Caption3Regular
+                .copy(color = summaryPrimaryText),
         )
         Spacer(modifier = GlanceModifier.width(4.dp))
         Image(
@@ -622,11 +617,8 @@ private fun MoreTodosText(
         Text(
             text = "그 외 ${count}건의 할 일이 있어요",
             maxLines = 1,
-            style = summaryTextStyle(
-                fontSize = fontSize,
-                fontWeight = FontWeight.Medium,
-                color = summarySecondaryText,
-            ),
+            style = SSUType.G_Caption2Medium
+                .copy(color = summarySecondaryText),
         )
     }
 }
