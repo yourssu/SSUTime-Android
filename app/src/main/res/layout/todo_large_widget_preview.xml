@@ -1,0 +1,240 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="24dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@drawable/todo_widget_preview_background"
+        android:orientation="vertical"
+        android:padding="24dp">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:fontFamily="sans"
+            android:includeFontPadding="false"
+            android:maxLines="1"
+            android:text="마감까지"
+            android:textColor="@color/todo_widget_accent"
+            android:textSize="11sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="160dp"
+            android:layout_height="wrap_content"
+            android:fontFamily="sans"
+            android:includeFontPadding="false"
+            android:maxLines="1"
+            android:text="03:24:16"
+            android:textColor="@color/todo_widget_accent"
+            android:textSize="27sp"
+            android:textStyle="bold" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="54dp"
+            android:layout_marginTop="3dp"
+            android:background="@drawable/todo_widget_preview_card_background"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp">
+
+            <TextView
+                android:layout_width="3dp"
+                android:layout_height="44dp"
+                android:background="@drawable/todo_widget_preview_accent"
+                android:text="" />
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:ellipsize="end"
+                    android:fontFamily="sans"
+                    android:includeFontPadding="false"
+                    android:maxLines="1"
+                    android:text="데이터사이언스"
+                    android:textColor="@color/todo_widget_text_primary"
+                    android:textSize="9sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:ellipsize="end"
+                    android:fontFamily="sans"
+                    android:includeFontPadding="false"
+                    android:maxLines="1"
+                    android:text="분석 리포트 제출"
+                    android:textColor="@color/todo_widget_text_primary"
+                    android:textSize="11sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:ellipsize="end"
+                    android:fontFamily="sans"
+                    android:includeFontPadding="false"
+                    android:maxLines="1"
+                    android:text="과제"
+                    android:textColor="@color/todo_widget_accent"
+                    android:textSize="11sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="14dp"
+            android:fontFamily="sans"
+            android:gravity="end|center_vertical"
+            android:includeFontPadding="false"
+            android:maxLines="1"
+            android:text="업데이트 오전 9:00 기준"
+            android:textColor="@color/todo_widget_text_primary"
+            android:textSize="8sp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="32dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <TextView
+                android:layout_width="3dp"
+                android:layout_height="28dp"
+                android:background="@drawable/todo_widget_preview_accent_soft"
+                android:text="" />
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:layout_weight="1"
+                android:ellipsize="end"
+                android:fontFamily="sans"
+                android:includeFontPadding="false"
+                android:maxLines="1"
+                android:text="벤처경영 퀴즈"
+                android:textColor="@color/todo_widget_text_primary"
+                android:textSize="12sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="40dp"
+                android:layout_height="wrap_content"
+                android:fontFamily="sans"
+                android:gravity="end"
+                android:includeFontPadding="false"
+                android:maxLines="1"
+                android:text="D-1"
+                android:textColor="@color/todo_widget_text_primary"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="32dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <TextView
+                android:layout_width="3dp"
+                android:layout_height="28dp"
+                android:background="@drawable/todo_widget_preview_accent_soft"
+                android:text="" />
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:layout_weight="1"
+                android:ellipsize="end"
+                android:fontFamily="sans"
+                android:includeFontPadding="false"
+                android:maxLines="1"
+                android:text="모바일프로그래밍 과제"
+                android:textColor="@color/todo_widget_text_primary"
+                android:textSize="12sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="40dp"
+                android:layout_height="wrap_content"
+                android:fontFamily="sans"
+                android:gravity="end"
+                android:includeFontPadding="false"
+                android:maxLines="1"
+                android:text="D-2"
+                android:textColor="@color/todo_widget_text_primary"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="32dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <TextView
+                android:layout_width="3dp"
+                android:layout_height="28dp"
+                android:background="@drawable/todo_widget_preview_accent_soft"
+                android:text="" />
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:layout_weight="1"
+                android:ellipsize="end"
+                android:fontFamily="sans"
+                android:includeFontPadding="false"
+                android:maxLines="1"
+                android:text="운영체제 강의"
+                android:textColor="@color/todo_widget_text_primary"
+                android:textSize="12sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="40dp"
+                android:layout_height="wrap_content"
+                android:fontFamily="sans"
+                android:gravity="end"
+                android:includeFontPadding="false"
+                android:maxLines="1"
+                android:text="D-3"
+                android:textColor="@color/todo_widget_text_primary"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="14dp"
+            android:layout_marginTop="2dp"
+            android:ellipsize="end"
+            android:fontFamily="sans"
+            android:gravity="center_vertical"
+            android:includeFontPadding="false"
+            android:maxLines="1"
+            android:text="그 외 1건의 할 일이 있어요"
+            android:textColor="#FF9BA5B1"
+            android:textSize="9sp" />
+    </LinearLayout>
+</FrameLayout>

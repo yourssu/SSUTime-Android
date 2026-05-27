@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="24dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@drawable/todo_widget_preview_background"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:padding="24dp">
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:gravity="center_vertical"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:fontFamily="sans"
+                android:includeFontPadding="false"
+                android:maxLines="1"
+                android:text="마감까지"
+                android:textColor="@color/todo_widget_accent"
+                android:textSize="10sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="132dp"
+                android:layout_height="wrap_content"
+                android:fontFamily="sans"
+                android:includeFontPadding="false"
+                android:maxLines="1"
+                android:text="03:24:16"
+                android:textColor="@color/todo_widget_accent"
+                android:textSize="24sp"
+                android:textStyle="bold" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="50dp"
+                android:layout_marginTop="4dp"
+                android:background="@drawable/todo_widget_preview_card_background"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingStart="8dp"
+                android:paddingEnd="8dp">
+
+                <TextView
+                    android:layout_width="3dp"
+                    android:layout_height="40dp"
+                    android:background="@drawable/todo_widget_preview_accent"
+                    android:text="" />
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:ellipsize="end"
+                        android:fontFamily="sans"
+                        android:includeFontPadding="false"
+                        android:maxLines="1"
+                        android:text="데이터사이언스 과제"
+                        android:textColor="@color/todo_widget_text_primary"
+                        android:textSize="9sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:ellipsize="end"
+                        android:fontFamily="sans"
+                        android:includeFontPadding="false"
+                        android:maxLines="1"
+                        android:text="과제"
+                        android:textColor="@color/todo_widget_accent"
+                        android:textSize="10sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+            </LinearLayout>
+        </LinearLayout>
+
+        <TextView
+            android:layout_width="10dp"
+            android:layout_height="1dp"
+            android:text="" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:gravity="center_vertical"
+            android:orientation="vertical">
+
+            <include layout="@layout/todo_widget_preview_compact_item_1" />
+
+            <TextView
+                android:layout_width="1dp"
+                android:layout_height="7dp"
+                android:text="" />
+
+            <include layout="@layout/todo_widget_preview_compact_item_2" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="14dp"
+                android:layout_marginTop="5dp"
+                android:ellipsize="end"
+                android:fontFamily="sans"
+                android:gravity="center_vertical"
+                android:includeFontPadding="false"
+                android:maxLines="1"
+                android:text="그 외 2건의 할 일이 있어요"
+                android:textColor="#FF9BA5B1"
+                android:textSize="9sp" />
+        </LinearLayout>
+    </LinearLayout>
+</FrameLayout>

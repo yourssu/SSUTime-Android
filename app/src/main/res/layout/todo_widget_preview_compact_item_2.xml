@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="34dp"
+    android:gravity="center_vertical"
+    android:orientation="horizontal">
+
+    <TextView
+        android:layout_width="3dp"
+        android:layout_height="30dp"
+        android:background="@drawable/todo_widget_preview_accent_soft"
+        android:text="" />
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="8dp"
+        android:layout_weight="1"
+        android:orientation="vertical">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:ellipsize="end"
+            android:fontFamily="sans"
+            android:includeFontPadding="false"
+            android:maxLines="1"
+            android:text="모바일프로그래밍"
+            android:textColor="@color/todo_widget_text_primary"
+            android:textSize="8sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:ellipsize="end"
+            android:fontFamily="sans"
+            android:includeFontPadding="false"
+            android:maxLines="1"
+            android:text="과제"
+            android:textColor="@color/todo_widget_text_primary"
+            android:textSize="12sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <TextView
+        android:layout_width="40dp"
+        android:layout_height="wrap_content"
+        android:fontFamily="sans"
+        android:gravity="end"
+        android:includeFontPadding="false"
+        android:maxLines="1"
+        android:text="D-2"
+        android:textColor="@color/todo_widget_text_primary"
+        android:textSize="14sp"
+        android:textStyle="bold" />
+</LinearLayout>

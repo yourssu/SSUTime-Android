@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <dimen name="dday_widget_size">110dp</dimen>
+    <dimen name="dday_widget_preview_size">160dp</dimen>
 </resources>

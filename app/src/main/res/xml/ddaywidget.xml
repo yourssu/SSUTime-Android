@@ -2,7 +2,7 @@
     android:initialLayout="@layout/dday_widget_empty"
     android:minWidth="110dp"
     android:minHeight="110dp"
-    android:previewLayout="@layout/dday_widget_empty"
+    android:previewLayout="@layout/dday_widget_preview"
     android:targetCellWidth="2"
     android:targetCellHeight="2"
     android:resizeMode="none"
