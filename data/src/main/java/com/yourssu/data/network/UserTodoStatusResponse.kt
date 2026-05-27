@@ -17,6 +17,8 @@ data class ReportedTodoResponse(
     val dueDate: String = "",
     val title: String = "",
     val aiSummary: String? = null,
+    val estimatedDurationMinutes: Int? = -1,
+    val status: String = "",
 )
 
 fun ReportedTodoResponse.matches(todo: TodoInfo): Boolean =

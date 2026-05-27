@@ -227,7 +227,6 @@ private fun TodoMediumContent(
             Spacer(modifier = GlanceModifier.height(5.dp))
             WidgetUpdatedAt(
                 text = uiState.updatedAtText,
-                alignEnd = false,
             )
         }
 
@@ -299,7 +298,6 @@ private fun TodoLargeContent(uiState: TodoSummaryUiState) {
         Spacer(modifier = GlanceModifier.height(2.dp))
         WidgetUpdatedAt(
             text = uiState.updatedAtText,
-            alignEnd = true,
             fontSize = 9,
             iconSize = 24.dp,
         )
@@ -564,13 +562,12 @@ private fun CompactTodoSlot(
 @GlanceComposable
 private fun WidgetUpdatedAt(
     text: String,
-    alignEnd: Boolean,
     fontSize: Int = 9,
     iconSize: Dp = 24.dp,
 ) {
     Row(
         modifier = GlanceModifier.fillMaxWidth(),
-        horizontalAlignment = if (alignEnd) Alignment.Horizontal.End else Alignment.Horizontal.CenterHorizontally,
+        horizontalAlignment = Alignment.Horizontal.End,
         verticalAlignment = Alignment.Vertical.CenterVertically,
     ) {
         Text(

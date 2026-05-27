@@ -7,12 +7,15 @@ import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.yourssu.data.AiSummaryCache
 import com.yourssu.data.AlertData
 import com.yourssu.data.TodoData
 import com.yourssu.data.TodoInfo
 import com.yourssu.data.TodoType
+import com.yourssu.data.network.ReportedTodoResponse
 import com.yourssu.data.network.matches
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.time.Duration
 import java.time.Instant
@@ -21,6 +24,10 @@ import java.time.ZoneId
 
 private val REFRESH_DATE_ZONE_ID: ZoneId = ZoneId.of("Asia/Seoul")
 private val SUBMITTED_VISIBLE_WINDOW: Duration = Duration.ofHours(24)
+private const val AI_SUMMARY_POLL_ATTEMPTS = 8
+private const val AI_SUMMARY_POLL_INTERVAL_MILLIS = 2_000L
+private const val TODO_STATUS_PROVISIONAL = "PROVISIONAL"
+private const val TODO_STATUS_CONFIRMED = "CONFIRMED"
 
 class MainViewModel(
     private val mainRepository: MainRepository,
@@ -70,37 +77,46 @@ class MainViewModel(
         }
 
         val key = todo.aiSummaryKey()
-        if (aiSummaryStates[key] == AiSummaryUiState.Loading) {
-            return
+        when (aiSummaryStates[key]) {
+            is AiSummaryUiState.Success,
+            AiSummaryUiState.Loading,
+            AiSummaryUiState.Analyzing -> return
+            AiSummaryUiState.Empty,
+            AiSummaryUiState.Error,
+            null -> Unit
         }
 
         viewModelScope.launch {
-            val analysisAlreadyRequested = aiSummaryStates[key] == AiSummaryUiState.Empty
+            mainRepository.getCachedAiSummary(key)?.toAiSummarySuccessOrNull()?.let { success ->
+                aiSummaryStates[key] = success
+                return@launch
+            }
+
+            val shouldPollOnly = aiSummaryStates[key] == AiSummaryUiState.Empty
             aiSummaryStates[key] = AiSummaryUiState.Loading
 
             val reportedTodoResult = runCatching {
-                mainRepository.getReportedTodos()
-                    .firstOrNull { response -> response.todo.matches(todo) }
-                    ?.todo
+                findReportedTodo(todo)
             }
 
             val reportedTodo = reportedTodoResult.getOrNull()
-            if (reportedTodo != null) {
-                val aiSummary = reportedTodo.aiSummary.orEmpty()
-                if (aiSummary.isNotBlank()) {
-                    aiSummaryStates[key] =
-                        AiSummaryUiState.Success(aiSummary)
-                    return@launch
-                }
-
-                if (analysisAlreadyRequested) {
-                    aiSummaryStates[key] = AiSummaryUiState.Empty
-                    return@launch
-                }
+            reportedTodo?.toAiSummarySuccessOrNull()?.let { success ->
+                cacheAndShowAiSummary(key, success)
+                return@launch
             }
 
-            if (analysisAlreadyRequested && reportedTodoResult.isFailure) {
+            if (shouldPollOnly && reportedTodoResult.isFailure) {
                 aiSummaryStates[key] = AiSummaryUiState.Error
+                return@launch
+            }
+
+            if (shouldPollOnly || reportedTodo?.isProvisional == true) {
+                pollAndCacheAiSummary(todo, key)
+                return@launch
+            }
+
+            if (reportedTodo?.isConfirmed == true) {
+                aiSummaryStates[key] = AiSummaryUiState.Empty
                 return@launch
             }
 
@@ -111,19 +127,7 @@ class MainViewModel(
                     lmsSession = lmsSession,
                 )
             }.onSuccess {
-                val aiSummary = runCatching {
-                    mainRepository.getReportedTodos()
-                        .firstOrNull { response -> response.todo.matches(todo) }
-                        ?.todo
-                        ?.aiSummary
-                        .orEmpty()
-                }.getOrDefault("")
-
-                aiSummaryStates[key] = if (aiSummary.isNotBlank()) {
-                    AiSummaryUiState.Success(aiSummary)
-                } else {
-                    AiSummaryUiState.Empty
-                }
+                pollAndCacheAiSummary(todo, key)
             }.onFailure { exception ->
                 Log.e(javaClass.name, "AI 요약 요청에 실패했습니다: ${todo.title}", exception)
                 aiSummaryStates[key] = AiSummaryUiState.Error
@@ -131,7 +135,11 @@ class MainViewModel(
         }
     }
 
-    suspend fun loadTodos(forceRefresh: Boolean = false, allowRefresh: Boolean = true) {
+    suspend fun loadTodos(
+        forceRefresh: Boolean = false,
+        allowRefresh: Boolean = true,
+        showBlockingLoading: Boolean = true,
+    ) {
         if(isLoading.value) {
             return
         }
@@ -155,7 +163,7 @@ class MainViewModel(
                 return
             }
 
-            showLoading.value = true
+            showLoading.value = showBlockingLoading
             when (val refreshResult = lmsRefreshRepository.refreshTodos(
                 source = RefreshSource.MANUAL,
                 loadingState = {
@@ -201,6 +209,50 @@ class MainViewModel(
         }
 
         loadedAt.value = todoData.loadedAt
+
+        todoData.aiSummaryCache.forEach { (key, cache) ->
+            cache.toAiSummarySuccessOrNull()?.let { success ->
+                aiSummaryStates[key] = success
+            }
+        }
+    }
+
+    private suspend fun findReportedTodo(todo: TodoInfo): ReportedTodoResponse? =
+        mainRepository.getReportedTodos()
+            .firstOrNull { response -> response.todo.matches(todo) }
+            ?.todo
+
+    private suspend fun pollAndCacheAiSummary(todo: TodoInfo, key: String) {
+        aiSummaryStates[key] = AiSummaryUiState.Analyzing
+
+        repeat(AI_SUMMARY_POLL_ATTEMPTS) { attempt ->
+            val success = runCatching {
+                findReportedTodo(todo)?.toAiSummarySuccessOrNull()
+            }.getOrNull()
+
+            if (success != null) {
+                cacheAndShowAiSummary(key, success)
+                return
+            }
+
+            if (attempt < AI_SUMMARY_POLL_ATTEMPTS - 1) {
+                delay(AI_SUMMARY_POLL_INTERVAL_MILLIS)
+            }
+        }
+
+        aiSummaryStates[key] = AiSummaryUiState.Empty
+    }
+
+    private suspend fun cacheAndShowAiSummary(
+        key: String,
+        success: AiSummaryUiState.Success,
+    ) {
+        mainRepository.cacheAiSummary(
+            key = key,
+            summary = success.summary,
+            estimatedDurationMinutes = success.estimatedDurationMinutes,
+        )
+        aiSummaryStates[key] = success
     }
 
     private fun shouldRefreshOnOpen(todoData: TodoData): Boolean {
@@ -224,8 +276,12 @@ class MainViewModel(
 
 sealed interface AiSummaryUiState {
     data object Loading : AiSummaryUiState
+    data object Analyzing : AiSummaryUiState
     data object Empty : AiSummaryUiState
-    data class Success(val summary: String) : AiSummaryUiState
+    data class Success(
+        val summary: String,
+        val estimatedDurationMinutes: Int?,
+    ) : AiSummaryUiState
     data object Error : AiSummaryUiState
 }
 
@@ -234,6 +290,33 @@ fun TodoInfo.aiSummaryKey(): String =
 
 fun TodoInfo.canRequestAiSummary(): Boolean =
     type == TodoType.ASSIGNMENT && description.isNotBlank()
+
+private fun ReportedTodoResponse.toAiSummarySuccessOrNull(): AiSummaryUiState.Success? {
+    val summary = aiSummary.orEmpty().trim()
+        .takeIf { isConfirmed && it.isNotBlank() }
+        ?: return null
+
+    return AiSummaryUiState.Success(
+        summary = summary,
+        estimatedDurationMinutes = estimatedDurationMinutes,
+    )
+}
+
+private fun AiSummaryCache.toAiSummarySuccessOrNull(): AiSummaryUiState.Success? =
+    summary.trim()
+        .takeIf { it.isNotBlank() }
+        ?.let { summary ->
+            AiSummaryUiState.Success(
+                summary = summary,
+                estimatedDurationMinutes = estimatedDurationMinutes,
+            )
+        }
+
+private val ReportedTodoResponse.isProvisional: Boolean
+    get() = status.equals(TODO_STATUS_PROVISIONAL, ignoreCase = true)
+
+private val ReportedTodoResponse.isConfirmed: Boolean
+    get() = status.equals(TODO_STATUS_CONFIRMED, ignoreCase = true)
 
 private fun List<TodoInfo>.filterRecentlySubmitted(
     now: Instant = Instant.now(),

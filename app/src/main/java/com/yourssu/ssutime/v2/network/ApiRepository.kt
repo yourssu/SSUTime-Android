@@ -2,13 +2,12 @@ package com.yourssu.ssutime.v2.network
 
 import android.util.Log
 import com.yourssu.data.network.AddEnrollmentRequest
-import com.yourssu.data.network.AddTodoRequest
 import com.yourssu.data.network.AssignmentAnalysisResponse
-import com.yourssu.data.network.CompleteTodoRequest
 import com.yourssu.data.network.DeleteEnrollmentRequest
 import com.yourssu.data.network.EnrollmentResponse
 import com.yourssu.data.network.FcmRequest
 import com.yourssu.data.network.NotificationSetting
+import com.yourssu.data.network.TodoReportRequest
 import com.yourssu.data.network.TodoReportWithAnalysisRequest
 import com.yourssu.data.network.TokenRequest
 import com.yourssu.data.network.TokenResponse
@@ -118,7 +117,7 @@ class ApiRepository {
         return response.body()
     }
 
-    suspend fun addTodo(todo: AddTodoRequest): HttpStatusCode {
+    suspend fun reportTodo(todo: TodoReportRequest): HttpStatusCode {
         val response = client.post(
             urlString = "https://ssutimev2-api-dev.yourssu.com/todo/report"
         ) {
@@ -126,19 +125,10 @@ class ApiRepository {
             contentType(ContentType.Application.Json)
             setBody(todo)
         }
-        Log.i("ApiRepository", todo.title + " Add Reqeust Status Code : ${response.status.value}")
-        return response.status
-    }
-
-    suspend fun completeTodo(todo: CompleteTodoRequest): HttpStatusCode {
-        val response = client.put(
-            urlString = "https://ssutimev2-api-dev.yourssu.com/todo/report"
-        ) {
-            bearerAuth(accessToken)
-            contentType(ContentType.Application.Json)
-            setBody(todo)
-        }
-        Log.i("ApiRepository", todo.title + " Complete Reqeust Status Code : ${response.status.value}")
+        Log.i(
+            "ApiRepository",
+            todo.title + " Todo Report Request Status Code : ${response.status.value}",
+        )
         return response.status
     }
 

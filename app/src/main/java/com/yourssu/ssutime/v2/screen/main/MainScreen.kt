@@ -13,12 +13,14 @@ import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
@@ -27,6 +29,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
@@ -44,13 +47,17 @@ import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.KeyboardArrowDown
 import androidx.compose.material.icons.outlined.KeyboardArrowUp
 import androidx.compose.material.icons.outlined.Refresh
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.ModalBottomSheetProperties
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
+import androidx.compose.material3.pulltorefresh.PullToRefreshState
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -66,11 +73,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.core.content.ContextCompat
@@ -134,6 +144,19 @@ fun MainScreen(
     val sheetState = rememberModalBottomSheetState(
         skipPartiallyExpanded = false,
     )
+    fun refreshTodos(showBlockingLoading: Boolean) {
+        Analytics.refreshClick()
+        coroutine.launch {
+            if (context.isNetworkConnected()) {
+                viewModel.loadTodos(
+                    forceRefresh = true,
+                    showBlockingLoading = showBlockingLoading,
+                )
+            } else {
+                viewModel.showNetworkErrorScreen()
+            }
+        }
+    }
 
 
     Scaffold(
@@ -169,15 +192,13 @@ fun MainScreen(
                 loadedAt = viewModel.loadedAt.value,
                 showWidgetBadge = viewModel.showWidgetBadge.value,
                 aiSummaryStates = viewModel.aiSummaryStates,
+                isRefreshing = viewModel.isLoading.value,
+                refreshProgress = viewModel.loadingProgress.value,
+                onRefresh = {
+                    refreshTodos(showBlockingLoading = false)
+                },
                 onClickRefresh = {
-                    Analytics.refreshClick()
-                    coroutine.launch {
-                        if (context.isNetworkConnected()) {
-                            viewModel.loadTodos(forceRefresh = true)
-                        } else {
-                            viewModel.showNetworkErrorScreen()
-                        }
-                    }
+                    refreshTodos(showBlockingLoading = true)
                 },
                 onClickSubmitted = {
                     showSubmittedBottomSheet = true
@@ -324,29 +345,6 @@ fun MainScreen(
                 }
             }
         }
-
-        if(viewModel.showLoading.value)
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color(0x80000000)),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    LinearProgressIndicator(
-                        progress = { viewModel.loadingProgress.value },
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Text(
-                        text = "정보를 불러오는 중이에요... ${(viewModel.loadingProgress.value * 100).toInt()}%",
-                        style = SSUType.H2Medium,
-                        color = WHITE
-                    )
-                }
-            }
-
     }
 }
 
@@ -405,6 +403,9 @@ fun MainFragment(
     loadedAt: String = "",
     showWidgetBadge: Boolean = false,
     aiSummaryStates: Map<String, AiSummaryUiState> = emptyMap(),
+    isRefreshing: Boolean = false,
+    refreshProgress: Float = 0f,
+    onRefresh: () -> Unit = {},
     onClickRefresh: () -> Unit = {},
     onClickSubmitted: () -> Unit = {},
     onClickWidgetBadge: () -> Unit = {},
@@ -412,75 +413,105 @@ fun MainFragment(
     onExpandTodo: (TodoInfo) -> Unit = {},
 ) {
     val context = LocalContext.current
+    val density = LocalDensity.current
     val scrollState = rememberScrollState()
+    val pullToRefreshState = rememberPullToRefreshState()
+    var headerHeightPx by remember { mutableIntStateOf(0) }
 
-    Box(
+    PullToRefreshBox(
+        isRefreshing = isRefreshing,
+        onRefresh = onRefresh,
+        state = pullToRefreshState,
+        indicator = {
+            LmsRefreshIndicator(
+                isRefreshing = isRefreshing,
+                progress = refreshProgress,
+                state = pullToRefreshState,
+                modifier = Modifier.align(Alignment.TopCenter),
+            )
+        },
         modifier = Modifier
             .fillMaxSize()
             .padding(innerPadding)
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .verticalScroll(scrollState)
-                .padding(vertical = 32.dp, horizontal = 16.dp),
+        BoxWithConstraints(
+            modifier = Modifier.fillMaxSize(),
         ) {
-            Text(
-                text = "완료하면 자동으로 사라져요",
-                style = SSUType.H4SemiBold
-            )
+            val headerHeight = with(density) { headerHeightPx.toDp() }
+            val emptyStateMinHeight = maxOf(240.dp, maxHeight - headerHeight)
 
-            Text(
-                text = "${todos.size}건의 할 일이 있어요",
-                style = SSUType.H1SemiBold
-            )
-
-            Row(
-                verticalAlignment = Alignment.CenterVertically
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(scrollState)
+                    .padding(horizontal = 16.dp),
             ) {
-                Text(
-                    text = if(loadedAt.isNotEmpty()) {
-                        "업데이트 ${
-                            getStringSimpleDate(
-                                context,
-                                loadedAt
-                            )
-                        } 기준"
-                    } else {
-                        "업데이트 정보 없음"
-                    },
-                    style = SSUType.Caption1Medium
-                )
-
-                Image(
+                Column(
                     modifier = Modifier
-                        .height(13.dp)
-                        .clickable { onClickRefresh() },
-                    imageVector = Icons.Outlined.Refresh,
-                    contentDescription = "새로고침"
+                        .fillMaxWidth()
+                        .onSizeChanged { headerHeightPx = it.height },
+                ) {
+                    Spacer(Modifier.height(32.dp))
+                    Text(
+                        text = "완료하면 자동으로 사라져요",
+                        style = SSUType.H4SemiBold
+                    )
+
+                    Text(
+                        text = "${todos.size}건의 할 일이 있어요",
+                        style = SSUType.H1SemiBold
+                    )
+
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = if(loadedAt.isNotEmpty()) {
+                                "업데이트 ${
+                                    getStringSimpleDate(
+                                        context,
+                                        loadedAt
+                                    )
+                                } 기준"
+                            } else {
+                                "업데이트 정보 없음"
+                            },
+                            style = SSUType.Caption1Medium
+                        )
+
+                        Image(
+                            modifier = Modifier
+                                .height(13.dp)
+                                .clickable { onClickRefresh() },
+                            imageVector = Icons.Outlined.Refresh,
+                            contentDescription = "새로고침"
+                        )
+                    }
+
+                    Spacer(Modifier.height(12.dp))
+                    if(showWidgetBadge)
+                        WidgetHelperBadge(
+                            onClickBadge = onClickWidgetBadge,
+                            onClickDismiss = onDismissWidgetBadge,
+                        )
+                    Spacer(Modifier.height(12.dp))
+                }
+
+                TodoList(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 32.dp),
+                    todos = todos,
+                    aiSummaryStates = aiSummaryStates,
+                    emptyStateMinHeight = emptyStateMinHeight,
+                    onClickSubmitted = {
+                        Analytics.submitCompleteClick()
+                        onClickSubmitted()
+                    },
+                    onExpandTodo = onExpandTodo,
+                    submittedSize = submitted.size,
                 )
             }
-
-            Spacer(Modifier.height(12.dp))
-            if(showWidgetBadge)
-                WidgetHelperBadge(
-                    onClickBadge = onClickWidgetBadge,
-                    onClickDismiss = onDismissWidgetBadge,
-                )
-            Spacer(Modifier.height(12.dp))
-
-            TodoList(
-                modifier = Modifier
-                    .fillMaxWidth(),
-                todos = todos,
-                aiSummaryStates = aiSummaryStates,
-                onClickSubmitted = {
-                    Analytics.submitCompleteClick()
-                    onClickSubmitted()
-                },
-                onExpandTodo = onExpandTodo,
-                submittedSize = submitted.size,
-            )
         }
     }
 }
@@ -535,10 +566,52 @@ fun WidgetHelperBadge(
 }
 
 @Composable
+private fun LmsRefreshIndicator(
+    isRefreshing: Boolean,
+    progress: Float,
+    state: PullToRefreshState,
+    modifier: Modifier = Modifier,
+) {
+    val indicatorProgress = if (isRefreshing) {
+        progress.coerceIn(0f, 1f)
+    } else {
+        state.distanceFraction.coerceIn(0f, 1f)
+    }
+    val progressText = "${(indicatorProgress * 100).toInt()}%"
+
+    PullToRefreshDefaults.IndicatorBox(
+        state = state,
+        isRefreshing = isRefreshing,
+        modifier = modifier,
+        containerColor = WHITE,
+        elevation = 6.dp,
+    ) {
+        Box(
+            contentAlignment = Alignment.Center,
+        ) {
+            CircularProgressIndicator(
+                progress = { indicatorProgress },
+                modifier = Modifier.size(36.dp),
+                color = R500,
+                trackColor = R100,
+                strokeWidth = 4.dp,
+            )
+            Text(
+                text = progressText,
+                style = SSUType.Caption2SemiBold,
+                color = R500,
+                maxLines = 1,
+            )
+        }
+    }
+}
+
+@Composable
 fun TodoList(
     modifier: Modifier = Modifier,
     todos: List<TodoInfo>,
     aiSummaryStates: Map<String, AiSummaryUiState> = emptyMap(),
+    emptyStateMinHeight: Dp = 240.dp,
     onClickSubmitted: () -> Unit,
     onExpandTodo: (TodoInfo) -> Unit = {},
     submittedSize: Int
@@ -546,10 +619,9 @@ fun TodoList(
     val immediateTodos = todos.filter { getRemainingDays(it.due_date) <= 1 }
     val freeTodos = todos.filter { getRemainingDays(it.due_date) > 1 }
 
-    Column (
-        modifier = modifier
+    Column(
+        modifier = modifier,
     ) {
-
         if (immediateTodos.isNotEmpty()) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -628,8 +700,15 @@ fun TodoList(
                 }
             }
         } else {
+            val density = LocalDensity.current
+            var emptyHeaderHeightPx by remember { mutableIntStateOf(0) }
+            val emptyHeaderHeight = with(density) { emptyHeaderHeightPx.toDp() }
+            val emptyContentMinHeight = maxOf(180.dp, emptyStateMinHeight - emptyHeaderHeight)
+
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .onSizeChanged { emptyHeaderHeightPx = it.height },
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
@@ -648,7 +727,9 @@ fun TodoList(
             }
 
             Column(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = emptyContentMinHeight),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
@@ -860,6 +941,14 @@ fun TodoItem(
 private fun AiSummaryBlock(
     aiSummaryState: AiSummaryUiState?,
 ) {
+    val estimatedDurationText = when (aiSummaryState) {
+        is AiSummaryUiState.Success -> aiSummaryState.estimatedDurationMinutes
+            ?.takeIf { it > 0 }
+            ?.let { "예상 소요시간 ${it}분" }
+            ?: "예상 소요시간 알 수 없음"
+        else -> "예상 소요시간 알 수 없음"
+    }
+
     Column(
         modifier = Modifier
             .padding(top = 14.dp)
@@ -884,7 +973,7 @@ private fun AiSummaryBlock(
             )
             Spacer(Modifier.weight(1f))
             Text(
-                text = "예상 소요시간 알 수 없음",
+                text = estimatedDurationText,
                 style = SSUType.Caption1SemiBold,
                 color = N500,
             )
@@ -892,17 +981,23 @@ private fun AiSummaryBlock(
 
         Spacer(Modifier.height(12.dp))
 
-        Text(
-            text = when (aiSummaryState) {
-                is AiSummaryUiState.Success -> aiSummaryState.summary
-                AiSummaryUiState.Loading -> "AI 요약을 불러오는 중이에요."
-                AiSummaryUiState.Empty -> "AI 요약을 준비 중이에요."
-                AiSummaryUiState.Error -> "AI 요약을 불러오지 못했어요."
-                null -> "AI 요약을 불러오는 중이에요."
-            },
-            style = SSUType.Body1Medium,
-            color = N500,
-        )
+        Crossfade(
+            targetState = aiSummaryState,
+            label = "AiSummaryText",
+        ) { state ->
+            Text(
+                text = when (state) {
+                    is AiSummaryUiState.Success -> state.summary
+                    AiSummaryUiState.Loading -> "AI 요약을 불러오는 중이에요."
+                    AiSummaryUiState.Analyzing -> "AI 분석을 진행 중이에요."
+                    AiSummaryUiState.Empty -> "AI 요약을 준비 중이에요."
+                    AiSummaryUiState.Error -> "AI 요약을 불러오지 못했어요."
+                    null -> "AI 요약을 불러오는 중이에요."
+                },
+                style = SSUType.Body1Medium,
+                color = N500,
+            )
+        }
     }
 }
 

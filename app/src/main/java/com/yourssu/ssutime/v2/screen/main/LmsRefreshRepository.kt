@@ -9,8 +9,7 @@ import com.yourssu.data.TodoType
 import com.yourssu.data.network.LmsSessionCookieRequest
 import com.yourssu.data.network.LmsSessionRequest
 import com.yourssu.data.network.toAddEnrollmentRequest
-import com.yourssu.data.network.toAddTodoRequest
-import com.yourssu.data.network.toCompleteTodoRequest
+import com.yourssu.data.network.toTodoReportRequest
 import com.yourssu.ssutime.v2.accessToken
 import com.yourssu.ssutime.v2.lms.getLmsCookies
 import com.yourssu.ssutime.v2.lms.getLmsTerms
@@ -22,8 +21,11 @@ import io.github.chlwhdtn03.LmsApi
 import io.github.chlwhdtn03.data.Lms.Subject
 import io.ktor.http.HttpStatusCode
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import java.time.Duration
@@ -44,6 +46,7 @@ class LmsRefreshRepository(
     private val apiRepository: ApiRepository,
 ) {
     private val isRefreshing = AtomicBoolean(false)
+    private val backendReportScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     suspend fun getLmsSessionRequest(): LmsSessionRequest {
         val loginData = loginRepository.getLoginData()
@@ -201,10 +204,25 @@ class LmsRefreshRepository(
         }
 
         mainRepository.updateTodoData(todoData)
-        reportEnrollmentsToBackend(subjectInfos, currentTerm.toString(), loginData)
-        reportTodosToBackend(todoData.todos, loginData)
-        reportCompletedTodosToBackend(todoData.submitted, loginData)
+        reportRefreshResultToBackend(
+            subjectInfos = subjectInfos,
+            semester = currentTerm.toString(),
+            todos = todoData.todos + todoData.submitted.filter { it.isCompletedSubmission },
+            loginData,
+        )
         TodoRefreshResult.Success(todoData, summary)
+    }
+
+    private fun reportRefreshResultToBackend(
+        subjectInfos: List<SubjectInfo>,
+        semester: String,
+        todos: List<TodoInfo>,
+        loginData: LoginData,
+    ) {
+        backendReportScope.launch {
+            reportEnrollmentsToBackend(subjectInfos, semester, loginData)
+            reportTodosToBackend(todos, loginData)
+        }
     }
 
     private suspend fun reportEnrollmentsToBackend(
@@ -244,47 +262,21 @@ class LmsRefreshRepository(
         var tokenRefreshAttempted = false
         todos.forEach { todo ->
             runCatching {
-                var status = apiRepository.addTodo(todo.toAddTodoRequest())
+                val request = todo.toTodoReportRequest()
+                var status = apiRepository.reportTodo(request)
                 if (status == HttpStatusCode.Unauthorized && !tokenRefreshAttempted) {
                     tokenRefreshAttempted = true
                     if (refreshBackendToken(loginData)) {
-                        status = apiRepository.addTodo(todo.toAddTodoRequest())
+                        status = apiRepository.reportTodo(request)
                     }
                 }
 
                 if (status.value !in 200..299) {
-                    Log.w(TAG, "Todo 백엔드 등록 실패: ${todo.title}, status=$status")
-                    Log.w(TAG, todo.toAddTodoRequest().toString())
+                    Log.w(TAG, "Todo 백엔드 제보 실패: ${todo.title}, status=$status")
+                    Log.w(TAG, request.toString())
                 }
             }.onFailure { exception ->
-                Log.e(TAG, "Todo 백엔드 등록 중 오류가 발생했습니다: ${todo.title}", exception)
-            }
-        }
-    }
-
-    private suspend fun reportCompletedTodosToBackend(submittedTodos: List<TodoInfo>, loginData: LoginData) {
-        val completedTodos = submittedTodos.filter { it.isCompletedSubmission }
-        if (completedTodos.isEmpty() || !prepareBackendToken(loginData)) {
-            return
-        }
-
-        var tokenRefreshAttempted = false
-        completedTodos.forEach { todo ->
-            runCatching {
-                var status = apiRepository.completeTodo(todo.toCompleteTodoRequest())
-                if (status == HttpStatusCode.Unauthorized && !tokenRefreshAttempted) {
-                    tokenRefreshAttempted = true
-                    if (refreshBackendToken(loginData)) {
-                        status = apiRepository.completeTodo(todo.toCompleteTodoRequest())
-                    }
-                }
-
-                if (status.value !in 200..299) {
-                    Log.w(TAG, "Todo 완료 백엔드 등록 실패: ${todo.title}, status=$status")
-                    Log.w(TAG, todo.toCompleteTodoRequest().toString())
-                }
-            }.onFailure { exception ->
-                Log.e(TAG, "Todo 완료 백엔드 등록 중 오류가 발생했습니다: ${todo.title}", exception)
+                Log.e(TAG, "Todo 백엔드 제보 중 오류가 발생했습니다: ${todo.title}", exception)
             }
         }
     }

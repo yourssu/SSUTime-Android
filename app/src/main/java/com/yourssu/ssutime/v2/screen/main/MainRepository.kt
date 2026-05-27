@@ -3,6 +3,7 @@ package com.yourssu.ssutime.v2.screen.main
 import android.content.Context
 import android.util.Log
 import androidx.datastore.core.DataStore
+import com.yourssu.data.AiSummaryCache
 import com.yourssu.data.AlertData
 import com.yourssu.data.TodoData
 import com.yourssu.data.TodoInfo
@@ -72,6 +73,25 @@ class MainRepository(
 
     suspend fun getReportedTodos(): List<UserTodoStatusResponse> =
         apiRepository.getTodos()
+
+    suspend fun getCachedAiSummary(key: String): AiSummaryCache? =
+        getTodoData().aiSummaryCache[key]?.takeIf { it.summary.isNotBlank() }
+
+    suspend fun cacheAiSummary(
+        key: String,
+        summary: String,
+        estimatedDurationMinutes: Int?,
+    ) {
+        val cache = AiSummaryCache(
+            summary = summary,
+            estimatedDurationMinutes = estimatedDurationMinutes,
+        )
+        todoDataStore.updateData { currentData ->
+            currentData.copy(
+                aiSummaryCache = currentData.aiSummaryCache + (key to cache),
+            )
+        }
+    }
 
     suspend fun reportTodoWithAnalysis(
         todo: TodoInfo,

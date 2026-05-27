@@ -4,17 +4,16 @@ import com.yourssu.data.TodoInfo
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class CompleteTodoRequest(
+data class TodoReportRequest(
     val subjectId: Long,
     val materialCode: Long,
     val type: String,
     val dueDate: String,
     val title: String,
-    val isCompleted: Boolean = true
 )
 
-fun TodoInfo.toCompleteTodoRequest(): CompleteTodoRequest =
-    CompleteTodoRequest(
+fun TodoInfo.toTodoReportRequest(): TodoReportRequest =
+    TodoReportRequest(
         subjectId = (subject?.id ?: subjectId).toLong(),
         materialCode = todoId.toLong(),
         type = type.name,
