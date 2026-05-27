@@ -1,10 +1,17 @@
 package com.yourssu.ssutime.v2.screen.main
 
 import android.Manifest
+import android.app.NotificationManager
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
+import android.net.Uri
+import android.os.Build
+import android.provider.Settings
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -109,6 +116,10 @@ fun MainScreen(
     val context = LocalContext.current
     var showSubmittedBottomSheet by remember { mutableStateOf(false) }
     var showWidgetHelperDialog by remember { mutableStateOf(false) }
+    val fullScreenIntentSettingsLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult(),
+        onResult = {},
+    )
     LaunchedEffect(Unit) {
         if (context.isNetworkConnected()) {
             viewModel.loadTodos(allowRefresh = !skipInitialLmsRefresh)
@@ -224,6 +235,12 @@ fun MainScreen(
                             callingAlertThresholdMinutes = it
                         )
                     )
+
+                    if (allowCalling && !context.canUseFullScreenIntent()) {
+                        context.fullScreenIntentSettingsIntent()?.let { intent ->
+                            fullScreenIntentSettingsLauncher.launch(intent)
+                        }
+                    }
 
                 }
             )
@@ -1080,4 +1097,28 @@ fun CallingAlertBody(
             enable = enableCallingAlert.value || radioOptions.any { it == selectedOption }
         )
     }
+}
+
+private fun Context.canUseFullScreenIntent(): Boolean {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+        return true
+    }
+
+    return getSystemService(NotificationManager::class.java).canUseFullScreenIntent()
+}
+
+private fun Context.fullScreenIntentSettingsIntent(): Intent? {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+        return null
+    }
+
+    val packageUri = Uri.parse("package:$packageName")
+    val fullScreenIntentSettings = Intent(Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT).apply {
+        data = packageUri
+    }
+
+    return fullScreenIntentSettings.takeIf { it.resolveActivity(packageManager) != null }
+        ?: Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+            data = packageUri
+        }.takeIf { it.resolveActivity(packageManager) != null }
 }
