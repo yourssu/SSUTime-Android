@@ -301,7 +301,7 @@ private fun TodoLargeContent(uiState: TodoSummaryUiState) {
             text = uiState.updatedAtText,
             alignEnd = true,
             fontSize = 9,
-            iconSize = 16.dp,
+            iconSize = 24.dp,
         )
         Spacer(modifier = GlanceModifier.height(6.dp))
 
@@ -566,7 +566,7 @@ private fun WidgetUpdatedAt(
     text: String,
     alignEnd: Boolean,
     fontSize: Int = 9,
-    iconSize: Dp = 16.dp,
+    iconSize: Dp = 24.dp,
 ) {
     Row(
         modifier = GlanceModifier.fillMaxWidth(),
