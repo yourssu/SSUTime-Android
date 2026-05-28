@@ -244,7 +244,7 @@ private fun TodoMediumContent(
                 subjectFontSize = 8,
                 titleFontSize = 11,
                 typeFontSize = 11,
-                horizontalPadding = 8.dp,
+                horizontalPadding = 4.dp,
                 verticalPadding = 5.dp,
             )
             Spacer(modifier = GlanceModifier.height(5.dp))
@@ -315,14 +315,14 @@ private fun TodoLargeContent(uiState: TodoSummaryUiState) {
             subjectFontSize = 10,
             titleFontSize = 12,
             typeFontSize = 12,
-            horizontalPadding = 8.dp,
+            horizontalPadding = 4.dp,
             verticalPadding = 5.dp,
         )
         Spacer(modifier = GlanceModifier.height(2.dp))
         WidgetUpdatedAt(
             text = uiState.updatedAtText,
             fontSize = 9,
-            iconSize = 24.dp,
+            iconSize = 18.dp,
         )
         Spacer(modifier = GlanceModifier.height(6.dp))
 
@@ -445,8 +445,8 @@ private fun PrimaryTodoCard(
     ) {
         Box(
             modifier = GlanceModifier
-                .width(3.dp)
-                .fillMaxHeight()
+                .width((1.5).dp)
+                .height(height.minus(verticalPadding.times(5)))
                 .background(summaryAccent)
                 .cornerRadius(2.dp),
         ) {}
@@ -509,8 +509,8 @@ private fun CompactTodoSlot(
     ) {
         Box(
             modifier = GlanceModifier
-                .width(3.dp)
-                .fillMaxHeight()
+                .width((1.5).dp)
+                .height(height.minus(15.dp))
                 .background(summaryAccentSoft)
                 .cornerRadius(2.dp),
         ) {}
@@ -561,7 +561,7 @@ private fun CompactTodoSlot(
 private fun WidgetUpdatedAt(
     text: String,
     fontSize: Int = 9,
-    iconSize: Dp = 24.dp,
+    iconSize: Dp = 18.dp,
 ) {
     Row(
         modifier = GlanceModifier.fillMaxWidth(),
@@ -576,7 +576,7 @@ private fun WidgetUpdatedAt(
         )
         Spacer(modifier = GlanceModifier.width(4.dp))
         Image(
-            provider = ImageProvider(R.drawable.ic_widget_refresh),
+            provider = ImageProvider(R.drawable.refreshbtn),
             contentDescription = "새로고침",
             contentScale = ContentScale.Fit,
             colorFilter = ColorFilter.tint(summarySecondaryText),
@@ -608,7 +608,7 @@ private fun MoreTodosText(
     ) {
         Box(
             modifier = GlanceModifier
-                .width(3.dp)
+                .width((1.5).dp)
                 .height(barHeight)
                 .background(summaryAccentSoft)
                 .cornerRadius(2.dp),

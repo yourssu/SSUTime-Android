@@ -46,7 +46,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.KeyboardArrowDown
 import androidx.compose.material.icons.outlined.KeyboardArrowUp
-import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -483,7 +482,7 @@ fun MainFragment(
                             modifier = Modifier
                                 .height(13.dp)
                                 .clickable { onClickRefresh() },
-                            imageVector = Icons.Outlined.Refresh,
+                            painter = painterResource(R.drawable.refreshbtn),
                             contentDescription = "새로고침"
                         )
                     }
