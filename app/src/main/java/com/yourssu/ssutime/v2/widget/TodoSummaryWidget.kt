@@ -509,7 +509,7 @@ private fun CompactTodoSlot(
     ) {
         Box(
             modifier = GlanceModifier
-                .width((1.25).dp)
+                .width((1.5).dp)
                 .height(height.minus(15.dp))
                 .background(summaryAccentSoft)
                 .cornerRadius(2.dp),
@@ -608,7 +608,7 @@ private fun MoreTodosText(
     ) {
         Box(
             modifier = GlanceModifier
-                .width((1.25).dp)
+                .width((1.5).dp)
                 .height(barHeight)
                 .background(summaryAccentSoft)
                 .cornerRadius(2.dp),
