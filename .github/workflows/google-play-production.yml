@@ -1,0 +1,101 @@
+name: Google Play Production Release
+
+on:
+  release:
+    types:
+      - published
+
+permissions:
+  contents: write
+
+concurrency:
+  group: google-play-production
+  cancel-in-progress: false
+
+env:
+  PACKAGE_NAME: com.yourssu.ssutime.v2
+  RELEASE_NOTES_LOCALE: ko-KR
+
+jobs:
+  publish:
+    name: Build and publish production release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Validate required secrets
+        env:
+          PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.ANDROID_GOOGLE_SERVICE_JSON }}
+          FIREBASE_GOOGLE_SERVICES_JSON: ${{ secrets.ANDROID_FIREBASE_GOOGLE_SERVICES_JSON }}
+          UPLOAD_KEYSTORE_BASE64: ${{ secrets.ANDROID_UPLOAD_KEYSTORE_BASE64 }}
+          UPLOAD_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_UPLOAD_KEYSTORE_PASSWORD }}
+          UPLOAD_KEY_ALIAS: ${{ secrets.ANDROID_UPLOAD_KEY_ALIAS }}
+        run: |
+          test -n "$PLAY_SERVICE_ACCOUNT_JSON" || { echo "::error::Missing ANDROID_GOOGLE_SERVICE_JSON secret."; exit 1; }
+          test -n "$FIREBASE_GOOGLE_SERVICES_JSON" || { echo "::error::Missing ANDROID_FIREBASE_GOOGLE_SERVICES_JSON secret for app/google-services.json."; exit 1; }
+          test -n "$UPLOAD_KEYSTORE_BASE64" || { echo "::error::Missing ANDROID_UPLOAD_KEYSTORE_BASE64 secret."; exit 1; }
+          test -n "$UPLOAD_KEYSTORE_PASSWORD" || { echo "::error::Missing ANDROID_UPLOAD_KEYSTORE_PASSWORD secret."; exit 1; }
+          test -n "$UPLOAD_KEY_ALIAS" || { echo "::error::Missing ANDROID_UPLOAD_KEY_ALIAS secret."; exit 1; }
+
+      - name: Materialize private Android files
+        env:
+          FIREBASE_GOOGLE_SERVICES_JSON: ${{ secrets.ANDROID_FIREBASE_GOOGLE_SERVICES_JSON }}
+          UPLOAD_KEYSTORE_BASE64: ${{ secrets.ANDROID_UPLOAD_KEYSTORE_BASE64 }}
+        run: |
+          printf '%s' "$FIREBASE_GOOGLE_SERVICES_JSON" > app/google-services.json
+          printf '%s' "$UPLOAD_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/upload-keystore.jks"
+
+      - name: Create Play release notes
+        env:
+          RELEASE_BODY: ${{ github.event.release.body }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          node -e "
+            const fs = require('fs');
+            const locale = process.env.RELEASE_NOTES_LOCALE || 'ko-KR';
+            const fallback = process.env.RELEASE_TAG || 'Release';
+            const body = (process.env.RELEASE_BODY || '').replace(/\r\n/g, '\n').trim();
+            const notes = Array.from(body || fallback).slice(0, 500).join('');
+            fs.mkdirSync('distribution/whatsnew', { recursive: true });
+            fs.writeFileSync('distribution/whatsnew/whatsnew-' + locale, notes + '\n');
+          "
+
+      - name: Build release APK and AAB
+        env:
+          ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/upload-keystore.jks
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_UPLOAD_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_UPLOAD_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_UPLOAD_KEY_PASSWORD }}
+        run: ./gradlew --no-daemon clean test assembleRelease bundleRelease
+
+      - name: Attach build outputs to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.release.tag_name }}
+          files: |
+            app/build/outputs/apk/release/*.apk
+            app/build/outputs/bundle/release/app-release.aab
+
+      - name: Upload AAB to Google Play production
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.ANDROID_GOOGLE_SERVICE_JSON }}
+          packageName: ${{ env.PACKAGE_NAME }}
+          releaseFiles: app/build/outputs/bundle/release/app-release.aab
+          tracks: production
+          status: completed
+          releaseName: ${{ github.event.release.tag_name }}
+          whatsNewDirectory: distribution/whatsnew
+          mappingFile: app/build/outputs/mapping/release/mapping.txt
+          changesNotSentForReview: false
