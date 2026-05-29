@@ -56,7 +56,7 @@ class LoginViewModel(
             return@withContext try {
                 val id = idState.text.toString()
                 val pw = pwState.text.toString()
-                Log.d(javaClass.name, "id : ${idState.text} || pw : ${pwState.text}")
+                Log.d(javaClass.name, "id : ${idState.text}")
 
                 loginLms(id, pw).apply {
                     if(this)

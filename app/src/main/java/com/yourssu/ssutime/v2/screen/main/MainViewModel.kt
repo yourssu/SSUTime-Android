@@ -27,7 +27,7 @@ private val SUBMITTED_VISIBLE_WINDOW: Duration = Duration.ofHours(24)
 private const val AI_SUMMARY_POLL_ATTEMPTS = 8
 private const val AI_SUMMARY_POLL_INTERVAL_MILLIS = 2_000L
 private const val TODO_STATUS_PROVISIONAL = "PROVISIONAL"
-private const val TODO_STATUS_CONFIRMED = "SUCCEEDED"
+private const val TODO_STATUS_CONFIRMED = "CONFIRMED"
 
 class MainViewModel(
     private val mainRepository: MainRepository,

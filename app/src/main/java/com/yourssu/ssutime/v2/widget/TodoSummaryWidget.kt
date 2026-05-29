@@ -17,6 +17,7 @@ import androidx.glance.Image
 import androidx.glance.ImageProvider
 import androidx.glance.LocalSize
 import androidx.glance.action.clickable
+import androidx.glance.appwidget.CircularProgressIndicator
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
 import androidx.glance.appwidget.SizeMode
@@ -189,15 +190,27 @@ private fun TodoSummaryContent(
                 .clickable(openAppAction),
             contentAlignment = Alignment.Center,
         ) {
-            if (uiState.primary == null) {
-                TodoSummaryEmptyContent(size = size)
-            } else {
-                when (size) {
-                    TodoSummarySize.Medium -> TodoMediumContent(
-                        uiState = uiState,
-                        availableHeight = surfaceHeight,
+            when {
+                uiState.isRefreshing -> {
+                    TodoSummaryRefreshInProgressContent(size = size)
+                }
+                uiState.refreshErrorMessage != null -> {
+                    TodoSummaryRefreshErrorContent(
+                        size = size,
+                        message = uiState.refreshErrorMessage,
                     )
-                    TodoSummarySize.Large -> TodoLargeContent(uiState = uiState)
+                }
+                uiState.primary == null -> {
+                    TodoSummaryEmptyContent(size = size)
+                }
+                else -> {
+                    when (size) {
+                        TodoSummarySize.Medium -> TodoMediumContent(
+                            uiState = uiState,
+                            availableHeight = surfaceHeight,
+                        )
+                        TodoSummarySize.Large -> TodoLargeContent(uiState = uiState)
+                    }
                 }
             }
         }
@@ -324,7 +337,7 @@ private fun TodoLargeContent(uiState: TodoSummaryUiState) {
             fontSize = 9,
             iconSize = 18.dp,
         )
-        Spacer(modifier = GlanceModifier.height(6.dp))
+        Spacer(modifier = GlanceModifier.height(2.dp))
 
         Column(modifier = GlanceModifier.fillMaxWidth()) {
             repeat(4) { index ->
@@ -343,11 +356,11 @@ private fun TodoLargeContent(uiState: TodoSummaryUiState) {
                     dDayTextWidth = 50.dp,
                 )
                 if (index != 3) {
-                    Spacer(modifier = GlanceModifier.height(4.dp))
+                    Spacer(modifier = GlanceModifier.height(2.dp))
                 }
             }
         }
-        Spacer(modifier = GlanceModifier.height(4.dp))
+        Spacer(modifier = GlanceModifier.height(2.dp))
         MoreTodosText(
             count = uiState.hiddenCount,
             height = 14.dp,
@@ -380,6 +393,94 @@ private fun TodoSummaryEmptyContent(size: TodoSummarySize) {
             maxLines = 1,
             style = SSUType.G_Caption2SemiBold
                 .copy(color = summaryPrimaryText),
+        )
+    }
+}
+
+@Composable
+@GlanceComposable
+private fun TodoSummaryRefreshInProgressContent(size: TodoSummarySize) {
+    Column(
+        modifier = GlanceModifier
+            .fillMaxSize()
+            .padding(
+                horizontal = 24.dp,
+                vertical = if (size == TodoSummarySize.Medium) 16.dp else 24.dp,
+            ),
+        verticalAlignment = Alignment.Vertical.CenterVertically,
+        horizontalAlignment = Alignment.Horizontal.CenterHorizontally,
+    ) {
+        CircularProgressIndicator(
+            modifier = GlanceModifier.size(30.dp),
+            color = headlineTextColor,
+        )
+        Spacer(modifier = GlanceModifier.height(8.dp))
+        Text(
+            text = "새로고침 중",
+            modifier = GlanceModifier.fillMaxWidth(),
+            maxLines = 1,
+            style = SSUType.G_Caption1SemiBold.copy(
+                color = headlineTextColor,
+                textAlign = TextAlign.Center,
+            ),
+        )
+        Spacer(modifier = GlanceModifier.height(4.dp))
+        Text(
+            text = "LMS에서 할 일을 불러오고 있어요.",
+            modifier = GlanceModifier.fillMaxWidth(),
+            maxLines = if (size == TodoSummarySize.Medium) 1 else 2,
+            style = SSUType.G_Caption2Medium.copy(
+                color = summaryPrimaryText,
+                textAlign = TextAlign.Center,
+            ),
+        )
+    }
+}
+
+@Composable
+@GlanceComposable
+private fun TodoSummaryRefreshErrorContent(
+    size: TodoSummarySize,
+    message: String,
+) {
+    Column(
+        modifier = GlanceModifier
+            .fillMaxSize()
+            .padding(
+                horizontal = 24.dp,
+                vertical = if (size == TodoSummarySize.Medium) 16.dp else 24.dp,
+            ),
+        verticalAlignment = Alignment.Vertical.CenterVertically,
+        horizontalAlignment = Alignment.Horizontal.CenterHorizontally,
+    ) {
+        Text(
+            text = "새로고침 실패",
+            modifier = GlanceModifier.fillMaxWidth(),
+            maxLines = 1,
+            style = SSUType.G_Caption1SemiBold.copy(
+                color = headlineTextColor,
+                textAlign = TextAlign.Center,
+            ),
+        )
+        Spacer(modifier = GlanceModifier.height(6.dp))
+        Text(
+            text = message,
+            modifier = GlanceModifier.fillMaxWidth(),
+            maxLines = if (size == TodoSummarySize.Medium) 1 else 2,
+            style = SSUType.G_Caption2Medium.copy(
+                color = summaryPrimaryText,
+                textAlign = TextAlign.Center,
+            ),
+        )
+        Spacer(modifier = GlanceModifier.height(10.dp))
+        Image(
+            provider = ImageProvider(R.drawable.refreshbtn),
+            contentDescription = "새로고침",
+            contentScale = ContentScale.Fit,
+            colorFilter = ColorFilter.tint(summarySecondaryText),
+            modifier = GlanceModifier
+                .size(24.dp)
+                .clickable(actionRunCallback<DDayWidgetRefreshAction>()),
         )
     }
 }
@@ -628,6 +729,8 @@ private data class TodoSummaryUiState(
     val items: List<TodoSummaryItem>,
     val hiddenCount: Int,
     val updatedAtText: String,
+    val isRefreshing: Boolean,
+    val refreshErrorMessage: String?,
 )
 
 private data class TodoSummaryItem(
@@ -661,6 +764,8 @@ private fun TodoData.toTodoSummaryUiState(
         items = sortedTodos.take(size.visibleTodoCount),
         hiddenCount = (sortedTodos.size - size.visibleTodoCount).coerceAtLeast(0),
         updatedAtText = loadedAt.toSummaryUpdatedAtText(context),
+        isRefreshing = isWidgetRefreshing,
+        refreshErrorMessage = widgetRefreshErrorMessage,
     )
 }
 

@@ -155,7 +155,8 @@ class ApiRepository {
         Json.encodeToString(todo).chunked(3000).forEachIndexed { index, chunk ->
             Log.d("AI_REQUEST", "$chunk")
         }
-        Log.i("ApiRepository RES", response.bodyAsText())
-        return response.body()
+        val responseText = response.bodyAsText()
+        Log.i("ApiRepository RES", responseText)
+        return Json.decodeFromString(responseText)
     }
 }

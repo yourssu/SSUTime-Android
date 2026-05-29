@@ -17,6 +17,9 @@ data class TodoData(
     val lastBackgroundRefreshSubmittedCount: Int = 0,
     val lastBackgroundRefreshSemesterCount: Int = 0,
     val lastBackgroundRefreshRequestId: String = "",
+    val lastWidgetRefreshStatus: String = "",
+    val lastWidgetRefreshErrorMessage: String = "",
+    val lastWidgetRefreshFinishedAt: String = "",
     val sentDeadlineReminderKeys: List<String> = emptyList(),
 )
 

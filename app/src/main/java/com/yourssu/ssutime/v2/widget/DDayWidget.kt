@@ -17,6 +17,7 @@ import androidx.glance.ImageProvider
 import androidx.glance.LocalSize
 import androidx.glance.action.ActionParameters
 import androidx.glance.action.clickable
+import androidx.glance.appwidget.CircularProgressIndicator
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.SizeMode
 import androidx.glance.appwidget.action.ActionCallback
@@ -31,6 +32,7 @@ import androidx.glance.layout.Column
 import androidx.glance.layout.ContentScale
 import androidx.glance.layout.Spacer
 import androidx.glance.layout.fillMaxSize
+import androidx.glance.layout.fillMaxWidth
 import androidx.glance.layout.height
 import androidx.glance.layout.padding
 import androidx.glance.layout.size
@@ -38,6 +40,7 @@ import androidx.glance.layout.width
 import androidx.glance.preview.ExperimentalGlancePreviewApi
 import androidx.glance.preview.Preview
 import androidx.glance.text.Text
+import androidx.glance.text.TextAlign
 import com.yourssu.data.TodoData
 import com.yourssu.data.TodoInfo
 import com.yourssu.ssutime.v2.MainActivity
@@ -68,6 +71,7 @@ private const val EMPTY_DDAY_TEXT = "모든 할 일을 수행했어요!"
 
 private val widgetWhite = ColorProvider(day = Color.White, night = Color.White)
 private val widgetEmptyTextColor = ColorProvider(day = Color(0xFF222222), night = Color(0xFF222222))
+private val widgetErrorTextColor = ColorProvider(day = Color(0xFFFE4F4C), night = Color(0xFFFE4F4C))
 
 class DDayWidget : GlanceAppWidget() {
     override val sizeMode = SizeMode.Exact
@@ -110,13 +114,22 @@ private fun DDayContent(uiState: DDayWidgetUiState) {
                 .clickable(openAppAction),
         ) {
             val backgroundResId = uiState.backgroundResId
-            if (uiState.hasTodo && backgroundResId != null) {
-                DDayTodoContent(
-                    uiState = uiState,
-                    backgroundResId = backgroundResId,
-                )
-            } else {
-                DDayEmptyContent()
+            when {
+                uiState.isRefreshing -> {
+                    DDayRefreshInProgressContent()
+                }
+                uiState.refreshErrorMessage != null -> {
+                    DDayRefreshErrorContent(message = uiState.refreshErrorMessage)
+                }
+                uiState.hasTodo && backgroundResId != null -> {
+                    DDayTodoContent(
+                        uiState = uiState,
+                        backgroundResId = backgroundResId,
+                    )
+                }
+                else -> {
+                    DDayEmptyContent()
+                }
             }
         }
     }
@@ -231,6 +244,85 @@ private fun DDayEmptyContent() {
     }
 }
 
+@Composable
+@GlanceComposable
+private fun DDayRefreshInProgressContent() {
+    Column(
+        modifier = GlanceModifier
+            .fillMaxSize()
+            .background(widgetWhite)
+            .padding(horizontal = 12.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.Vertical.CenterVertically,
+        horizontalAlignment = Alignment.Horizontal.CenterHorizontally,
+    ) {
+        CircularProgressIndicator(
+            modifier = GlanceModifier.size(28.dp),
+            color = widgetErrorTextColor,
+        )
+        Spacer(modifier = GlanceModifier.height(8.dp))
+        Text(
+            text = "새로고침 중",
+            modifier = GlanceModifier.fillMaxWidth(),
+            maxLines = 1,
+            style = SSUType.G_Caption1SemiBold.copy(
+                color = widgetErrorTextColor,
+                textAlign = TextAlign.Center,
+            ),
+        )
+        Spacer(modifier = GlanceModifier.height(4.dp))
+        Text(
+            text = "LMS에서 할 일을 불러오고 있어요.",
+            modifier = GlanceModifier.fillMaxWidth(),
+            maxLines = 2,
+            style = SSUType.G_Caption2Medium.copy(
+                color = widgetEmptyTextColor,
+                textAlign = TextAlign.Center,
+            ),
+        )
+    }
+}
+
+@Composable
+@GlanceComposable
+private fun DDayRefreshErrorContent(message: String) {
+    Column(
+        modifier = GlanceModifier
+            .fillMaxSize()
+            .background(widgetWhite)
+            .padding(horizontal = 12.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.Vertical.CenterVertically,
+        horizontalAlignment = Alignment.Horizontal.CenterHorizontally,
+    ) {
+        Text(
+            text = "새로고침 실패",
+            modifier = GlanceModifier.fillMaxWidth(),
+            maxLines = 1,
+            style = SSUType.G_Caption1SemiBold.copy(
+                color = widgetErrorTextColor,
+                textAlign = TextAlign.Center,
+            ),
+        )
+        Spacer(modifier = GlanceModifier.height(6.dp))
+        Text(
+            text = message,
+            modifier = GlanceModifier.fillMaxWidth(),
+            maxLines = 2,
+            style = SSUType.G_Caption2Medium.copy(
+                color = widgetEmptyTextColor,
+                textAlign = TextAlign.Center,
+            ),
+        )
+        Spacer(modifier = GlanceModifier.height(8.dp))
+        Image(
+            provider = ImageProvider(R.drawable.ic_widget_refresh),
+            contentDescription = "새로고침",
+            modifier = GlanceModifier
+                .size(28.dp)
+                .clickable(actionRunCallback<DDayWidgetRefreshAction>()),
+        )
+    }
+}
+
 private data class DDayWidgetUiState(
     val hasTodo: Boolean,
     val subjectName: String,
@@ -240,6 +332,8 @@ private data class DDayWidgetUiState(
     val updatedAtText: String,
     val backgroundResId: Int?,
     val countdownTargetEpochMillis: Long?,
+    val isRefreshing: Boolean,
+    val refreshErrorMessage: String?,
 )
 
 private fun TodoData.toWidgetUiState(context: Context): DDayWidgetUiState {
@@ -278,6 +372,8 @@ private fun TodoData.toWidgetUiState(context: Context): DDayWidgetUiState {
         } else {
             null
         },
+        isRefreshing = isWidgetRefreshing,
+        refreshErrorMessage = widgetRefreshErrorMessage,
     )
 }
 
@@ -364,6 +460,8 @@ private fun DDayWidgetEmptyPreview() {
             updatedAtText = "",
             backgroundResId = null,
             countdownTargetEpochMillis = null,
+            isRefreshing = false,
+            refreshErrorMessage = null,
         ),
     )
 }
@@ -382,6 +480,8 @@ private fun DDayWidgetDdayPreview() {
             updatedAtText = "업데이트 05.24 10:30",
             backgroundResId = R.drawable.oth_1,
             countdownTargetEpochMillis = null,
+            isRefreshing = false,
+            refreshErrorMessage = null,
         ),
     )
 }
@@ -400,6 +500,48 @@ private fun DDayWidgetRemainingTimePreview() {
             updatedAtText = "업데이트 05.24 10:30",
             backgroundResId = R.drawable.d1_1,
             countdownTargetEpochMillis = null,
+            isRefreshing = false,
+            refreshErrorMessage = null,
+        ),
+    )
+}
+
+@OptIn(ExperimentalGlancePreviewApi::class)
+@Preview(widthDp = 110, heightDp = 110)
+@Composable
+private fun DDayWidgetRefreshErrorPreview() {
+    DDayContent(
+        uiState = DDayWidgetUiState(
+            hasTodo = true,
+            subjectName = "운영체제",
+            type = "과제",
+            dDayText = "D-1",
+            isRemainingTimeText = false,
+            updatedAtText = "업데이트 05.24 10:30",
+            backgroundResId = R.drawable.d1_1,
+            countdownTargetEpochMillis = null,
+            isRefreshing = false,
+            refreshErrorMessage = "네트워크 연결을 확인해 주세요.",
+        ),
+    )
+}
+
+@OptIn(ExperimentalGlancePreviewApi::class)
+@Preview(widthDp = 110, heightDp = 110)
+@Composable
+private fun DDayWidgetRefreshingPreview() {
+    DDayContent(
+        uiState = DDayWidgetUiState(
+            hasTodo = true,
+            subjectName = "운영체제",
+            type = "과제",
+            dDayText = "D-1",
+            isRemainingTimeText = false,
+            updatedAtText = "업데이트 05.24 10:30",
+            backgroundResId = R.drawable.d1_1,
+            countdownTargetEpochMillis = null,
+            isRefreshing = true,
+            refreshErrorMessage = null,
         ),
     )
 }
@@ -415,16 +557,29 @@ class DDayWidgetRefreshAction : ActionCallback, KoinComponent {
         glanceId: GlanceId,
         parameters: ActionParameters,
     ) {
+        context.markWidgetRefreshRunning()
+        updateAllTodoWidgets(context)
+
         runCatching {
             when (val result = lmsRefreshRepository.refreshTodos(
                 source = RefreshSource.MANUAL,
                 timeoutMillis = WIDGET_REFRESH_TIMEOUT_MILLIS,
             )) {
                 is TodoRefreshResult.Success -> Log.i(TAG, "위젯 새로고침이 완료되었습니다.")
-                is TodoRefreshResult.Skipped -> Log.i(TAG, result.reason)
-                is TodoRefreshResult.Failure -> Log.e(TAG, result.message, result.throwable)
+                is TodoRefreshResult.Skipped -> {
+                    context.markWidgetRefreshFailed(result.reason)
+                    Log.i(TAG, result.reason)
+                }
+                is TodoRefreshResult.Failure -> {
+                    context.markWidgetRefreshFailed(result.message)
+                    Log.e(TAG, result.message, result.throwable)
+                }
             }
         }.onFailure { exception ->
+            context.markWidgetRefreshFailed(
+                exception.message?.takeIf { it.isNotBlank() }
+                    ?: "위젯 새로고침을 실행하지 못했어요.",
+            )
             Log.e(TAG, "위젯 새로고침을 실행하지 못했습니다.", exception)
         }
 

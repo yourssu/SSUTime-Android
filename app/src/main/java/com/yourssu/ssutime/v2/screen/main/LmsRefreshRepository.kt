@@ -187,6 +187,10 @@ class LmsRefreshRepository(
             subjectInfos = subjectInfos,
             previousData = previousData,
             loadedAt = completedAt.toString(),
+        ).copy(
+            lastWidgetRefreshStatus = "",
+            lastWidgetRefreshErrorMessage = "",
+            lastWidgetRefreshFinishedAt = completedAt.toString(),
         )
         val todoData = if (source == RefreshSource.FCM) {
             refreshedTodoData.copy(
