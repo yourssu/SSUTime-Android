@@ -17,7 +17,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.yourssu.ssutime.v2.ui.theme.N500
-import com.yourssu.ssutime.v2.ui.theme.R300
+import com.yourssu.ssutime.v2.ui.theme.R500
 import com.yourssu.ssutime.v2.ui.theme.SSUType
 import com.yourssu.ssutime.v2.ui.theme.WHITE
 
@@ -32,7 +32,7 @@ fun SCheckBox(
     ) {
         Checkbox(
             colors = CheckboxDefaults.colors(
-                checkedColor = R300,
+                checkedColor = R500,
                 checkmarkColor = WHITE
             ),
             checked = checked.value,

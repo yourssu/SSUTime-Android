@@ -24,8 +24,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Call
-import androidx.compose.material.icons.filled.CallEnd
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -35,6 +35,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.yourssu.ssutime.v2.MainActivity
 import com.yourssu.ssutime.v2.ui.theme.G400
@@ -206,8 +207,9 @@ private fun IncomingCallScreen(
         Spacer(Modifier.weight(1f))
 
         Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceEvenly,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             CallActionButton(
@@ -216,23 +218,49 @@ private fun IncomingCallScreen(
                 onClick = onDecline,
             ) {
                 Icon(
-                    imageVector = Icons.Filled.CallEnd,
+                    imageVector = Icons.Outlined.Close,
                     contentDescription = "거절",
                     tint = WHITE,
                 )
             }
+            Spacer(Modifier.weight(1f))
             CallActionButton(
-                label = "수락",
+                label = "응답",
                 color = G400,
                 onClick = onAnswer,
             ) {
                 Icon(
-                    imageVector = Icons.Filled.Call,
-                    contentDescription = "수락",
+                    imageVector = Icons.Filled.Check,
+                    contentDescription = "응답",
                     tint = WHITE,
                 )
             }
         }
+    }
+}
+
+@Preview(
+    name = "Incoming Call Screen",
+    showBackground = true,
+    widthDp = 360,
+    heightDp = 800,
+)
+@Composable
+private fun IncomingCallScreenPreview() {
+    SSUTimeTheme {
+        IncomingCallScreen(
+            state = CallAlertUiState(
+                notificationId = 0,
+                todoId = 1,
+                title = "데이터사이언스 분석 리포트 제출",
+                subjectName = "데이터사이언스",
+                professor = "김교수",
+                todoType = "과제",
+                dueDate = "2026-05-29T18:00:00Z",
+            ),
+            onDecline = {},
+            onAnswer = {},
+        )
     }
 }
 

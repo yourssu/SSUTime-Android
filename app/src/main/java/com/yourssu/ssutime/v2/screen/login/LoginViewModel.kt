@@ -21,7 +21,7 @@ class LoginViewModel(
 ) : ViewModel() {
     val idState = TextFieldState()
     val pwState = TextFieldState()
-    val autoLoginState = mutableStateOf(false)
+    val autoLoginState = mutableStateOf(true) // 기본 값 : 체크된 상태
     val isAutoLogined = mutableStateOf(false)
     var errorMessage = mutableStateOf("")
     var isLoading = mutableStateOf(false)
