@@ -3,8 +3,10 @@ package com.yourssu.ssutime.v2
 import android.content.Context
 import android.text.format.DateFormat
 import androidx.datastore.core.CorruptionException
+import androidx.datastore.core.DataMigration
 import androidx.datastore.core.DataStore
 import androidx.datastore.core.Serializer
+import androidx.datastore.core.handlers.ReplaceFileCorruptionHandler
 import androidx.datastore.dataStore
 import com.yourssu.data.AlertData
 import com.yourssu.data.LoginData
@@ -22,6 +24,7 @@ import com.yourssu.ssutime.v2.screen.onboarding.OnBoardingData
 import com.yourssu.ssutime.v2.screen.onboarding.OnBoardingRepository
 import com.yourssu.ssutime.v2.screen.onboarding.OnBoardingViewModel
 import com.yourssu.ssutime.v2.screen.onboarding.onBoardingDataStore
+import com.yourssu.ssutime.v2.security.LoginDataCrypto
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 import org.koin.android.ext.koin.androidContext
@@ -30,6 +33,7 @@ import org.koin.core.qualifier.named
 import org.koin.dsl.module
 import java.io.InputStream
 import java.io.OutputStream
+import java.security.GeneralSecurityException
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.OffsetDateTime
@@ -135,24 +139,60 @@ val previewModule = module {
 val Context.loginDataStore: DataStore<LoginData> by dataStore(
     fileName = "account.json",
     serializer = LoginDataSerializer,
+    corruptionHandler = ReplaceFileCorruptionHandler { LoginDataSerializer.defaultValue },
+    produceMigrations = { listOf(LoginDataEncryptionMigration) },
 )
 
 object LoginDataSerializer : Serializer<LoginData> {
     override val defaultValue: LoginData = LoginData(id = "", pw = "", isAutoLogin = false, accessToken = "")
+    @Volatile
+    private var lastReadWasPlainText = false
+
+    internal val needsPlainTextMigration: Boolean
+        get() = lastReadWasPlainText
+
+    internal fun clearPlainTextMigrationFlag() {
+        lastReadWasPlainText = false
+    }
+
     override suspend fun readFrom(input: InputStream): LoginData =
         try {
-            Json.decodeFromString<LoginData>(
-                input.readBytes().decodeToString()
-            )
+            val storedValue = input.readBytes().decodeToString()
+            val json = if (LoginDataCrypto.isEncrypted(storedValue)) {
+                lastReadWasPlainText = false
+                LoginDataCrypto.decrypt(storedValue).decodeToString()
+            } else {
+                lastReadWasPlainText = true
+                storedValue
+            }
+            Json.decodeFromString<LoginData>(json)
         } catch (serialization: SerializationException) {
             throw CorruptionException("계정 정보를 읽어오지 못했습니다.", serialization)
+        } catch (security: GeneralSecurityException) {
+            lastReadWasPlainText = false
+            throw CorruptionException("계정 정보를 복호화하지 못했습니다.", security)
+        } catch (illegalArgument: IllegalArgumentException) {
+            lastReadWasPlainText = false
+            throw CorruptionException("계정 정보 암호문 형식이 올바르지 않습니다.", illegalArgument)
         }
 
     override suspend fun writeTo(t: LoginData, output: OutputStream) {
-        output.write(
-            Json.encodeToString(LoginData.serializer(), t)
-                .encodeToByteArray()
-        )
+        val json = Json.encodeToString(LoginData.serializer(), t)
+        val encryptedValue = LoginDataCrypto.encrypt(json.encodeToByteArray())
+        output.write(encryptedValue.encodeToByteArray())
+        clearPlainTextMigrationFlag()
+    }
+}
+
+private object LoginDataEncryptionMigration : DataMigration<LoginData> {
+    override suspend fun shouldMigrate(currentData: LoginData): Boolean =
+        LoginDataSerializer.needsPlainTextMigration
+
+    override suspend fun migrate(currentData: LoginData): LoginData =
+        currentData
+
+    override suspend fun cleanUp() {
+        LoginDataSerializer.clearPlainTextMigrationFlag()
     }
 }
 
