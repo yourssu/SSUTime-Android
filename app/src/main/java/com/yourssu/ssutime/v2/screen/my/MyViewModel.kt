@@ -1,8 +1,10 @@
 package com.yourssu.ssutime.v2.screen.my
 
 import android.content.Context
+import android.content.Intent
 import android.util.Log
 import androidx.compose.runtime.mutableStateOf
+import androidx.core.net.toUri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.yourssu.data.AlertData
@@ -82,7 +84,19 @@ class MyViewModel(
             }.thenBy { todo -> todo.due_date },
         )
 
+    fun openKakaoTalkQA(context: Context) {
+        val intent = Intent(Intent.ACTION_VIEW, KAKAO_TALK_QA_URL.toUri()).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        runCatching {
+            context.startActivity(intent)
+        }.onFailure { exception ->
+            Log.e(TAG, "문의하기 링크를 열지 못했습니다.", exception)
+        }
+    }
+
     private companion object {
         const val TAG = "MyViewModel"
+        const val KAKAO_TALK_QA_URL = "https://open.kakao.com/o/gFKdBhxi"
     }
 }

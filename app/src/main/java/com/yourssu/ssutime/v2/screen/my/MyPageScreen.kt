@@ -377,6 +377,13 @@ fun MyPageScreen(
                     }
                 }
             )
+
+            OptionButton(
+                text = "문의하기"
+            ) {
+                viewModel.openKakaoTalkQA(context)
+            }
+
         }
 
         Spacer(Modifier.height(28.dp))
