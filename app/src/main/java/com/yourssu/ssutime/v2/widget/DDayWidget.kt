@@ -571,6 +571,7 @@ class DDayWidgetRefreshAction : ActionCallback, KoinComponent {
             when (val result = lmsRefreshRepository.refreshTodos(
                 source = RefreshSource.MANUAL,
                 timeoutMillis = WIDGET_REFRESH_TIMEOUT_MILLIS,
+                forceLogin = true,
             )) {
                 is TodoRefreshResult.Success -> Log.i(TAG, "위젯 새로고침이 완료되었습니다.")
                 is TodoRefreshResult.Skipped -> {

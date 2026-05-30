@@ -122,9 +122,11 @@ fun MainScreen(
     viewModel: MainViewModel = koinViewModel(),
     coroutine: CoroutineScope = rememberCoroutineScope(),
     skipInitialLmsRefresh: Boolean = false,
+    forceInitialLmsRefresh: Boolean = false,
     homeEntrySource: String = MainActivity.ENTRY_SOURCE_APP,
     homeEntryVersion: Int = 0,
     onInitialLmsRefreshSkipConsumed: () -> Unit = {},
+    onInitialLmsRefreshForceConsumed: () -> Unit = {},
     onProfileClick: () -> Unit = {},
 ) {
     val context = LocalContext.current
@@ -136,7 +138,11 @@ fun MainScreen(
     )
     LaunchedEffect(homeEntryVersion) {
         if (context.isNetworkConnected()) {
-            viewModel.loadTodos(allowRefresh = !skipInitialLmsRefresh)
+            viewModel.loadTodos(
+                forceRefresh = forceInitialLmsRefresh,
+                forceLogin = forceInitialLmsRefresh,
+                allowRefresh = !skipInitialLmsRefresh,
+            )
             if (!viewModel.showNetworkError.value) {
                 Analytics.viewHome(
                     taskCount = viewModel.todos.size,
@@ -149,6 +155,9 @@ fun MainScreen(
         }
         if (skipInitialLmsRefresh) {
             onInitialLmsRefreshSkipConsumed()
+        }
+        if (forceInitialLmsRefresh) {
+            onInitialLmsRefreshForceConsumed()
         }
     }
 

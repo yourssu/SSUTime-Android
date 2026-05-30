@@ -53,18 +53,9 @@ fun LoginScreen(
     val pwState = remember { viewModel.pwState }
     val errorMessage = remember { viewModel.errorMessage }
     val isLoading by remember { viewModel.isLoading }
-    val isAutoLogined by remember { viewModel.isAutoLogined }
 
     LaunchedEffect(Unit) {
         Analytics.viewLogin()
-    }
-
-    LaunchedEffect(isAutoLogined) {
-        if (isAutoLogined) {
-            Analytics.loginSuccess()
-            registerFCMTokenAndContinue(viewModel, coroutine, successLogin)
-        }
-
     }
 
     Column(

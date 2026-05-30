@@ -8,7 +8,6 @@ import androidx.lifecycle.viewModelScope
 import com.yourssu.data.LoginData
 import com.yourssu.data.network.FcmRequest
 import com.yourssu.ssutime.v2.accessToken
-import com.yourssu.ssutime.v2.analytics.Analytics
 import com.yourssu.ssutime.v2.lms.loginLms
 import com.yourssu.ssutime.v2.network.ApiRepository
 import kotlinx.coroutines.Dispatchers
@@ -22,7 +21,6 @@ class LoginViewModel(
     val idState = TextFieldState()
     val pwState = TextFieldState()
     val autoLoginState = mutableStateOf(true)
-    val isAutoLogined = mutableStateOf(false)
     var errorMessage = mutableStateOf("")
     var isLoading = mutableStateOf(false)
 
@@ -36,15 +34,6 @@ class LoginViewModel(
                 append(info.pw)
             }
             autoLoginState.value = true // 초기 자동로그인 체크상태
-
-            if(autoLoginState.value && idState.text.isNotEmpty() && pwState.text.isNotEmpty()) {
-                Analytics.loginAttempt(autoLogin = true)
-                if(login()) {
-                    isAutoLogined.value = true
-                } else {
-                    Analytics.loginFailIfKnown(errorMessage.value)
-                }
-            }
         }
     }
 

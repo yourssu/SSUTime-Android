@@ -24,6 +24,7 @@ import com.yourssu.ssutime.v2.screen.onboarding.OnBoardingData
 import com.yourssu.ssutime.v2.screen.onboarding.OnBoardingRepository
 import com.yourssu.ssutime.v2.screen.onboarding.OnBoardingViewModel
 import com.yourssu.ssutime.v2.screen.onboarding.onBoardingDataStore
+import com.yourssu.ssutime.v2.screen.splash.SplashViewModel
 import com.yourssu.ssutime.v2.security.LoginDataCrypto
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
@@ -82,6 +83,7 @@ val appModule = module {
         )
     }
     viewModel { MyViewModel(get(), get()) }
+    viewModel { SplashViewModel(get()) }
     viewModel { LoginViewModel(get(), get()) }
     viewModel {
         OnBoardingViewModel(
@@ -127,6 +129,7 @@ val previewModule = module {
         )
     }
     viewModel { MyViewModel(get(), get()) }
+    viewModel { SplashViewModel(get()) }
     viewModel { LoginViewModel(get(), get()) }
     viewModel {
         OnBoardingViewModel(

@@ -50,7 +50,7 @@ class LmsRefreshRepository(
 
     suspend fun getLmsSessionRequest(): LmsSessionRequest {
         val loginData = loginRepository.getLoginData()
-        loginIfNeeded(RefreshSource.MANUAL, loginData)
+        loginIfNeeded(RefreshSource.MANUAL, loginData, forceLogin = false)
         val lmsSession = getLmsCookies()
 
         return LmsSessionRequest(
@@ -76,6 +76,7 @@ class LmsRefreshRepository(
         source: RefreshSource,
         requestId: String? = null,
         timeoutMillis: Long? = null,
+        forceLogin: Boolean = false,
         loadingState: (Float) -> Unit = {},
     ): TodoRefreshResult {
         if (!isRefreshing.compareAndSet(false, true)) {
@@ -103,10 +104,10 @@ class LmsRefreshRepository(
 
             if (timeoutMillis != null) {
                 withTimeout(timeoutMillis) {
-                    executeRefresh(source, loginData, requestId, loadingState)
+                    executeRefresh(source, loginData, requestId, loadingState, forceLogin)
                 }
             } else {
-                executeRefresh(source, loginData, requestId, loadingState)
+                executeRefresh(source, loginData, requestId, loadingState, forceLogin)
             }
         } catch (e: TimeoutCancellationException) {
             val message = "새로고침 시간이 초과됐어요."
@@ -170,8 +171,9 @@ class LmsRefreshRepository(
         loginData: LoginData,
         requestId: String?,
         loadingState: (Float) -> Unit,
+        forceLogin: Boolean,
     ): TodoRefreshResult.Success = withContext(Dispatchers.IO) {
-        loginIfNeeded(source, loginData)
+        loginIfNeeded(source, loginData, forceLogin)
 
         val terms = getLmsTerms()
         val currentTerm = terms.firstOrNull()
@@ -315,8 +317,15 @@ class LmsRefreshRepository(
         }.isSuccess
     }
 
-    private suspend fun loginIfNeeded(source: RefreshSource, loginData: LoginData) {
-        if (loginData.hasAutoLoginCredentials && (source == RefreshSource.FCM || !LmsApi.isLoggined)) {
+    private suspend fun loginIfNeeded(
+        source: RefreshSource,
+        loginData: LoginData,
+        forceLogin: Boolean,
+    ) {
+        if (
+            loginData.hasAutoLoginCredentials &&
+            (forceLogin || source == RefreshSource.FCM || !LmsApi.isLoggined)
+        ) {
             val isLoggedIn = loginWithRetryIfNeeded(source, loginData)
             if (!isLoggedIn) {
                 throw IllegalStateException("LMS 로그인에 실패했어요.")

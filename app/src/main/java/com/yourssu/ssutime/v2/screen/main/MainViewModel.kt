@@ -144,6 +144,7 @@ class MainViewModel(
 
     suspend fun loadTodos(
         forceRefresh: Boolean = false,
+        forceLogin: Boolean = false,
         allowRefresh: Boolean = true,
         showBlockingLoading: Boolean = true,
     ) {
@@ -173,6 +174,7 @@ class MainViewModel(
             showLoading.value = showBlockingLoading
             when (val refreshResult = lmsRefreshRepository.refreshTodos(
                 source = RefreshSource.MANUAL,
+                forceLogin = forceLogin,
                 loadingState = {
                     viewModelScope.launch {
                         loadingProgress.value = it

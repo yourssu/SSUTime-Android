@@ -195,7 +195,7 @@ object Analytics {
             LoginFailErrorType.NETWORK
         } else {
             // TODO: LMS 로그인 실패 응답에서 아이디/비밀번호 오류가 구분되면 wrong_id/wrong_pw를 연결하세요.
-            null
+            LoginFailErrorType.WRONG_IDPW
         }
     }
 
@@ -217,7 +217,6 @@ object Analytics {
 enum class LoginFailErrorType(
     val value: String,
 ) {
-    WRONG_ID("wrong_id"),
-    WRONG_PW("wrong_pw"),
+    WRONG_IDPW("wrong_idpw"),
     NETWORK("network"),
 }

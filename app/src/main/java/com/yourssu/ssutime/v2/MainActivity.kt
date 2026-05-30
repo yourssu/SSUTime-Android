@@ -28,6 +28,7 @@ import com.yourssu.ssutime.v2.ui.theme.WHITE
 
 class MainActivity : ComponentActivity() {
     private val skipInitialLmsRefresh = mutableStateOf(false)
+    private val forceInitialLmsRefresh = mutableStateOf(false)
     private val homeEntrySource = mutableStateOf(ENTRY_SOURCE_APP)
     private val homeEntryVersion = mutableStateOf(0)
 
@@ -36,6 +37,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         skipInitialLmsRefresh.value = intent.shouldSkipInitialLmsRefresh()
         homeEntrySource.value = intent.homeEntrySource()
+        forceInitialLmsRefresh.value = intent.shouldForceInitialLmsRefresh()
         if (savedInstanceState == null) {
             intent.captureEntryAnalytics()
         }
@@ -56,6 +58,13 @@ class MainActivity : ComponentActivity() {
                         SplashScreen(
                             navigateToLogin = {
                                 navController.navigate(Screens.LOGIN.name) {
+                                    popUpTo(Screens.SPLASH.name) { inclusive = true }
+                                    launchSingleTop = true
+                                }
+                            },
+                            navigateToMain = {
+                                forceInitialLmsRefresh.value = true
+                                navController.navigate(Screens.MAIN.name) {
                                     popUpTo(Screens.SPLASH.name) { inclusive = true }
                                     launchSingleTop = true
                                 }
@@ -89,10 +98,14 @@ class MainActivity : ComponentActivity() {
                     composable(route = Screens.MAIN.name) {
                         MainScreen(
                             skipInitialLmsRefresh = skipInitialLmsRefresh.value,
+                            forceInitialLmsRefresh = forceInitialLmsRefresh.value,
                             homeEntrySource = homeEntrySource.value,
                             homeEntryVersion = homeEntryVersion.value,
                             onInitialLmsRefreshSkipConsumed = {
                                 skipInitialLmsRefresh.value = false
+                            },
+                            onInitialLmsRefreshForceConsumed = {
+                                forceInitialLmsRefresh.value = false
                             },
                             onProfileClick = {
                                 navController.navigate(Screens.MY.name)
@@ -122,6 +135,7 @@ class MainActivity : ComponentActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         skipInitialLmsRefresh.value = intent.shouldSkipInitialLmsRefresh()
+        forceInitialLmsRefresh.value = intent.shouldForceInitialLmsRefresh()
         homeEntrySource.value = intent.homeEntrySource()
         homeEntryVersion.value += 1
         intent.captureEntryAnalytics()
@@ -145,6 +159,9 @@ class MainActivity : ComponentActivity() {
 
 private fun Intent?.shouldSkipInitialLmsRefresh(): Boolean =
     this?.getBooleanExtra(MainActivity.EXTRA_SKIP_INITIAL_LMS_REFRESH, false) == true
+
+private fun Intent?.shouldForceInitialLmsRefresh(): Boolean =
+    this.homeEntrySource() == MainActivity.ENTRY_SOURCE_WIDGET
 
 private fun Intent?.homeEntrySource(): String =
     this?.getStringExtra(MainActivity.EXTRA_ENTRY_SOURCE)

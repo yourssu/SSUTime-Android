@@ -10,6 +10,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -17,13 +19,31 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.yourssu.ssutime.v2.R
-import kotlinx.coroutines.delay
+import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
-@Preview
 fun SplashScreen(
+    viewModel: SplashViewModel = koinViewModel(),
     modifier: Modifier = Modifier,
     navigateToLogin: () -> Unit = {},
+    navigateToMain: () -> Unit = {},
+) {
+    val destination by remember { viewModel.destination }
+
+    SplashContent(modifier = modifier)
+
+    LaunchedEffect(destination) {
+        when (destination) {
+            SplashDestination.Login -> navigateToLogin()
+            SplashDestination.Main -> navigateToMain()
+            null -> Unit
+        }
+    }
+}
+
+@Composable
+private fun SplashContent(
+    modifier: Modifier = Modifier,
 ) {
     Column(
         modifier = modifier
@@ -43,9 +63,10 @@ fun SplashScreen(
             color = Color.White,
         )
     }
+}
 
-    LaunchedEffect(Unit) {
-        delay(100)
-        navigateToLogin()
-    }
+@Preview
+@Composable
+private fun SplashContentPreview() {
+    SplashContent()
 }
