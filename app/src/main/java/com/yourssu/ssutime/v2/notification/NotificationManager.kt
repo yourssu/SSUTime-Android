@@ -15,9 +15,11 @@ import androidx.annotation.RequiresApi
 import com.yourssu.data.TodoInfo
 import com.yourssu.ssutime.v2.CALL_CHANNEL_ID
 import com.yourssu.ssutime.v2.R
+import com.yourssu.ssutime.v2.analytics.Analytics
 
 fun showCallAlert(context: Context, todo: TodoInfo) {
     val notificationId = todo.todoId
+    Analytics.callAlertReceived(subjectName = todo.subject?.name.orEmpty())
     CallAlertRinger.start(context)
 
     if (context.canPostNotifications()) {
@@ -85,6 +87,7 @@ private fun showFallbackNotification(context: Context, todo: TodoInfo, notificat
 class CallNotificationActionReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action == ACTION_DECLINE_CALL) {
+            Analytics.callAlertReject()
             val notificationId = intent.getIntExtra(EXTRA_CALL_NOTIFICATION_ID, 0)
             context.getSystemService(NotificationManager::class.java).cancel(notificationId)
             CallAlertRinger.stop(context)

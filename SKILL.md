@@ -28,6 +28,7 @@ Follow this workflow when the user asks to deploy SSUTime.
    - `ANDROID_UPLOAD_KEYSTORE_PASSWORD`
    - `ANDROID_UPLOAD_KEY_ALIAS`
    - `ANDROID_UPLOAD_KEY_PASSWORD` only if the key password differs from the keystore password.
+   - `POSTHOG_API_KEY`
 3. Bump the committed app version before the final release commit:
    - In `app/build.gradle.kts`, increase the hardcoded `versionCode` value by exactly 1.
    - Increase the hardcoded `versionName` by one patch step unless the user specified a version. Example: `1.0.7` -> `1.0.8`.

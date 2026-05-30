@@ -87,6 +87,7 @@ class DDayWidget : GlanceAppWidget() {
             val todoData by context.todoDataStore.data.collectAsState(initial = initialTodoData)
             DDayContent(
                 uiState = todoData.toWidgetUiState(context),
+                packageName = context.packageName,
             )
         }
     }
@@ -94,14 +95,20 @@ class DDayWidget : GlanceAppWidget() {
 
 @Composable
 @GlanceComposable
-private fun DDayContent(uiState: DDayWidgetUiState) {
+private fun DDayContent(
+    uiState: DDayWidgetUiState,
+    packageName: String = "com.yourssu.ssutime.v2",
+) {
     val availableSize = LocalSize.current
     val squareSize = availableSize.toSquareSize()
     val openAppAction = actionStartActivity(
         Intent().setClassName(
-            MainActivity::class.java.packageName,
+            packageName,
             MainActivity::class.java.name,
-        ),
+        ).apply {
+            putExtra(MainActivity.EXTRA_ENTRY_SOURCE, MainActivity.ENTRY_SOURCE_WIDGET)
+            putExtra(MainActivity.EXTRA_WIDGET_SIZE, WidgetAnalyticsSize.Small.value)
+        },
     )
 
     Box(

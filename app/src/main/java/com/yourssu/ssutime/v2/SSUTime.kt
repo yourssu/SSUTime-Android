@@ -86,6 +86,7 @@ val appModule = module {
     viewModel {
         OnBoardingViewModel(
             androidContext(),
+            get(),
             get()
         )
     }
@@ -130,6 +131,7 @@ val previewModule = module {
     viewModel {
         OnBoardingViewModel(
             androidContext(),
+            get(),
             get()
         )
     }

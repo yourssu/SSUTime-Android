@@ -17,6 +17,9 @@ val localProperties = Properties().apply {
         localPropertiesFile.inputStream().use(::load)
     }
 }
+val postHogApiKey = System.getenv("POSTHOG_API_KEY")
+    ?: localProperties.getProperty("posthog")
+    ?: ""
 
 val releaseKeystorePath = System.getenv("ANDROID_KEYSTORE_PATH")
 val releaseKeystorePassword = System.getenv("ANDROID_KEYSTORE_PASSWORD")
@@ -55,7 +58,7 @@ android {
         buildConfigField(
             "String",
             "POSTHOG_API_KEY",
-            localProperties.getProperty("posthog").orEmpty().toBuildConfigString(),
+            postHogApiKey.toBuildConfigString(),
         )
     }
 

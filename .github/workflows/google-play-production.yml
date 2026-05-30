@@ -41,12 +41,14 @@ jobs:
           UPLOAD_KEYSTORE_BASE64: ${{ secrets.ANDROID_UPLOAD_KEYSTORE_BASE64 }}
           UPLOAD_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_UPLOAD_KEYSTORE_PASSWORD }}
           UPLOAD_KEY_ALIAS: ${{ secrets.ANDROID_UPLOAD_KEY_ALIAS }}
+          POSTHOG_API_KEY: ${{ secrets.POSTHOG_API_KEY }}
         run: |
           test -n "$PLAY_SERVICE_ACCOUNT_JSON" || { echo "::error::Missing ANDROID_GOOGLE_SERVICE_JSON secret."; exit 1; }
           test -n "$FIREBASE_GOOGLE_SERVICES_JSON" || { echo "::error::Missing ANDROID_FIREBASE_GOOGLE_SERVICES_JSON secret for app/google-services.json."; exit 1; }
           test -n "$UPLOAD_KEYSTORE_BASE64" || { echo "::error::Missing ANDROID_UPLOAD_KEYSTORE_BASE64 secret."; exit 1; }
           test -n "$UPLOAD_KEYSTORE_PASSWORD" || { echo "::error::Missing ANDROID_UPLOAD_KEYSTORE_PASSWORD secret."; exit 1; }
           test -n "$UPLOAD_KEY_ALIAS" || { echo "::error::Missing ANDROID_UPLOAD_KEY_ALIAS secret."; exit 1; }
+          test -n "$POSTHOG_API_KEY" || { echo "::error::Missing POSTHOG_API_KEY secret."; exit 1; }
 
       - name: Materialize private Android files
         env:
@@ -77,6 +79,7 @@ jobs:
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_UPLOAD_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_UPLOAD_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_UPLOAD_KEY_PASSWORD }}
+          POSTHOG_API_KEY: ${{ secrets.POSTHOG_API_KEY }}
         run: ./gradlew --no-daemon clean test assembleRelease bundleRelease
 
       - name: Attach build outputs to GitHub Release

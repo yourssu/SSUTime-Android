@@ -134,6 +134,13 @@ class LmsRefreshRepository(
         now: Instant,
     ): String? {
         if (!loginData.hasAutoLoginCredentials) {
+            Log.w(
+                TAG,
+                "백그라운드 새로고침 자동 로그인 정보 없음: " +
+                    "isAutoLogin=${loginData.isAutoLogin}, " +
+                    "hasId=${loginData.id.isNotBlank()}, " +
+                    "hasPassword=${loginData.pw.isNotBlank()}",
+            )
             return "자동 로그인 정보가 없어 백그라운드 새로고침을 건너뜁니다."
         }
 

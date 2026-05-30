@@ -21,7 +21,7 @@ class LoginViewModel(
 ) : ViewModel() {
     val idState = TextFieldState()
     val pwState = TextFieldState()
-    val autoLoginState = mutableStateOf(true) // 기본 값 : 체크된 상태
+    val autoLoginState = mutableStateOf(true)
     val isAutoLogined = mutableStateOf(false)
     var errorMessage = mutableStateOf("")
     var isLoading = mutableStateOf(false)
@@ -35,7 +35,7 @@ class LoginViewModel(
             pwState.edit {
                 append(info.pw)
             }
-            autoLoginState.value = info.isAutoLogin
+            autoLoginState.value = true // 초기 자동로그인 체크상태
 
             if(autoLoginState.value && idState.text.isNotEmpty() && pwState.text.isNotEmpty()) {
                 Analytics.loginAttempt(autoLogin = true)
@@ -50,12 +50,12 @@ class LoginViewModel(
 
     suspend fun login(): Boolean {
         isLoading.value = true
-        var errorMessage = ""
+        var loginErrorMessage = ""
+        val id = idState.text.toString()
+        val pw = pwState.text.toString()
         val isLoggined = withContext(Dispatchers.IO) {
             // 무거운 작업 + 네트워크 작업은 I/O쓰레드에서 따로 실행
             return@withContext try {
-                val id = idState.text.toString()
-                val pw = pwState.text.toString()
                 Log.d(javaClass.name, "id : ${idState.text}")
 
                 loginLms(id, pw).apply {
@@ -63,32 +63,26 @@ class LoginViewModel(
                         accessToken = apiRepository.requestJwtToken(id, pw).accessToken
                 }
             } catch (e: Exception) {
-                errorMessage = e.message ?: ""
+                loginErrorMessage = e.message ?: ""
                 false
             }
         }
         isLoading.value = false
-        // 다시 메인쓰레드에서 나머지 작업 처리
-        processLogin(isLoggined, errorMessage)
+        errorMessage.value = loginErrorMessage
+        if (isLoggined) {
+            loginRepository.updateLoginData(
+                LoginData(
+                    id = if (autoLoginState.value) id else "",
+                    pw = if (autoLoginState.value) pw else "",
+                    isAutoLogin = autoLoginState.value,
+                    accessToken = accessToken,
+                )
+            )
+        }
         return isLoggined
     }
 
     suspend fun registerFCMToken(fcm: String) {
         apiRepository.registerFCMToken(FcmRequest(fcm))
-    }
-    fun processLogin(logined: Boolean, errorMessage: String = "") {
-        this.errorMessage.value = errorMessage
-        if (logined) {
-            viewModelScope.launch {
-                loginRepository.updateLoginData(
-                    LoginData(
-                        id = if (autoLoginState.value) idState.text.toString() else "",
-                        pw = if (autoLoginState.value) pwState.text.toString() else "",
-                        isAutoLogin = autoLoginState.value,
-                        accessToken = accessToken
-                    )
-                )
-            }
-        }
     }
 }

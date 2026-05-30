@@ -13,6 +13,10 @@ import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.yourssu.data.SubjectInfo
+import com.yourssu.data.TodoInfo
+import com.yourssu.data.TodoType
+import com.yourssu.ssutime.v2.analytics.Analytics
 import com.yourssu.ssutime.v2.screen.login.LoginScreen
 import com.yourssu.ssutime.v2.screen.main.MainScreen
 import com.yourssu.ssutime.v2.screen.my.MyPageScreen
@@ -24,11 +28,17 @@ import com.yourssu.ssutime.v2.ui.theme.WHITE
 
 class MainActivity : ComponentActivity() {
     private val skipInitialLmsRefresh = mutableStateOf(false)
+    private val homeEntrySource = mutableStateOf(ENTRY_SOURCE_APP)
+    private val homeEntryVersion = mutableStateOf(0)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
         super.onCreate(savedInstanceState)
         skipInitialLmsRefresh.value = intent.shouldSkipInitialLmsRefresh()
+        homeEntrySource.value = intent.homeEntrySource()
+        if (savedInstanceState == null) {
+            intent.captureEntryAnalytics()
+        }
         enableEdgeToEdge()
         setContent {
             val navController = rememberNavController()
@@ -45,7 +55,10 @@ class MainActivity : ComponentActivity() {
                     composable(route = Screens.SPLASH.name) {
                         SplashScreen(
                             navigateToLogin = {
-                                navController.navigate(Screens.LOGIN.name)
+                                navController.navigate(Screens.LOGIN.name) {
+                                    popUpTo(Screens.SPLASH.name) { inclusive = true }
+                                    launchSingleTop = true
+                                }
                             }
                         )
                     }
@@ -53,7 +66,10 @@ class MainActivity : ComponentActivity() {
                     composable(route = Screens.LOGIN.name) {
                         LoginScreen(
                             successLogin = {
-                                navController.navigate(Screens.ONBORADING.name)
+                                navController.navigate(Screens.ONBORADING.name) {
+                                    popUpTo(Screens.LOGIN.name) { inclusive = true }
+                                    launchSingleTop = true
+                                }
                             }
                         )
                     }
@@ -61,7 +77,11 @@ class MainActivity : ComponentActivity() {
                     composable(route = Screens.ONBORADING.name) {
                         OnBoardingScreen(
                             onConfirmClick = {
-                                navController.navigate(Screens.MAIN.name)
+                                skipInitialLmsRefresh.value = true
+                                navController.navigate(Screens.MAIN.name) {
+                                    popUpTo(Screens.ONBORADING.name) { inclusive = true }
+                                    launchSingleTop = true
+                                }
                             }
                         )
                     }
@@ -69,6 +89,8 @@ class MainActivity : ComponentActivity() {
                     composable(route = Screens.MAIN.name) {
                         MainScreen(
                             skipInitialLmsRefresh = skipInitialLmsRefresh.value,
+                            homeEntrySource = homeEntrySource.value,
+                            homeEntryVersion = homeEntryVersion.value,
                             onInitialLmsRefreshSkipConsumed = {
                                 skipInitialLmsRefresh.value = false
                             },
@@ -100,12 +122,83 @@ class MainActivity : ComponentActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         skipInitialLmsRefresh.value = intent.shouldSkipInitialLmsRefresh()
+        homeEntrySource.value = intent.homeEntrySource()
+        homeEntryVersion.value += 1
+        intent.captureEntryAnalytics()
     }
 
     companion object {
         const val EXTRA_SKIP_INITIAL_LMS_REFRESH = "extra_skip_initial_lms_refresh"
+        const val EXTRA_ENTRY_SOURCE = "extra_entry_source"
+        const val EXTRA_WIDGET_SIZE = "extra_widget_size"
+        const val EXTRA_NOTIFICATION_D_DAY = "extra_notification_d_day"
+        const val EXTRA_NOTIFICATION_TASK_COUNT = "extra_notification_task_count"
+        const val EXTRA_NOTIFICATION_TASK_TYPE = "extra_notification_task_type"
+        const val EXTRA_NOTIFICATION_SUBJECT_NAME = "extra_notification_subject_name"
+
+        const val ENTRY_SOURCE_APP = "app"
+        const val ENTRY_SOURCE_WIDGET = "widget"
+        const val ENTRY_SOURCE_NOTIFICATION = "notification"
+        const val ENTRY_SOURCE_CALL_ALERT = "call_alert"
     }
 }
 
 private fun Intent?.shouldSkipInitialLmsRefresh(): Boolean =
     this?.getBooleanExtra(MainActivity.EXTRA_SKIP_INITIAL_LMS_REFRESH, false) == true
+
+private fun Intent?.homeEntrySource(): String =
+    this?.getStringExtra(MainActivity.EXTRA_ENTRY_SOURCE)
+        ?.takeIf { it in knownHomeEntrySources }
+        ?: MainActivity.ENTRY_SOURCE_APP
+
+private val knownHomeEntrySources = setOf(
+    MainActivity.ENTRY_SOURCE_APP,
+    MainActivity.ENTRY_SOURCE_WIDGET,
+    MainActivity.ENTRY_SOURCE_NOTIFICATION,
+    MainActivity.ENTRY_SOURCE_CALL_ALERT,
+)
+
+private fun Intent.captureEntryAnalytics() {
+    getStringExtra(MainActivity.EXTRA_WIDGET_SIZE)
+        ?.takeIf { it in knownWidgetSizes }
+        ?.let(Analytics::widgetTap)
+
+    if (
+        hasExtra(MainActivity.EXTRA_NOTIFICATION_D_DAY) &&
+        hasExtra(MainActivity.EXTRA_NOTIFICATION_TASK_COUNT)
+    ) {
+        val representativeTodo = notificationRepresentativeTodo()
+        if (representativeTodo != null) {
+            Analytics.notificationTap(
+                dDay = getIntExtra(MainActivity.EXTRA_NOTIFICATION_D_DAY, 0),
+                notificationTaskCount = getIntExtra(MainActivity.EXTRA_NOTIFICATION_TASK_COUNT, 1),
+                representativeTodo = representativeTodo,
+            )
+        }
+    }
+}
+
+private val knownWidgetSizes = setOf("small", "medium", "large")
+
+private fun Intent.notificationRepresentativeTodo(): TodoInfo? {
+    val taskType = getStringExtra(MainActivity.EXTRA_NOTIFICATION_TASK_TYPE).toTodoTypeOrNull()
+        ?: return null
+    val subjectName = getStringExtra(MainActivity.EXTRA_NOTIFICATION_SUBJECT_NAME).orEmpty()
+
+    return TodoInfo(
+        todoId = 0,
+        title = "",
+        due_date = "",
+        type = taskType,
+        subject = SubjectInfo(
+            id = 0,
+            name = subjectName,
+            professor = "",
+        ).takeIf { subjectName.isNotBlank() },
+    )
+}
+
+private fun String?.toTodoTypeOrNull(): TodoType? =
+    TodoType.values().firstOrNull { type ->
+        equals(type.name, ignoreCase = true) || this == type.kor
+    }

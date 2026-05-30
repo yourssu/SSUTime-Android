@@ -54,7 +54,6 @@ object Analytics {
 
     fun refreshClick() = capture("refresh_click")
 
-    // TODO: 화면 당겨서 새로고침 UI가 구현되면 호출하세요.
     fun pullToRefresh() = capture("pull_to_refresh")
 
     fun taskDetailExpand(
@@ -92,7 +91,6 @@ object Analytics {
         ),
     )
 
-    // TODO: 알림 PendingIntent로 알림 메타데이터를 MainActivity에 전달할 수 있을 때 호출하세요.
     fun notificationTap(
         dDay: Int,
         notificationTaskCount: Int,
@@ -106,19 +104,15 @@ object Analytics {
         ),
     )
 
-    // TODO: 전체화면 전화 알림 기능을 다시 활성화할 때만 호출하세요.
     fun callAlertReceived(subjectName: String) = capture(
         event = "call_alert_received",
         properties = mapOf("subject_name" to subjectName),
     )
 
-    // TODO: 전체화면 전화 알림 기능을 다시 활성화할 때만 호출하세요.
     fun callAlertAccept() = capture("call_alert_accept")
 
-    // TODO: 전체화면 전화 알림 기능을 다시 활성화할 때만 호출하세요.
     fun callAlertReject() = capture("call_alert_reject")
 
-    // TODO: 위젯 클릭 Intent에 위젯 크기 정보를 담을 수 있을 때 호출하세요.
     fun widgetTap(widgetSize: String) = capture(
         event = "widget_tap",
         properties = mapOf("widget_size" to widgetSize),
@@ -129,7 +123,6 @@ object Analytics {
         properties = mapOf("widget_size" to widgetSize),
     )
 
-    // TODO: MainActivity에서 앱/위젯/알림/전화알림 진입 경로를 구분할 수 있을 때 호출하세요.
     fun viewHome(
         taskCount: Int,
         urgentCount: Int,
@@ -161,7 +154,6 @@ object Analytics {
         ),
     )
 
-    // TODO: 전화 알림 온보딩 또는 시간 선택 플로우를 다시 활성화할 때만 호출하세요.
     fun callAlarmSetting(selectedTime: String) = capture(
         event = "call_alarm_setting",
         properties = mapOf("selected_time" to selectedTime),

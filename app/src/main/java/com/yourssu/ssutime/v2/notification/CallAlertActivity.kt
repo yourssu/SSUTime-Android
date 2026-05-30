@@ -38,6 +38,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.yourssu.ssutime.v2.MainActivity
+import com.yourssu.ssutime.v2.analytics.Analytics
 import com.yourssu.ssutime.v2.ui.theme.G400
 import com.yourssu.ssutime.v2.ui.theme.R500
 import com.yourssu.ssutime.v2.ui.theme.SSUTimeTheme
@@ -56,14 +57,24 @@ class CallAlertActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         configureCallWindow()
+        val state = intent.toCallAlertState()
+        if (intent.action == ACTION_ANSWER_CALL) {
+            answerCall(state)
+            return
+        }
         CallAlertRinger.start(this)
-        render(intent.toCallAlertState())
+        render(state)
     }
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        render(intent.toCallAlertState())
+        val state = intent.toCallAlertState()
+        if (intent.action == ACTION_ANSWER_CALL) {
+            answerCall(state)
+            return
+        }
+        render(state)
     }
 
     private fun render(state: CallAlertUiState) {
@@ -72,24 +83,35 @@ class CallAlertActivity : ComponentActivity() {
                 IncomingCallScreen(
                     state = state,
                     onDecline = {
-                        notificationManager.cancel(state.notificationId)
-                        CallAlertRinger.stop(this)
-                        closeAppAfterDecline()
+                        declineCall(state)
                     },
                     onAnswer = {
-                        notificationManager.cancel(state.notificationId)
-                        CallAlertRinger.stop(this)
-                        startActivity(
-                            Intent(this, MainActivity::class.java).apply {
-                                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-                                putExtra(MainActivity.EXTRA_SKIP_INITIAL_LMS_REFRESH, true)
-                            }
-                        )
-                        finish()
+                        answerCall(state)
                     },
                 )
             }
         }
+    }
+
+    private fun declineCall(state: CallAlertUiState) {
+        Analytics.callAlertReject()
+        notificationManager.cancel(state.notificationId)
+        CallAlertRinger.stop(this)
+        closeAppAfterDecline()
+    }
+
+    private fun answerCall(state: CallAlertUiState) {
+        Analytics.callAlertAccept()
+        notificationManager.cancel(state.notificationId)
+        CallAlertRinger.stop(this)
+        startActivity(
+            Intent(this, MainActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                putExtra(MainActivity.EXTRA_SKIP_INITIAL_LMS_REFRESH, true)
+                putExtra(MainActivity.EXTRA_ENTRY_SOURCE, MainActivity.ENTRY_SOURCE_CALL_ALERT)
+            }
+        )
+        finish()
     }
 
     private fun configureCallWindow() {

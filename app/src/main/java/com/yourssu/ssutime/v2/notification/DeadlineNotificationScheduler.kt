@@ -93,6 +93,8 @@ fun sendDeadlineNotificationsIfNeeded(
                         title = buildDeadlineNotificationTitle(reminder.daysBefore),
                         message = buildDdayDeadlineMessage(reminder.todo),
                         representativeTodo = reminder.todo,
+                        dDay = reminder.daysBefore,
+                        notificationTaskCount = 1,
                     )
                     Analytics.notificationReceived(
                         dDay = reminder.daysBefore,
@@ -110,6 +112,8 @@ fun sendDeadlineNotificationsIfNeeded(
                     title = buildDeadlineNotificationTitle(daysBefore),
                     message = message,
                     representativeTodo = sortedReminders.first().todo,
+                    dDay = daysBefore,
+                    notificationTaskCount = sortedReminders.size,
                 )
                 Analytics.notificationReceived(
                     dDay = daysBefore,
@@ -231,6 +235,8 @@ private fun Context.showDeadlineNotification(
     title: String,
     message: String,
     representativeTodo: TodoInfo,
+    dDay: Int,
+    notificationTaskCount: Int,
 ) {
     val notificationId = key.hashCode()
     val notification = NotificationCompat.Builder(this, CHANNEL_ID)
@@ -239,7 +245,14 @@ private fun Context.showDeadlineNotification(
         .setContentText(message)
         .setStyle(NotificationCompat.BigTextStyle().bigText(message))
         .setSubText(representativeTodo.subject?.name?.takeIf { it.isNotBlank() })
-        .setContentIntent(mainActivityPendingIntent(notificationId))
+        .setContentIntent(
+            mainActivityPendingIntent(
+                requestCode = notificationId,
+                dDay = dDay,
+                notificationTaskCount = notificationTaskCount,
+                representativeTodo = representativeTodo,
+            ),
+        )
         .setAutoCancel(true)
         .setPriority(NotificationCompat.PRIORITY_DEFAULT)
         .build()
@@ -334,11 +347,21 @@ private fun cancelLegacyDeadlineWorkers(context: Context) {
     WorkManager.getInstance(context).cancelAllWorkByTag(DEADLINE_REMINDER_TAG)
 }
 
-private fun Context.mainActivityPendingIntent(requestCode: Int): PendingIntent = PendingIntent.getActivity(
+private fun Context.mainActivityPendingIntent(
+    requestCode: Int,
+    dDay: Int,
+    notificationTaskCount: Int,
+    representativeTodo: TodoInfo,
+): PendingIntent = PendingIntent.getActivity(
     this,
     requestCode,
     Intent(this, MainActivity::class.java).apply {
         flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+        putExtra(MainActivity.EXTRA_ENTRY_SOURCE, MainActivity.ENTRY_SOURCE_NOTIFICATION)
+        putExtra(MainActivity.EXTRA_NOTIFICATION_D_DAY, dDay)
+        putExtra(MainActivity.EXTRA_NOTIFICATION_TASK_COUNT, notificationTaskCount)
+        putExtra(MainActivity.EXTRA_NOTIFICATION_TASK_TYPE, representativeTodo.type.kor)
+        putExtra(MainActivity.EXTRA_NOTIFICATION_SUBJECT_NAME, representativeTodo.subject?.name.orEmpty())
     },
     PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
 )

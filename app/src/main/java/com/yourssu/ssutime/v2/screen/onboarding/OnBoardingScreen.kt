@@ -51,25 +51,29 @@ fun OnBoardingScreen(
     viewModel: OnBoardingViewModel = koinViewModel(),
     onConfirmClick: () -> Unit = {}
 ) {
-    var isGranted by remember { viewModel.isGranted }
+    val isNotificationPermissionStepCompleted by remember { viewModel.isNotificationPermissionStepCompleted }
     val isTipConfirmed by remember { viewModel.isTipConfirmed }
     val isOnBoardingDataLoaded by remember { viewModel.isOnBoardingDataLoaded }
     val coroutine = rememberCoroutineScope()
+
+    LaunchedEffect(Unit) {
+        viewModel.startInitialLmsRefresh()
+    }
 
     val launcher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) { granted ->
         Analytics.alarmPermission(isAllowed = granted)
-        isGranted = granted
+        viewModel.completeNotificationPermissionStep(granted)
     }
 
-    LaunchedEffect(isGranted, isTipConfirmed, isOnBoardingDataLoaded) {
-        if(isGranted && isTipConfirmed && isOnBoardingDataLoaded) {
+    LaunchedEffect(isNotificationPermissionStepCompleted, isTipConfirmed, isOnBoardingDataLoaded) {
+        if(isNotificationPermissionStepCompleted && isTipConfirmed && isOnBoardingDataLoaded) {
             onConfirmClick()
         }
     }
 
-    if(isGranted) {
+    if(isNotificationPermissionStepCompleted) {
         if(!isOnBoardingDataLoaded || isTipConfirmed) {
             return
         }
@@ -80,7 +84,7 @@ fun OnBoardingScreen(
             }
         }
     } else {
-        NotificationFragment() {
+        NotificationFragment {
             launcher.launch(Manifest.permission.POST_NOTIFICATIONS)
         }
     }
@@ -100,7 +104,7 @@ fun NotificationFragment(
         verticalArrangement = Arrangement.Center
     ) {
         Text(
-            text = "과제 알림을 제공받기 위해\n허용을 눌러주세요",
+            text = "과제 알림을 받으려면\n알림을 허용해주세요",
             style = SSUType.H2SemiBold,
             textAlign = TextAlign.Center
         )

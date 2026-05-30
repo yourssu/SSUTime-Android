@@ -86,6 +86,7 @@ import androidx.core.content.ContextCompat
 import com.yourssu.data.AlertData
 import com.yourssu.data.TodoInfo
 import com.yourssu.data.TodoType
+import com.yourssu.ssutime.v2.MainActivity
 import com.yourssu.ssutime.v2.R
 import com.yourssu.ssutime.v2.analytics.Analytics
 import com.yourssu.ssutime.v2.component.OutlinedButton
@@ -111,7 +112,9 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.koin.compose.viewmodel.koinViewModel
+import java.text.Collator
 import java.time.Instant
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -119,6 +122,8 @@ fun MainScreen(
     viewModel: MainViewModel = koinViewModel(),
     coroutine: CoroutineScope = rememberCoroutineScope(),
     skipInitialLmsRefresh: Boolean = false,
+    homeEntrySource: String = MainActivity.ENTRY_SOURCE_APP,
+    homeEntryVersion: Int = 0,
     onInitialLmsRefreshSkipConsumed: () -> Unit = {},
     onProfileClick: () -> Unit = {},
 ) {
@@ -129,9 +134,16 @@ fun MainScreen(
         contract = ActivityResultContracts.StartActivityForResult(),
         onResult = {},
     )
-    LaunchedEffect(Unit) {
+    LaunchedEffect(homeEntryVersion) {
         if (context.isNetworkConnected()) {
             viewModel.loadTodos(allowRefresh = !skipInitialLmsRefresh)
+            if (!viewModel.showNetworkError.value) {
+                Analytics.viewHome(
+                    taskCount = viewModel.todos.size,
+                    urgentCount = viewModel.todos.urgentTodoCount(),
+                    entrySource = homeEntrySource,
+                )
+            }
         } else {
             viewModel.showNetworkErrorScreen()
         }
@@ -143,8 +155,11 @@ fun MainScreen(
     val sheetState = rememberModalBottomSheetState(
         skipPartiallyExpanded = false,
     )
-    fun refreshTodos(showBlockingLoading: Boolean) {
-        Analytics.refreshClick()
+    fun refreshTodos(
+        showBlockingLoading: Boolean,
+        captureRefreshEvent: () -> Unit,
+    ) {
+        captureRefreshEvent()
         coroutine.launch {
             if (context.isNetworkConnected()) {
                 viewModel.loadTodos(
@@ -174,6 +189,7 @@ fun MainScreen(
             NetworkErrorFragment(
                 modifier = Modifier.padding(innerPadding),
                 onRefreshClick = {
+                    Analytics.refreshClick()
                     coroutine.launch {
                         if (context.isNetworkConnected()) {
                             viewModel.loadTodos(forceRefresh = true)
@@ -194,10 +210,16 @@ fun MainScreen(
                 isRefreshing = viewModel.isLoading.value,
                 refreshProgress = viewModel.loadingProgress.value,
                 onRefresh = {
-                    refreshTodos(showBlockingLoading = false)
+                    refreshTodos(
+                        showBlockingLoading = false,
+                        captureRefreshEvent = Analytics::pullToRefresh,
+                    )
                 },
                 onClickRefresh = {
-                    refreshTodos(showBlockingLoading = true)
+                    refreshTodos(
+                        showBlockingLoading = true,
+                        captureRefreshEvent = Analytics::refreshClick,
+                    )
                 },
                 onClickSubmitted = {
                     showSubmittedBottomSheet = true
@@ -239,6 +261,9 @@ fun MainScreen(
         if(viewModel.requiredShowAlertBottomSheet.value) {
             CallingAlertBottomSheet(
                 onConfirmClick = {
+                    Analytics.callAlarmSetting(
+                        selectedTime = Analytics.selectedTimeFromMinutes(it) ?: "reject",
+                    )
                     val allowSystem = ContextCompat.checkSelfPermission(
                         context,
                         Manifest.permission.POST_NOTIFICATIONS
@@ -346,6 +371,9 @@ fun MainScreen(
         }
     }
 }
+
+private fun List<TodoInfo>.urgentTodoCount(): Int =
+    count { todo -> getRemainingDays(todo.due_date) <= 1 }
 
 @Preview
 @Composable
@@ -615,8 +643,9 @@ fun TodoList(
     onExpandTodo: (TodoInfo) -> Unit = {},
     submittedSize: Int
 ) {
-    val immediateTodos = todos.filter { getRemainingDays(it.due_date) <= 1 }
-    val freeTodos = todos.filter { getRemainingDays(it.due_date) > 1 }
+    val sortedTodos = todos.sortedForMainDisplay()
+    val immediateTodos = sortedTodos.filter { getRemainingDays(it.due_date) <= 1 }
+    val freeTodos = sortedTodos.filter { getRemainingDays(it.due_date) > 1 }
 
     Column(
         modifier = modifier,
@@ -745,6 +774,25 @@ fun TodoList(
         }
     }
 }
+
+private fun List<TodoInfo>.sortedForMainDisplay(): List<TodoInfo> {
+    val koreanCollator = Collator.getInstance(Locale.KOREAN)
+    return sortedWith { left, right ->
+        compareValuesBy(left, right) { todo: TodoInfo -> todo.due_date }
+            .takeIf { it != 0 }
+            ?: koreanCollator.compare(left.sortName(), right.sortName())
+                .takeIf { it != 0 }
+            ?: koreanCollator.compare(left.title, right.title)
+                .takeIf { it != 0 }
+            ?: left.todoId.compareTo(right.todoId)
+    }
+}
+
+private fun TodoInfo.sortName(): String =
+    subject?.name
+        ?.trim()
+        ?.takeIf { it.isNotBlank() }
+        ?: title.trim()
 
 @Composable
 fun TodoItem(

@@ -110,6 +110,7 @@ class TodoMediumWidget : GlanceAppWidget() {
             TodoSummaryContent(
                 uiState = todoData.toTodoSummaryUiState(context, TodoSummarySize.Medium),
                 size = TodoSummarySize.Medium,
+                packageName = context.packageName,
             )
         }
     }
@@ -130,6 +131,7 @@ class TodoLargeWidget : GlanceAppWidget() {
             TodoSummaryContent(
                 uiState = todoData.toTodoSummaryUiState(context, TodoSummarySize.Large),
                 size = TodoSummarySize.Large,
+                packageName = context.packageName,
             )
         }
     }
@@ -156,6 +158,7 @@ internal suspend fun updateAllTodoWidgets(context: Context) {
 private fun TodoSummaryContent(
     uiState: TodoSummaryUiState,
     size: TodoSummarySize,
+    packageName: String = "com.yourssu.ssutime.v2",
 ) {
     val availableSize = LocalSize.current
     val surfaceHeight = when {
@@ -165,9 +168,12 @@ private fun TodoSummaryContent(
     }
     val openAppAction = actionStartActivity(
         Intent().setClassName(
-            MainActivity::class.java.packageName,
+            packageName,
             MainActivity::class.java.name,
-        ),
+        ).apply {
+            putExtra(MainActivity.EXTRA_ENTRY_SOURCE, MainActivity.ENTRY_SOURCE_WIDGET)
+            putExtra(MainActivity.EXTRA_WIDGET_SIZE, size.analyticsSize.value)
+        },
     )
 
     Box(
@@ -745,9 +751,10 @@ private data class TodoSummaryItem(
 
 private enum class TodoSummarySize(
     val visibleTodoCount: Int,
+    val analyticsSize: WidgetAnalyticsSize,
 ) {
-    Medium(3),
-    Large(5),
+    Medium(3, WidgetAnalyticsSize.Medium),
+    Large(5, WidgetAnalyticsSize.Large),
 }
 
 private fun TodoData.toTodoSummaryUiState(

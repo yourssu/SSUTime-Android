@@ -1,5 +1,15 @@
 package com.yourssu.ssutime.v2.screen.my
 
+import android.Manifest
+import android.app.NotificationManager
+import android.content.Context
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.net.Uri
+import android.os.Build
+import android.provider.Settings
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -48,10 +58,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.yourssu.data.AlertData
 import com.yourssu.data.UiState
@@ -73,6 +85,7 @@ fun MyPageScreen(
     onPressBack: () -> Unit = {},
     onLogout: () -> Unit = {},
 ) {
+    val context = LocalContext.current
     val loginInfo = viewModel.loginInfo.value
     val isLogout by remember { viewModel.isLogout }
     var showLogoutPopup by remember { mutableStateOf(false) }
@@ -82,13 +95,148 @@ fun MyPageScreen(
     val coroutine = rememberCoroutineScope()
     val alertState by viewModel.uiState.collectAsStateWithLifecycle()
     var alertData by remember { mutableStateOf<AlertData>(AlertData(valid = false, false, false, -1)) }
+    var pendingNotificationSettingsRequest by remember {
+        mutableStateOf<NotificationSettingsRequest?>(null)
+    }
+    var pendingCallAlertThresholdMinutes by remember {
+        mutableStateOf<Long?>(null)
+    }
+
+    fun updateAlertData(nextAlertData: AlertData) {
+        alertData = nextAlertData
+        viewModel.updateAlertData(nextAlertData)
+    }
+
+    fun enableSystemAlert() {
+        Analytics.settingSystemAlarm(isEnabled = true)
+        updateAlertData(
+            alertData.copy(allowSystemAlert = true)
+        )
+    }
+
+    fun disableSystemAlert() {
+        Analytics.settingSystemAlarm(isEnabled = false)
+        updateAlertData(
+            alertData.copy(allowSystemAlert = false)
+        )
+    }
+
+    fun applyCallAlertSetting(
+        enabled: Boolean,
+        thresholdMinutes: Long = alertData.callingAlertThresholdMinutes,
+    ) {
+        val selectedTime = if (enabled) {
+            Analytics.selectedTimeFromMinutes(thresholdMinutes) ?: return
+        } else {
+            "reject"
+        }
+        Analytics.settingCallAlarm(
+            isEnabled = enabled,
+            selectedTime = selectedTime,
+        )
+        updateAlertData(
+            alertData.copy(
+                allowCallAlert = enabled,
+                callingAlertThresholdMinutes = thresholdMinutes,
+            )
+        )
+    }
+
+    fun enableCallAlert(thresholdMinutes: Long = alertData.callingAlertThresholdMinutes) {
+        applyCallAlertSetting(
+            enabled = true,
+            thresholdMinutes = thresholdMinutes,
+        )
+    }
+
+    fun disableCallAlert() {
+        applyCallAlertSetting(
+            enabled = false,
+        )
+    }
+
+    lateinit var notificationSettingsLauncher: androidx.activity.result.ActivityResultLauncher<Intent>
+
+    fun openNotificationSettings(request: NotificationSettingsRequest) {
+        pendingNotificationSettingsRequest = request
+        val intent = when (request) {
+            NotificationSettingsRequest.SystemAlert,
+            NotificationSettingsRequest.CallAlertPostNotifications -> context.notificationSettingsIntent()
+            NotificationSettingsRequest.CallAlertFullScreenIntent -> context.fullScreenIntentSettingsIntent()
+        }
+        notificationSettingsLauncher.launch(intent)
+    }
+
+    fun requestEnableSystemAlert() {
+        if (context.canPostNotifications()) {
+            enableSystemAlert()
+        } else {
+            openNotificationSettings(NotificationSettingsRequest.SystemAlert)
+        }
+    }
+
+    fun requestEnableCallAlert(thresholdMinutes: Long = alertData.callingAlertThresholdMinutes) {
+        pendingCallAlertThresholdMinutes = thresholdMinutes
+        when {
+            !context.canPostNotifications() -> {
+                openNotificationSettings(NotificationSettingsRequest.CallAlertPostNotifications)
+            }
+
+            !context.canUseFullScreenIntent() -> {
+                openNotificationSettings(NotificationSettingsRequest.CallAlertFullScreenIntent)
+            }
+
+            else -> {
+                enableCallAlert(thresholdMinutes)
+                pendingCallAlertThresholdMinutes = null
+            }
+        }
+    }
+
+    notificationSettingsLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) {
+        when (pendingNotificationSettingsRequest) {
+            NotificationSettingsRequest.SystemAlert -> {
+                if (context.canPostNotifications()) {
+                    enableSystemAlert()
+                }
+            }
+
+            NotificationSettingsRequest.CallAlertPostNotifications -> {
+                if (context.canPostNotifications()) {
+                    val thresholdMinutes = pendingCallAlertThresholdMinutes
+                        ?: alertData.callingAlertThresholdMinutes
+                    if (context.canUseFullScreenIntent()) {
+                        enableCallAlert(thresholdMinutes)
+                    } else {
+                        openNotificationSettings(NotificationSettingsRequest.CallAlertFullScreenIntent)
+                        return@rememberLauncherForActivityResult
+                    }
+                }
+            }
+
+            NotificationSettingsRequest.CallAlertFullScreenIntent -> {
+                if (context.canPostNotifications() && context.canUseFullScreenIntent()) {
+                    enableCallAlert(
+                        pendingCallAlertThresholdMinutes ?: alertData.callingAlertThresholdMinutes
+                    )
+                }
+            }
+
+            null -> Unit
+        }
+        pendingNotificationSettingsRequest = null
+        pendingCallAlertThresholdMinutes = null
+    }
 
     LaunchedEffect(Unit) {
         Analytics.viewMyPage()
     }
 
-    when (val state = alertState) {
-        is UiState.Success -> {
+    LaunchedEffect(alertState) {
+        val state = alertState
+        if (state is UiState.Success) {
             alertData = state.data
         }
     }
@@ -193,48 +341,39 @@ fun MyPageScreen(
             ToggleOption(
                 text = "시스템 알림",
                 value = alertData.allowSystemAlert,
-                onValueChanged = {
-                    Analytics.settingSystemAlarm(isEnabled = !alertData.allowSystemAlert)
-                    viewModel.updateAlertData(
-                        alertData.copy(allowSystemAlert = !alertData.allowSystemAlert)
-                    )
+                onValueChanged = { enabled ->
+                    if (enabled) {
+                        requestEnableSystemAlert()
+                    } else {
+                        disableSystemAlert()
+                    }
                 },
                 childOption = null
             )
             ToggleOption(
                 text = "전화 알림",
                 value = alertData.allowCallAlert,
-                onValueChanged = {
-                    val nextEnabled = !alertData.allowCallAlert
-                    val selectedTime = if (nextEnabled) {
-                        Analytics.selectedTimeFromMinutes(alertData.callingAlertThresholdMinutes)
+                onValueChanged = { enabled ->
+                    if (enabled) {
+                        requestEnableCallAlert()
                     } else {
-                        "reject"
+                        disableCallAlert()
                     }
-                    if (selectedTime != null) {
-                        Analytics.settingCallAlarm(
-                            isEnabled = nextEnabled,
-                            selectedTime = selectedTime,
-                        )
-                    }
-                    viewModel.updateAlertData(
-                        alertData.copy(allowCallAlert = nextEnabled)
-                    )
                 },
                 childOption = {
                     ComboOption(
                         text = "시간",
                         value = "${(alertData.callingAlertThresholdMinutes / 60).toInt()}시간 전"
                     ) { hours ->
-                        Analytics.selectedTimeFromMinutes(hours * 60L)?.let { selectedTime ->
-                            Analytics.settingCallAlarm(
-                                isEnabled = alertData.allowCallAlert,
-                                selectedTime = selectedTime,
+                        val thresholdMinutes = hours * 60L
+                        if (alertData.allowCallAlert) {
+                            applyCallAlertSetting(
+                                enabled = true,
+                                thresholdMinutes = thresholdMinutes,
                             )
+                        } else {
+                            requestEnableCallAlert(thresholdMinutes)
                         }
-                        viewModel.updateAlertData(
-                            alertData.copy(callingAlertThresholdMinutes = hours * 60L)
-                        )
                     }
                 }
             )
@@ -248,8 +387,69 @@ fun MyPageScreen(
             Analytics.logoutClick()
             showLogoutPopup = true
         }
+
+        Spacer(Modifier.height(12.dp))
+
+        OptionButton(
+            text = "디버그: 10초 후 전화알림"
+        ) {
+            viewModel.sendDebugCallAlertAfterDelay(context)
+        }
     }
 }
+
+private enum class NotificationSettingsRequest {
+    SystemAlert,
+    CallAlertPostNotifications,
+    CallAlertFullScreenIntent,
+}
+
+private fun Context.canPostNotifications(): Boolean =
+    Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+        ContextCompat.checkSelfPermission(
+            this,
+            Manifest.permission.POST_NOTIFICATIONS,
+        ) == PackageManager.PERMISSION_GRANTED
+
+private fun Context.canUseFullScreenIntent(): Boolean {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+        return true
+    }
+
+    return getSystemService(NotificationManager::class.java).canUseFullScreenIntent()
+}
+
+private fun Context.notificationSettingsIntent(): Intent {
+    val notificationSettingsIntent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
+            putExtra(Settings.EXTRA_APP_PACKAGE, packageName)
+        }
+    } else {
+        null
+    }
+
+    return notificationSettingsIntent?.takeIf { it.resolveActivity(packageManager) != null }
+        ?: appDetailsSettingsIntent()
+}
+
+private fun Context.fullScreenIntentSettingsIntent(): Intent {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+        return appDetailsSettingsIntent()
+    }
+
+    val packageUri = Uri.parse("package:$packageName")
+    val fullScreenIntentSettings = Intent(Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT).apply {
+        data = packageUri
+    }
+
+    return fullScreenIntentSettings.takeIf { it.resolveActivity(packageManager) != null }
+        ?: appDetailsSettingsIntent()
+}
+
+private fun Context.appDetailsSettingsIntent(): Intent =
+    Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+        data = Uri.parse("package:$packageName")
+    }
 
 @Composable
 fun ToggleOption(

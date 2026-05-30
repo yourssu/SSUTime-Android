@@ -51,6 +51,12 @@ class MainViewModel(
             requiredShowAlertBottomSheet.value = !alertData.valid
             showWidgetBadge.value = alertData.showWidgetHelperBadge
         }
+
+        viewModelScope.launch {
+            mainRepository.todoData.collect { todoData ->
+                updateTodoState(todoData)
+            }
+        }
     }
 
     fun updateAlertState(alertData: AlertData) {
@@ -78,39 +84,51 @@ class MainViewModel(
 
         val key = todo.aiSummaryKey()
         when (aiSummaryStates[key]) {
-            is AiSummaryUiState.Success,
             AiSummaryUiState.Loading,
             AiSummaryUiState.Analyzing -> return
+            is AiSummaryUiState.Success,
             AiSummaryUiState.Empty,
             AiSummaryUiState.Error,
             null -> Unit
         }
 
         viewModelScope.launch {
-            mainRepository.getCachedAiSummary(key)?.toAiSummarySuccessOrNull()?.let { success ->
-                aiSummaryStates[key] = success
-                return@launch
+            val fallbackSuccess = (aiSummaryStates[key] as? AiSummaryUiState.Success)
+                ?: mainRepository.getCachedAiSummary(key)?.toAiSummarySuccessOrNull()
+
+            if (fallbackSuccess != null) {
+                aiSummaryStates[key] = fallbackSuccess
+            } else {
+                aiSummaryStates[key] = AiSummaryUiState.Loading
             }
 
-            val shouldPollOnly = aiSummaryStates[key] == AiSummaryUiState.Empty
-            aiSummaryStates[key] = AiSummaryUiState.Loading
+            runCatching {
+                requestAiSummary(todo)
+            }.onSuccess {
+                pollAndCacheAiSummary(todo, key, fallbackSuccess)
+                return@launch
+            }.onFailure { exception ->
+                Log.e(javaClass.name, "AI 요약 요청에 실패했습니다: ${todo.title}", exception)
+                if (fallbackSuccess != null) {
+                    return@launch
+                }
+            }
 
             val reportedTodoResult = runCatching {
                 findReportedTodo(todo)
             }
-
             val reportedTodo = reportedTodoResult.getOrNull()
             reportedTodo?.toAiSummarySuccessOrNull()?.let { success ->
                 cacheAndShowAiSummary(key, success)
                 return@launch
             }
 
-            if (shouldPollOnly && reportedTodoResult.isFailure) {
+            if (reportedTodoResult.isFailure) {
                 aiSummaryStates[key] = AiSummaryUiState.Error
                 return@launch
             }
 
-            if (shouldPollOnly || reportedTodo?.isProvisional == true) {
+            if (reportedTodo?.isProvisional == true) {
                 pollAndCacheAiSummary(todo, key)
                 return@launch
             }
@@ -120,18 +138,7 @@ class MainViewModel(
                 return@launch
             }
 
-            runCatching {
-                val lmsSession = lmsRefreshRepository.getLmsSessionRequest()
-                mainRepository.reportTodoWithAnalysis(
-                    todo = todo,
-                    lmsSession = lmsSession,
-                )
-            }.onSuccess {
-                pollAndCacheAiSummary(todo, key)
-            }.onFailure { exception ->
-                Log.e(javaClass.name, "AI 요약 요청에 실패했습니다: ${todo.title}", exception)
-                aiSummaryStates[key] = AiSummaryUiState.Error
-            }
+            aiSummaryStates[key] = AiSummaryUiState.Error
         }
     }
 
@@ -222,8 +229,22 @@ class MainViewModel(
             .firstOrNull { response -> response.todo.matches(todo) }
             ?.todo
 
-    private suspend fun pollAndCacheAiSummary(todo: TodoInfo, key: String) {
-        aiSummaryStates[key] = AiSummaryUiState.Analyzing
+    private suspend fun requestAiSummary(todo: TodoInfo) {
+        val lmsSession = lmsRefreshRepository.getLmsSessionRequest()
+        mainRepository.reportTodoWithAnalysis(
+            todo = todo,
+            lmsSession = lmsSession,
+        )
+    }
+
+    private suspend fun pollAndCacheAiSummary(
+        todo: TodoInfo,
+        key: String,
+        fallbackSuccess: AiSummaryUiState.Success? = null,
+    ) {
+        if (fallbackSuccess == null) {
+            aiSummaryStates[key] = AiSummaryUiState.Analyzing
+        }
 
         repeat(AI_SUMMARY_POLL_ATTEMPTS) { attempt ->
             val success = runCatching {
@@ -240,7 +261,7 @@ class MainViewModel(
             }
         }
 
-        aiSummaryStates[key] = AiSummaryUiState.Empty
+        aiSummaryStates[key] = fallbackSuccess ?: AiSummaryUiState.Empty
     }
 
     private suspend fun cacheAndShowAiSummary(

@@ -139,6 +139,7 @@ class ApiRepository {
             bearerAuth(accessToken)
             contentType(ContentType.Application.Json)
         }
+
         Log.i("ApiRepository", "Get Todos Status Code : ${response.status.value}")
         return response.body()
     }
