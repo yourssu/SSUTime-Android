@@ -390,11 +390,11 @@ fun MyPageScreen(
 
         Spacer(Modifier.height(12.dp))
 
-        OptionButton(
-            text = "디버그: 10초 후 전화알림"
-        ) {
-            viewModel.sendDebugCallAlertAfterDelay(context)
-        }
+//        OptionButton(
+//            text = "디버그: 10초 후 전화알림"
+//        ) {
+//            viewModel.sendDebugCallAlertAfterDelay(context)
+//        }
     }
 }
 
