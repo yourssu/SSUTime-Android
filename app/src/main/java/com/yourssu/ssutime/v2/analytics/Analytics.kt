@@ -7,9 +7,16 @@ import com.posthog.android.PostHogAndroid
 import com.posthog.android.PostHogAndroidConfig
 import com.yourssu.data.TodoInfo
 import com.yourssu.ssutime.v2.BuildConfig
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.withTimeoutOrNull
+import java.security.MessageDigest
+import java.util.concurrent.atomic.AtomicReference
 
 object Analytics {
     private const val TAG = "Analytics"
+    private const val INSTALL_ATTRIBUTION_WAIT_MILLIS = 2_000L
+    private val installAttributionHandled = CompletableDeferred<Unit>()
+    private val identifiedDistinctId = AtomicReference<String?>(null)
 
     fun setup(context: Context) {
         val apiKey = BuildConfig.POSTHOG_API_KEY
@@ -165,6 +172,43 @@ object Analytics {
 
     fun logoutCancel() = capture("logout_cancel")
 
+    fun appStoreInstalled(utmProperties: Map<String, String>) = capture(
+        event = "app_store_installed",
+        properties = utmProperties.filterKeys { key ->
+            key.startsWith("utm_")
+        } + ("platform" to "android"),
+    ).also {
+        flush()
+    }
+
+    suspend fun identifyUser(loginId: String) {
+        val distinctId = loginId.toHashedDistinctId() ?: return
+        waitForInstallAttribution()
+        if (identifiedDistinctId.get() == distinctId) return
+
+        runCatching {
+            PostHog.identify(distinctId = distinctId)
+            identifiedDistinctId.set(distinctId)
+        }.onFailure { exception ->
+            Log.w(TAG, "Failed to identify user.", exception)
+        }
+    }
+
+    fun resetUser() {
+        identifiedDistinctId.set(null)
+        runCatching {
+            PostHog.reset()
+        }.onFailure { exception ->
+            Log.w(TAG, "Failed to reset user.", exception)
+        }
+    }
+
+    internal fun markInstallAttributionHandled() {
+        if (!installAttributionHandled.isCompleted) {
+            installAttributionHandled.complete(Unit)
+        }
+    }
+
     fun selectedTimeFromMinutes(minutes: Long): String? = when (minutes) {
         60L -> "1h"
         120L -> "2h"
@@ -211,6 +255,32 @@ object Analytics {
         }.onFailure { exception ->
             Log.w(TAG, "Failed to capture event: $event", exception)
         }
+    }
+
+    private suspend fun waitForInstallAttribution() {
+        withTimeoutOrNull(INSTALL_ATTRIBUTION_WAIT_MILLIS) {
+            installAttributionHandled.await()
+        }
+    }
+
+    private fun flush() {
+        runCatching {
+            PostHog.flush()
+        }.onFailure { exception ->
+            Log.w(TAG, "Failed to flush events.", exception)
+        }
+    }
+
+    private fun String.toHashedDistinctId(): String? {
+        val normalizedId = trim()
+        if (normalizedId.isBlank()) return null
+
+        val digest = MessageDigest.getInstance("SHA-256")
+            .digest(normalizedId.encodeToByteArray())
+            .joinToString(separator = "") { byte ->
+                (byte.toInt() and 0xff).toString(radix = 16).padStart(length = 2, padChar = '0')
+            }
+        return "lms_sha256:$digest"
     }
 }
 

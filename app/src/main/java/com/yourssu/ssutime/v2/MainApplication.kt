@@ -6,6 +6,8 @@ import android.media.AudioAttributes
 import android.media.RingtoneManager
 import android.os.Build
 import com.yourssu.ssutime.v2.analytics.Analytics
+import com.yourssu.ssutime.v2.analytics.captureInstallReferrerIfNeeded
+import com.yourssu.ssutime.v2.analytics.identifyStoredAnalyticsUserIfNeeded
 import org.koin.android.ext.koin.androidContext
 import org.koin.android.ext.koin.androidLogger
 import org.koin.core.context.startKoin
@@ -15,6 +17,8 @@ class MainApplication : android.app.Application() {
     override fun onCreate() {
         super.onCreate()
         Analytics.setup(this)
+        captureInstallReferrerIfNeeded()
+        identifyStoredAnalyticsUserIfNeeded()
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager

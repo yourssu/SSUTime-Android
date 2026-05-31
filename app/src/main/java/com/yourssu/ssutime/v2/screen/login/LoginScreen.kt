@@ -110,6 +110,7 @@ fun LoginScreen(
                 coroutine.launch {
                     Analytics.loginAttempt(autoLogin = viewModel.autoLoginState.value)
                     if (viewModel.login()) {
+                        Analytics.identifyUser(idState.text.toString())
                         Analytics.loginSuccess()
                         registerFCMTokenAndContinue(viewModel, coroutine, successLogin)
                     } else {

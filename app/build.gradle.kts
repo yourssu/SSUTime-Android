@@ -148,6 +148,7 @@ dependencies {
     implementation(project(":data"))
 
     implementation("com.posthog:posthog-android:3.+")
+    implementation("com.android.installreferrer:installreferrer:2.2")
 
     testImplementation(libs.junit)
     androidTestImplementation(platform(libs.androidx.compose.bom))

@@ -24,6 +24,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import java.security.MessageDigest
 import java.time.Duration
 import java.time.Instant
 import java.time.LocalDateTime
@@ -39,6 +40,8 @@ private const val MORNING_REMINDER_REQUEST_CODE = 90_000
 private const val EVENING_REMINDER_REQUEST_CODE = 180_000
 private const val EXTRA_DEADLINE_REMINDER_TRIGGER_AT_MILLIS = "extra_deadline_reminder_trigger_at_millis"
 private const val MAX_SENT_DEADLINE_REMINDER_KEYS = 500
+private const val DEADLINE_REMINDER_KEY_VERSION = "deadline:v2"
+private const val DEADLINE_REMINDER_KEY_SEPARATOR = "\u001F"
 
 private val DEADLINE_ZONE_ID: ZoneId = ZoneId.of("Asia/Seoul")
 private val D_DAY_NOTIFY_TIME: LocalTime = LocalTime.of(9, 0)
@@ -76,7 +79,10 @@ fun sendDeadlineNotificationsIfNeeded(
 
     val pendingReminders = todoData.todos
         .flatMap { todo -> todo.toPendingReminderCandidates(now) }
-        .filterNot { reminder -> reminder.key in todoData.sentDeadlineReminderKeys }
+        .filterNot { reminder ->
+            reminder.key in todoData.sentDeadlineReminderKeys ||
+                reminder.legacyKey in todoData.sentDeadlineReminderKeys
+        }
 
     if (pendingReminders.isEmpty()) {
         return DeadlineReminderSendResult()
@@ -208,6 +214,7 @@ private fun TodoInfo.toPendingReminderCandidates(now: Instant): List<DeadlineRem
             todo = this,
             daysBefore = daysBefore,
             key = deadlineReminderKey(daysBefore),
+            legacyKey = legacyDeadlineReminderKey(daysBefore),
         )
     }
 }
@@ -238,7 +245,7 @@ private fun Context.showDeadlineNotification(
     dDay: Int,
     notificationTaskCount: Int,
 ) {
-    val notificationId = key.hashCode()
+    val notificationId = key.toStableNotificationId()
     val notification = NotificationCompat.Builder(this, CHANNEL_ID)
         .setSmallIcon(R.drawable.ssutime_launcher_foreground)
         .setContentTitle(title)
@@ -268,8 +275,41 @@ private fun TodoInfo.toNotificationItemName(): String =
         .joinToString(" ")
         .ifBlank { title.ifBlank { "과제" } }
 
-private fun TodoInfo.deadlineReminderKey(daysBefore: Int): String =
+internal fun TodoInfo.deadlineReminderKey(daysBefore: Int): String {
+    val digest = listOf(
+        todoId.toString(),
+        due_date,
+        daysBefore.toString(),
+        type.name,
+        subject?.id?.toString().orEmpty(),
+        subject?.name.orEmpty(),
+        subject?.professor.orEmpty(),
+        title,
+    )
+        .joinToString(DEADLINE_REMINDER_KEY_SEPARATOR) { it.toReminderKeyPart() }
+        .sha256Hex()
+
+    return "$DEADLINE_REMINDER_KEY_VERSION:$digest"
+}
+
+private fun TodoInfo.legacyDeadlineReminderKey(daysBefore: Int): String =
     "deadline:$todoId:$due_date:$daysBefore"
+
+internal fun String.toStableNotificationId(): Int {
+    val digest = MessageDigest.getInstance("SHA-256").digest(toByteArray(Charsets.UTF_8))
+    return ((digest[0].toInt() and 0xFF) shl 24) or
+        ((digest[1].toInt() and 0xFF) shl 16) or
+        ((digest[2].toInt() and 0xFF) shl 8) or
+        (digest[3].toInt() and 0xFF)
+}
+
+private fun String.toReminderKeyPart(): String =
+    trim().replace(Regex("\\s+"), " ")
+
+private fun String.sha256Hex(): String =
+    MessageDigest.getInstance("SHA-256")
+        .digest(toByteArray(Charsets.UTF_8))
+        .joinToString(separator = "") { byte -> "%02x".format(byte) }
 
 private fun Instant.isInRefreshWindowAfter(target: Instant): Boolean =
     !isBefore(target) && !isAfter(target.plus(REFRESH_NOTIFICATION_WINDOW))
@@ -391,6 +431,7 @@ private data class DeadlineReminderCandidate(
     val todo: TodoInfo,
     val daysBefore: Int,
     val key: String,
+    val legacyKey: String,
 )
 
 class DeadlineReminderReceiver : BroadcastReceiver() {

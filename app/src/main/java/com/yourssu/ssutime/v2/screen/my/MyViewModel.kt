@@ -11,6 +11,7 @@ import com.yourssu.data.AlertData
 import com.yourssu.data.TodoInfo
 import com.yourssu.data.UiState
 import com.yourssu.ssutime.v2.accessToken
+import com.yourssu.ssutime.v2.analytics.Analytics
 import com.yourssu.ssutime.v2.getRemainingDays
 import com.yourssu.ssutime.v2.lms.getLmsLoginInfo
 import com.yourssu.ssutime.v2.notification.showCallAlert
@@ -59,6 +60,7 @@ class MyViewModel(
             mainRepository.clearTodoData()
             loginRepository.logout()
             accessToken = ""
+            Analytics.resetUser()
             isLogout.value = true
         }
     }
