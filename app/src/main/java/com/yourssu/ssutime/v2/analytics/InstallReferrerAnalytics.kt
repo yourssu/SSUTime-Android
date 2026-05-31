@@ -41,10 +41,14 @@ fun Context.captureInstallReferrerIfNeeded() {
                 .first()[APP_STORE_INSTALLED_SENT_KEY] == true
             if (alreadySent) return@launch
 
-            val referrer = withTimeoutOrNull(INSTALL_REFERRER_FETCH_TIMEOUT_MILLIS) {
-                appContext.fetchInstallReferrer()
-            } ?: return@launch
-            Analytics.appStoreInstalled(referrer.extractUtmProperties())
+            val referrer = runCatching {
+                withTimeoutOrNull(INSTALL_REFERRER_FETCH_TIMEOUT_MILLIS) {
+                    appContext.fetchInstallReferrer()
+                }
+            }.onFailure { exception ->
+                Log.w(TAG, "Failed to fetch install referrer.", exception)
+            }.getOrNull()
+            Analytics.appStoreInstalled(referrer?.extractUtmProperties().orEmpty())
             appContext.installReferrerAnalyticsDataStore.edit { preferences ->
                 preferences[APP_STORE_INSTALLED_SENT_KEY] = true
             }
