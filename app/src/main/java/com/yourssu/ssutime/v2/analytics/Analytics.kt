@@ -68,12 +68,15 @@ object Analytics {
         dDay: Int,
         hasAiSummary: Boolean? = null,
     ) {
+        if (hasAiSummary == null) {
+            return
+        }
         val properties = mutableMapOf<String, Any>(
             "task_type" to todo.type.kor,
             "d_day" to dDay,
             "subject_name" to todo.subject?.name.orEmpty(),
+            "has_ai_summary" to hasAiSummary,
         )
-        hasAiSummary?.let { properties["has_ai_summary"] = it }
 
         capture(
             event = "task_detail_expand",
