@@ -16,6 +16,7 @@ import androidx.glance.Image
 import androidx.glance.ImageProvider
 import androidx.glance.LocalSize
 import androidx.glance.action.ActionParameters
+import androidx.glance.action.actionParametersOf
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.CircularProgressIndicator
 import androidx.glance.appwidget.GlanceAppWidget
@@ -45,6 +46,7 @@ import com.yourssu.data.TodoData
 import com.yourssu.data.TodoInfo
 import com.yourssu.ssutime.v2.MainActivity
 import com.yourssu.ssutime.v2.R
+import com.yourssu.ssutime.v2.analytics.Analytics
 import com.yourssu.ssutime.v2.getRemainingDays
 import com.yourssu.ssutime.v2.getStringSimpleDate
 import com.yourssu.ssutime.v2.screen.main.LmsRefreshRepository
@@ -68,10 +70,15 @@ private const val TAG = "DDayWidget"
 private const val SECONDS_PER_DAY = 24 * 60 * 60L
 private const val WIDGET_REFRESH_TIMEOUT_MILLIS = 30_000L
 private const val EMPTY_DDAY_TEXT = "모든 할 일을 수행했어요!"
+private val WidgetRefreshSizeKey = ActionParameters.Key<String>("widget_size")
 
 private val widgetWhite = ColorProvider(day = Color.White, night = Color.White)
-private val widgetEmptyTextColor = ColorProvider(day = Color(0xFF222222), night = Color(0xFF222222))
+private val widgetTextColor = ColorProvider(day = Color.White, night = Color.White)
 private val widgetErrorTextColor = ColorProvider(day = Color(0xFFFE4F4C), night = Color(0xFFFE4F4C))
+
+internal fun widgetRefreshAction(widgetSize: WidgetAnalyticsSize) = actionRunCallback<DDayWidgetRefreshAction>(
+    actionParametersOf(WidgetRefreshSizeKey to widgetSize.value),
+)
 
 class DDayWidget : GlanceAppWidget() {
     override val sizeMode = SizeMode.Exact
@@ -164,12 +171,12 @@ private fun DDayTodoContent(
         Text(
             text = uiState.subjectName,
             maxLines = 1,
-            style = SSUType.G_Caption1SemiBold,
+            style = SSUType.G_Caption1SemiBold.copy(color = widgetTextColor),
         )
         Text(
             text = uiState.type,
             maxLines = 1,
-            style = SSUType.G_H3SemiBold,
+            style = SSUType.G_H3SemiBold.copy(color = widgetTextColor),
         )
     }
 
@@ -182,7 +189,7 @@ private fun DDayTodoContent(
         Column {
             Text(
                 text = "마감까지",
-                style = SSUType.G_Caption2Medium,
+                style = SSUType.G_Caption2Medium.copy(color = widgetTextColor),
             )
             if (uiState.isRemainingTimeText) {
                 LiveCountdownText(
@@ -198,14 +205,14 @@ private fun DDayTodoContent(
                 Text(
                     text = uiState.dDayText,
                     maxLines = 1,
-                    style = SSUType.G_H1SemiBold,
+                    style = SSUType.G_H1SemiBold.copy(color = widgetTextColor),
                 )
             }
 
             Text(
                 text = uiState.updatedAtText,
                 maxLines = 1,
-                style = SSUType.G_Caption3Regular,
+                style = SSUType.G_Caption3Regular.copy(color = widgetTextColor),
             )
         }
     }
@@ -221,7 +228,7 @@ private fun DDayTodoContent(
             contentDescription = "새로고침",
             modifier = GlanceModifier
                 .size(34.dp)
-                .clickable(actionRunCallback<DDayWidgetRefreshAction>()),
+                .clickable(widgetRefreshAction(WidgetAnalyticsSize.Small)),
         )
     }
 }
@@ -246,7 +253,7 @@ private fun DDayEmptyContent() {
         Text(
             text = EMPTY_DDAY_TEXT,
             maxLines = 1,
-            style = SSUType.G_Caption2SemiBold.copy(color = widgetEmptyTextColor),
+            style = SSUType.G_Caption2SemiBold.copy(color = widgetTextColor),
         )
     }
 }
@@ -272,7 +279,7 @@ private fun DDayRefreshInProgressContent() {
             modifier = GlanceModifier.fillMaxWidth(),
             maxLines = 1,
             style = SSUType.G_Caption1SemiBold.copy(
-                color = widgetErrorTextColor,
+                color = widgetTextColor,
                 textAlign = TextAlign.Center,
             ),
         )
@@ -282,7 +289,7 @@ private fun DDayRefreshInProgressContent() {
             modifier = GlanceModifier.fillMaxWidth(),
             maxLines = 2,
             style = SSUType.G_Caption2Medium.copy(
-                color = widgetEmptyTextColor,
+                color = widgetTextColor,
                 textAlign = TextAlign.Center,
             ),
         )
@@ -305,7 +312,7 @@ private fun DDayRefreshErrorContent(message: String) {
             modifier = GlanceModifier.fillMaxWidth(),
             maxLines = 1,
             style = SSUType.G_Caption1SemiBold.copy(
-                color = widgetErrorTextColor,
+                color = widgetTextColor,
                 textAlign = TextAlign.Center,
             ),
         )
@@ -315,7 +322,7 @@ private fun DDayRefreshErrorContent(message: String) {
             modifier = GlanceModifier.fillMaxWidth(),
             maxLines = 2,
             style = SSUType.G_Caption2Medium.copy(
-                color = widgetEmptyTextColor,
+                color = widgetTextColor,
                 textAlign = TextAlign.Center,
             ),
         )
@@ -325,7 +332,7 @@ private fun DDayRefreshErrorContent(message: String) {
             contentDescription = "새로고침",
             modifier = GlanceModifier
                 .size(28.dp)
-                .clickable(actionRunCallback<DDayWidgetRefreshAction>()),
+                .clickable(widgetRefreshAction(WidgetAnalyticsSize.Small)),
         )
     }
 }
@@ -564,6 +571,9 @@ class DDayWidgetRefreshAction : ActionCallback, KoinComponent {
         glanceId: GlanceId,
         parameters: ActionParameters,
     ) {
+        val widgetSize = parameters[WidgetRefreshSizeKey] ?: WidgetAnalyticsSize.Small.value
+        var refreshSucceeded = false
+
         context.markWidgetRefreshRunning()
         updateAllTodoWidgets(context)
 
@@ -573,7 +583,10 @@ class DDayWidgetRefreshAction : ActionCallback, KoinComponent {
                 timeoutMillis = WIDGET_REFRESH_TIMEOUT_MILLIS,
                 forceLogin = true,
             )) {
-                is TodoRefreshResult.Success -> Log.i(TAG, "위젯 새로고침이 완료되었습니다.")
+                is TodoRefreshResult.Success -> {
+                    refreshSucceeded = true
+                    Log.i(TAG, "위젯 새로고침이 완료되었습니다.")
+                }
                 is TodoRefreshResult.Skipped -> {
                     context.markWidgetRefreshFailed(result.reason)
                     Log.i(TAG, result.reason)
@@ -591,6 +604,10 @@ class DDayWidgetRefreshAction : ActionCallback, KoinComponent {
             Log.e(TAG, "위젯 새로고침을 실행하지 못했습니다.", exception)
         }
 
+        Analytics.widgetRefreshTap(
+            refreshResult = refreshSucceeded,
+            widgetSize = widgetSize,
+        )
         updateAllTodoWidgets(context)
     }
 }

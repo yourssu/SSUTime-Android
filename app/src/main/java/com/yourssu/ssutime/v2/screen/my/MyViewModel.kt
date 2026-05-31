@@ -83,6 +83,7 @@ class MyViewModel(
         sortedForMainDisplay().firstOrNull()
 
     fun openKakaoTalkQA(context: Context) {
+        Analytics.kakaoClick()
         val intent = Intent(Intent.ACTION_VIEW, KAKAO_TALK_QA_URL.toUri()).apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }

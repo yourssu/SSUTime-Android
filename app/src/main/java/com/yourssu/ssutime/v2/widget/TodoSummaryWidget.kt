@@ -21,7 +21,6 @@ import androidx.glance.appwidget.CircularProgressIndicator
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
 import androidx.glance.appwidget.SizeMode
-import androidx.glance.appwidget.action.actionRunCallback
 import androidx.glance.appwidget.action.actionStartActivity
 import androidx.glance.appwidget.appWidgetBackground
 import androidx.glance.appwidget.cornerRadius
@@ -269,6 +268,7 @@ private fun TodoMediumContent(
             Spacer(modifier = GlanceModifier.height(5.dp))
             WidgetUpdatedAt(
                 text = uiState.updatedAtText,
+                widgetSize = WidgetAnalyticsSize.Medium,
             )
         }
 
@@ -340,6 +340,7 @@ private fun TodoLargeContent(uiState: TodoSummaryUiState) {
         Spacer(modifier = GlanceModifier.height(2.dp))
         WidgetUpdatedAt(
             text = uiState.updatedAtText,
+            widgetSize = WidgetAnalyticsSize.Large,
             fontSize = 9,
             iconSize = 24.dp,
         )
@@ -486,7 +487,7 @@ private fun TodoSummaryRefreshErrorContent(
             colorFilter = ColorFilter.tint(summarySecondaryText),
             modifier = GlanceModifier
                 .size(24.dp)
-                .clickable(actionRunCallback<DDayWidgetRefreshAction>()),
+                .clickable(widgetRefreshAction(size.analyticsSize)),
         )
     }
 }
@@ -667,6 +668,7 @@ private fun CompactTodoSlot(
 @GlanceComposable
 private fun WidgetUpdatedAt(
     text: String,
+    widgetSize: WidgetAnalyticsSize,
     fontSize: Int = 9,
     iconSize: Dp = 24.dp,
 ) {
@@ -689,7 +691,7 @@ private fun WidgetUpdatedAt(
             colorFilter = ColorFilter.tint(summarySecondaryText),
             modifier = GlanceModifier
                 .size(iconSize)
-                .clickable(actionRunCallback<DDayWidgetRefreshAction>()),
+                .clickable(widgetRefreshAction(widgetSize)),
         )
     }
 }

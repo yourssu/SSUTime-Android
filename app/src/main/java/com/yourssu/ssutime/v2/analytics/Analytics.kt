@@ -85,6 +85,8 @@ object Analytics {
 
     fun widgetBannerDismiss() = capture("widget_banner_dismiss")
 
+    fun widgetBannerConfirm() = capture("widget_banner_confirm")
+
     fun notificationReceived(
         dDay: Int,
         notificationTaskCount: Int,
@@ -130,6 +132,17 @@ object Analytics {
         properties = mapOf("widget_size" to widgetSize),
     )
 
+    fun widgetRefreshTap(
+        refreshResult: Boolean,
+        widgetSize: String,
+    ) = capture(
+        event = "widget_refresh_tap",
+        properties = mapOf(
+            "refresh_result" to refreshResult,
+            "widget_size" to widgetSize,
+        ),
+    )
+
     fun viewHome(
         taskCount: Int,
         urgentCount: Int,
@@ -144,6 +157,8 @@ object Analytics {
     )
 
     fun viewMyPage() = capture("view_mypage")
+
+    fun kakaoClick() = capture("kakao_click")
 
     fun settingSystemAlarm(isEnabled: Boolean) = capture(
         event = "setting_system_alarm",

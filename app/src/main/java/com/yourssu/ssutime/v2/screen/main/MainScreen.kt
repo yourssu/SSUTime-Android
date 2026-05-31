@@ -258,6 +258,7 @@ fun MainScreen(
                 ) {
                     WidgetHelperDialogContent(
                         onDismissClick = {
+                            Analytics.widgetBannerConfirm()
                             showWidgetHelperDialog = false
                             viewModel.dismissWidgetHelperBadge()
                         },
