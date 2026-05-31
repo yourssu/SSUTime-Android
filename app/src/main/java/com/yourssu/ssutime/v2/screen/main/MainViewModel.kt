@@ -163,7 +163,7 @@ class MainViewModel(
                 updateTodoState(cachedTodoData)
             }
 
-            if (!allowRefresh) {
+            if (!allowRefresh && hasCachedTodoData) {
                 return
             }
 

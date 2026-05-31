@@ -140,6 +140,7 @@ fun MainScreen(
                 forceRefresh = forceInitialLmsRefresh,
                 forceLogin = forceInitialLmsRefresh,
                 allowRefresh = !skipInitialLmsRefresh,
+                showBlockingLoading = !skipInitialLmsRefresh,
             )
             if (!viewModel.showNetworkError.value) {
                 Analytics.viewHome(

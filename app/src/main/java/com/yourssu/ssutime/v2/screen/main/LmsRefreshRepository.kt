@@ -23,6 +23,7 @@ import io.ktor.http.HttpStatusCode
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.launch
@@ -47,6 +48,8 @@ class LmsRefreshRepository(
 ) {
     private val isRefreshing = AtomicBoolean(false)
     private val backendReportScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val appRefreshScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private var onboardingInitialRefreshJob: Job? = null
 
     suspend fun getLmsSessionRequest(): LmsSessionRequest {
         val loginData = loginRepository.getLoginData()
@@ -125,6 +128,28 @@ class LmsRefreshRepository(
             TodoRefreshResult.Failure(message, e)
         } finally {
             isRefreshing.set(false)
+        }
+    }
+
+    fun startOnboardingInitialRefresh() {
+        if (onboardingInitialRefreshJob?.isActive == true) {
+            return
+        }
+
+        onboardingInitialRefreshJob = appRefreshScope.launch {
+            when (val result = refreshTodos(source = RefreshSource.MANUAL)) {
+                is TodoRefreshResult.Success -> {
+                    Log.i(TAG, "온보딩 LMS 초기 새로고침이 완료되었습니다.")
+                }
+
+                is TodoRefreshResult.Failure -> {
+                    Log.e(TAG, "온보딩 LMS 초기 새로고침에 실패했습니다: ${result.message}", result.throwable)
+                }
+
+                is TodoRefreshResult.Skipped -> {
+                    Log.i(TAG, "온보딩 LMS 초기 새로고침을 건너뜁니다: ${result.reason}")
+                }
+            }
         }
     }
 

@@ -9,8 +9,6 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.yourssu.ssutime.v2.screen.main.LmsRefreshRepository
-import com.yourssu.ssutime.v2.screen.main.RefreshSource
-import com.yourssu.ssutime.v2.screen.main.TodoRefreshResult
 import kotlinx.coroutines.launch
 
 class OnBoardingViewModel(
@@ -62,22 +60,6 @@ class OnBoardingViewModel(
         }
         initialLmsRefreshStarted = true
 
-        viewModelScope.launch {
-            when (val result = lmsRefreshRepository.refreshTodos(source = RefreshSource.MANUAL)) {
-                is TodoRefreshResult.Success -> {
-                    Log.i(TAG, "온보딩 LMS 초기 새로고침이 완료되었습니다.")
-                }
-
-                is TodoRefreshResult.Failure -> {
-                    Log.e(TAG, "온보딩 LMS 초기 새로고침에 실패했습니다: ${result.message}", result.throwable)
-                }
-
-                is TodoRefreshResult.Skipped -> {
-                    Log.i(TAG, "온보딩 LMS 초기 새로고침을 건너뜁니다: ${result.reason}")
-                }
-            }
-        }
+        lmsRefreshRepository.startOnboardingInitialRefresh()
     }
 }
-
-private const val TAG = "OnBoardingViewModel"
