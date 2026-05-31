@@ -1,0 +1,60 @@
+package com.yourssu.ssutime.v2.screen.main
+
+import com.yourssu.data.SubjectInfo
+import com.yourssu.data.TodoInfo
+import com.yourssu.data.TodoType
+import org.junit.Assert.assertEquals
+import org.junit.Test
+
+class TodoSortTest {
+    @Test
+    fun sortedForMainDisplay_matchesMainListOrderTieBreakers() {
+        val later = todoInfo(
+            todoId = 4,
+            title = "가장 늦은 과제",
+            dueDate = "2026-06-01T10:00:00+09:00",
+            subjectName = "가나다",
+        )
+        val titleFirst = todoInfo(
+            todoId = 3,
+            title = "다 과제",
+            subjectName = "",
+        )
+        val subjectFirst = todoInfo(
+            todoId = 2,
+            title = "나 과제",
+            subjectName = "가 과목",
+        )
+        val subjectSecond = todoInfo(
+            todoId = 1,
+            title = "가 과제",
+            subjectName = "나 과목",
+        )
+
+        val sorted = listOf(later, subjectSecond, titleFirst, subjectFirst)
+            .sortedForMainDisplay()
+
+        assertEquals(
+            listOf(subjectFirst, subjectSecond, titleFirst, later),
+            sorted,
+        )
+    }
+
+    private fun todoInfo(
+        todoId: Int,
+        title: String,
+        dueDate: String = "2026-05-31T09:00:00+09:00",
+        subjectName: String,
+    ): TodoInfo =
+        TodoInfo(
+            todoId = todoId,
+            title = title,
+            due_date = dueDate,
+            type = TodoType.ASSIGNMENT,
+            subject = SubjectInfo(
+                id = todoId,
+                name = subjectName,
+                professor = "",
+            ).takeIf { subjectName.isNotBlank() },
+        )
+}
