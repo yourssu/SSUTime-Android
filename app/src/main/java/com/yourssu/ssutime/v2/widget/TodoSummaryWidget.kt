@@ -154,7 +154,7 @@ internal suspend fun updateAllTodoWidgets(context: Context) {
 
 @Composable
 @GlanceComposable
-private fun TodoSummaryContent(
+internal fun TodoSummaryContent(
     uiState: TodoSummaryUiState,
     size: TodoSummarySize,
     packageName: String = "com.yourssu.ssutime.v2",
@@ -732,7 +732,7 @@ private fun MoreTodosText(
     }
 }
 
-private data class TodoSummaryUiState(
+internal data class TodoSummaryUiState(
     val primary: TodoSummaryItem?,
     val items: List<TodoSummaryItem>,
     val hiddenCount: Int,
@@ -741,7 +741,7 @@ private data class TodoSummaryUiState(
     val refreshErrorMessage: String?,
 )
 
-private data class TodoSummaryItem(
+internal data class TodoSummaryItem(
     val subjectName: String,
     val title: String,
     val type: String,
@@ -751,7 +751,7 @@ private data class TodoSummaryItem(
     val isLate: Boolean,
 )
 
-private enum class TodoSummarySize(
+internal enum class TodoSummarySize(
     val visibleTodoCount: Int,
     val analyticsSize: WidgetAnalyticsSize,
 ) {
@@ -759,7 +759,7 @@ private enum class TodoSummarySize(
     Large(5, WidgetAnalyticsSize.Large),
 }
 
-private fun TodoData.toTodoSummaryUiState(
+internal fun TodoData.toTodoSummaryUiState(
     context: Context,
     size: TodoSummarySize,
 ): TodoSummaryUiState {

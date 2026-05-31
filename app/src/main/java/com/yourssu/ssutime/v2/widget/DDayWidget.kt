@@ -92,12 +92,36 @@ class DDayWidget : GlanceAppWidget() {
 
         provideContent {
             val todoData by context.todoDataStore.data.collectAsState(initial = initialTodoData)
-            DDayContent(
-                uiState = todoData.toWidgetUiState(context),
+            ResponsiveDDayContent(
+                todoData = todoData,
+                context = context,
                 packageName = context.packageName,
             )
         }
     }
+}
+
+@Composable
+@GlanceComposable
+private fun ResponsiveDDayContent(
+    todoData: TodoData,
+    context: Context,
+    packageName: String,
+) {
+    val summarySize = LocalSize.current.toTodoSummarySizeOrNull()
+    if (summarySize != null) {
+        TodoSummaryContent(
+            uiState = todoData.toTodoSummaryUiState(context, summarySize),
+            size = summarySize,
+            packageName = packageName,
+        )
+        return
+    }
+
+    DDayContent(
+        uiState = todoData.toWidgetUiState(context),
+        packageName = packageName,
+    )
 }
 
 @Composable
@@ -562,6 +586,13 @@ private fun DDayWidgetRefreshingPreview() {
 
 private fun androidx.compose.ui.unit.DpSize.toSquareSize(): Dp =
     if (width < height) width else height
+
+private fun androidx.compose.ui.unit.DpSize.toTodoSummarySizeOrNull(): TodoSummarySize? =
+    when {
+        width >= 250.dp && height >= 180.dp -> TodoSummarySize.Large
+        width >= 250.dp && height >= 100.dp -> TodoSummarySize.Medium
+        else -> null
+    }
 
 class DDayWidgetRefreshAction : ActionCallback, KoinComponent {
     private val lmsRefreshRepository: LmsRefreshRepository by inject()
