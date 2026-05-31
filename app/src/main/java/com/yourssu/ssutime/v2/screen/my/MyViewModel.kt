@@ -12,11 +12,11 @@ import com.yourssu.data.TodoInfo
 import com.yourssu.data.UiState
 import com.yourssu.ssutime.v2.accessToken
 import com.yourssu.ssutime.v2.analytics.Analytics
-import com.yourssu.ssutime.v2.getRemainingDays
 import com.yourssu.ssutime.v2.lms.getLmsLoginInfo
 import com.yourssu.ssutime.v2.notification.showCallAlert
 import com.yourssu.ssutime.v2.screen.login.LoginRepository
 import com.yourssu.ssutime.v2.screen.main.MainRepository
+import com.yourssu.ssutime.v2.screen.main.sortedForMainDisplay
 import io.github.chlwhdtn03.LmsApi
 import io.github.chlwhdtn03.data.Lms.Info
 import kotlinx.coroutines.delay
@@ -80,11 +80,7 @@ class MyViewModel(
     }
 
     private fun List<TodoInfo>.selectDebugCallAlertTodo(): TodoInfo? =
-        minWithOrNull(
-            compareBy<TodoInfo> { todo ->
-                runCatching { getRemainingDays(todo.due_date) }.getOrDefault(Long.MAX_VALUE)
-            }.thenBy { todo -> todo.due_date },
-        )
+        sortedForMainDisplay().firstOrNull()
 
     fun openKakaoTalkQA(context: Context) {
         val intent = Intent(Intent.ACTION_VIEW, KAKAO_TALK_QA_URL.toUri()).apply {

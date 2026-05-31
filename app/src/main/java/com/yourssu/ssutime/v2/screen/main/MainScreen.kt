@@ -112,9 +112,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.koin.compose.viewmodel.koinViewModel
-import java.text.Collator
 import java.time.Instant
-import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -783,25 +781,6 @@ fun TodoList(
         }
     }
 }
-
-private fun List<TodoInfo>.sortedForMainDisplay(): List<TodoInfo> {
-    val koreanCollator = Collator.getInstance(Locale.KOREAN)
-    return sortedWith { left, right ->
-        compareValuesBy(left, right) { todo: TodoInfo -> todo.due_date }
-            .takeIf { it != 0 }
-            ?: koreanCollator.compare(left.sortName(), right.sortName())
-                .takeIf { it != 0 }
-            ?: koreanCollator.compare(left.title, right.title)
-                .takeIf { it != 0 }
-            ?: left.todoId.compareTo(right.todoId)
-    }
-}
-
-private fun TodoInfo.sortName(): String =
-    subject?.name
-        ?.trim()
-        ?.takeIf { it.isNotBlank() }
-        ?: title.trim()
 
 @Composable
 fun TodoItem(

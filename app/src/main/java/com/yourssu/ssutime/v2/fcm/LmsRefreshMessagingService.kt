@@ -8,7 +8,6 @@ import com.yourssu.data.TodoInfo
 import com.yourssu.data.TodoType
 import com.yourssu.data.network.FcmRequest
 import com.yourssu.ssutime.v2.accessToken
-import com.yourssu.ssutime.v2.getRemainingDays
 import com.yourssu.ssutime.v2.network.ApiRepository
 import com.yourssu.ssutime.v2.notification.showCallAlert
 import com.yourssu.ssutime.v2.screen.login.LoginRepository
@@ -16,6 +15,7 @@ import com.yourssu.ssutime.v2.screen.main.LmsRefreshRepository
 import com.yourssu.ssutime.v2.screen.main.MainRepository
 import com.yourssu.ssutime.v2.screen.main.RefreshSource
 import com.yourssu.ssutime.v2.screen.main.TodoRefreshResult
+import com.yourssu.ssutime.v2.screen.main.sortedForMainDisplay
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -129,11 +129,7 @@ class LmsRefreshMessagingService : FirebaseMessagingService(), KoinComponent {
 }
 
 private fun List<TodoInfo>.selectMostUrgentTodo(): TodoInfo? =
-    minWithOrNull(
-        compareBy<TodoInfo> { todo ->
-            runCatching { getRemainingDays(todo.due_date) }.getOrDefault(Long.MAX_VALUE)
-        }.thenBy { todo -> todo.due_date },
-    )
+    sortedForMainDisplay().firstOrNull()
 
 private fun RemoteMessage.toFallbackTodoInfo(): TodoInfo? {
     val title = data["todoTitle"]

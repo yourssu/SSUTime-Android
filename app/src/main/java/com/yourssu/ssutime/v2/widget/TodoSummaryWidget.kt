@@ -341,7 +341,7 @@ private fun TodoLargeContent(uiState: TodoSummaryUiState) {
         WidgetUpdatedAt(
             text = uiState.updatedAtText,
             fontSize = 9,
-            iconSize = 18.dp,
+            iconSize = 24.dp,
         )
         Spacer(modifier = GlanceModifier.height(2.dp))
 
@@ -668,7 +668,7 @@ private fun CompactTodoSlot(
 private fun WidgetUpdatedAt(
     text: String,
     fontSize: Int = 9,
-    iconSize: Dp = 18.dp,
+    iconSize: Dp = 24.dp,
 ) {
     Row(
         modifier = GlanceModifier.fillMaxWidth(),
