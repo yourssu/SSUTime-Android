@@ -11,6 +11,7 @@ import com.yourssu.data.network.LmsSessionRequest
 import com.yourssu.data.network.toAddEnrollmentRequest
 import com.yourssu.data.network.toTodoReportRequest
 import com.yourssu.ssutime.v2.accessToken
+import com.yourssu.ssutime.v2.analytics.Analytics
 import com.yourssu.ssutime.v2.lms.getLmsCookies
 import com.yourssu.ssutime.v2.lms.getLmsTerms
 import com.yourssu.ssutime.v2.lms.getLmsTodoList
@@ -203,7 +204,12 @@ class LmsRefreshRepository(
         val terms = getLmsTerms()
         val currentTerm = terms.firstOrNull()
             ?: throw IllegalStateException("학기 정보를 불러오지 못했어요.")
-        val subjects = getLmsTodoList(term = currentTerm, loadingState = loadingState)
+        val subjects = getLmsTodoList(
+            term = currentTerm,
+            loadingState = loadingState,
+            postHogDistinctId = Analytics.currentPostHogDistinctId()
+                ?: Analytics.postHogDistinctId(loginData.id),
+        )
         val subjectInfos = buildSubjectInfos(subjects)
         val completedAt = Instant.now()
         val previousData = mainRepository.getTodoData()

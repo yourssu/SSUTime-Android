@@ -45,11 +45,13 @@ suspend fun getLmsTerms(): List<Term> =
 suspend fun getLmsTodoList(
     term: Term,
     loadingState: (Float) -> Unit = {},
+    postHogDistinctId: String? = null,
 ): List<Subject> =
     suspendCancellableCoroutine { continuation ->
         LmsApi.getTodoList(
             term = term,
             loadingState = loadingState,
+            postHogDistinctId = postHogDistinctId,
         ) { result ->
             if (!continuation.isActive) return@getTodoList
 

@@ -172,6 +172,10 @@ object Analytics {
 
     fun logoutCancel() = capture("logout_cancel")
 
+    fun postHogDistinctId(loginId: String): String? = loginId.toHashedDistinctId()
+
+    fun currentPostHogDistinctId(): String? = identifiedDistinctId.get()
+
     fun appStoreInstalled(utmProperties: Map<String, String>) = capture(
         event = "app_store_installed",
         properties = utmProperties.filterKeys { key ->
@@ -182,7 +186,7 @@ object Analytics {
     }
 
     suspend fun identifyUser(loginId: String) {
-        val distinctId = loginId.toHashedDistinctId() ?: return
+        val distinctId = postHogDistinctId(loginId) ?: return
         waitForInstallAttribution()
         if (identifiedDistinctId.get() == distinctId) return
 
