@@ -66,16 +66,20 @@ object Analytics {
     fun taskDetailExpand(
         todo: TodoInfo,
         dDay: Int,
-        hasAiSummary: Boolean = false,
-    ) = capture(
-        event = "task_detail_expand",
-        properties = mapOf(
+        hasAiSummary: Boolean? = null,
+    ) {
+        val properties = mutableMapOf<String, Any>(
             "task_type" to todo.type.kor,
             "d_day" to dDay,
             "subject_name" to todo.subject?.name.orEmpty(),
-            "has_ai_summary" to hasAiSummary,
-        ),
-    )
+        )
+        hasAiSummary?.let { properties["has_ai_summary"] = it }
+
+        capture(
+            event = "task_detail_expand",
+            properties = properties,
+        )
+    }
 
     fun taskDetailCollapse() = capture("task_detail_collapse")
 

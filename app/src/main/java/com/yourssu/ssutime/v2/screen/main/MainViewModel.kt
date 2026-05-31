@@ -147,16 +147,16 @@ class MainViewModel(
         forceLogin: Boolean = false,
         allowRefresh: Boolean = true,
         showBlockingLoading: Boolean = true,
-    ) {
+    ): TodoData? {
         if(isLoading.value) {
-            return
+            return null
         }
 
         isLoading.value = true
         loadingProgress.value = 0f
         showNetworkError.value = false
 
-        try {
+        return try {
             val cachedTodoData = mainRepository.getTodoData()
             val hasCachedTodoData = cachedTodoData.loadedAt.isNotEmpty()
             if(hasCachedTodoData) {
@@ -164,42 +164,44 @@ class MainViewModel(
             }
 
             if (!allowRefresh && hasCachedTodoData) {
-                return
-            }
-
-            if (!forceRefresh && !shouldRefreshOnOpen(cachedTodoData)) {
-                return
-            }
-
-            showLoading.value = showBlockingLoading
-            when (val refreshResult = lmsRefreshRepository.refreshTodos(
-                source = RefreshSource.MANUAL,
-                forceLogin = forceLogin,
-                loadingState = {
-                    viewModelScope.launch {
-                        loadingProgress.value = it
+                cachedTodoData
+            } else if (!forceRefresh && !shouldRefreshOnOpen(cachedTodoData)) {
+                cachedTodoData
+            } else {
+                showLoading.value = showBlockingLoading
+                when (val refreshResult = lmsRefreshRepository.refreshTodos(
+                    source = RefreshSource.MANUAL,
+                    forceLogin = forceLogin,
+                    loadingState = {
+                        viewModelScope.launch {
+                            loadingProgress.value = it
+                        }
                     }
-                }
-            )) {
-                is TodoRefreshResult.Success -> {
-                    loadingProgress.value = 1f
-                    showNetworkError.value = false
-                    updateTodoState(refreshResult.todoData)
-                }
+                )) {
+                    is TodoRefreshResult.Success -> {
+                        loadingProgress.value = 1f
+                        showNetworkError.value = false
+                        updateTodoState(refreshResult.todoData)
+                        refreshResult.todoData
+                    }
 
-                is TodoRefreshResult.Skipped -> {
-                    Log.i(javaClass.name, refreshResult.reason)
-                }
+                    is TodoRefreshResult.Skipped -> {
+                        Log.i(javaClass.name, refreshResult.reason)
+                        cachedTodoData.takeIf { hasCachedTodoData }
+                    }
 
-                is TodoRefreshResult.Failure -> {
-                    Log.e(javaClass.name, refreshResult.message, refreshResult.throwable)
-                    showNetworkError.value = true
+                    is TodoRefreshResult.Failure -> {
+                        Log.e(javaClass.name, refreshResult.message, refreshResult.throwable)
+                        showNetworkError.value = true
+                        null
+                    }
                 }
             }
         } catch(e: Exception) {
             if(e is CancellationException) throw e
             Log.e(javaClass.name, "과제 정보를 갱신하지 못했습니다.", e)
             showNetworkError.value = true
+            null
         } finally {
             isLoading.value = false
             showLoading.value = false

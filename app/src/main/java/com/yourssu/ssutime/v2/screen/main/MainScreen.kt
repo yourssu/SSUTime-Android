@@ -136,16 +136,16 @@ fun MainScreen(
     )
     LaunchedEffect(homeEntryVersion) {
         if (context.isNetworkConnected()) {
-            viewModel.loadTodos(
+            val todoData = viewModel.loadTodos(
                 forceRefresh = forceInitialLmsRefresh,
                 forceLogin = forceInitialLmsRefresh,
                 allowRefresh = !skipInitialLmsRefresh,
                 showBlockingLoading = !skipInitialLmsRefresh,
             )
-            if (!viewModel.showNetworkError.value) {
+            if (!viewModel.showNetworkError.value && todoData != null) {
                 Analytics.viewHome(
-                    taskCount = viewModel.todos.size,
-                    urgentCount = viewModel.todos.urgentTodoCount(),
+                    taskCount = todoData.todos.size,
+                    urgentCount = todoData.todos.urgentTodoCount(),
                     entrySource = homeEntrySource,
                 )
             }
@@ -935,7 +935,11 @@ fun TodoItem(
                             Analytics.taskDetailExpand(
                                 todo = todoInfo,
                                 dDay = leftDay.toInt(),
-                                hasAiSummary = aiSummaryState is AiSummaryUiState.Success,
+                                hasAiSummary = when (aiSummaryState) {
+                                    is AiSummaryUiState.Success -> true
+                                    AiSummaryUiState.Error -> false
+                                    else -> null
+                                },
                             )
                             onExpandTodo(todoInfo)
                         } else {
