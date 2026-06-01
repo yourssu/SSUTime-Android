@@ -665,7 +665,7 @@ fun TodoList(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "가장 급한 과제에요",
+                    text = "가장 급한 과제예요!",
                     style = SSUType.H3SemiBold
                 )
                 Spacer(Modifier.weight(1f))
