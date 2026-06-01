@@ -68,16 +68,16 @@ fun OnBoardingScreen(
     }
 
     LaunchedEffect(isNotificationPermissionStepCompleted, isTipConfirmed, isOnBoardingDataLoaded) {
-        if(isNotificationPermissionStepCompleted && isTipConfirmed && isOnBoardingDataLoaded) {
+        if(isOnBoardingDataLoaded && isTipConfirmed) {
             onConfirmClick()
         }
     }
 
-    if(isNotificationPermissionStepCompleted) {
-        if(!isOnBoardingDataLoaded || isTipConfirmed) {
-            return
-        }
+    if(!isOnBoardingDataLoaded || isTipConfirmed) {
+        return
+    }
 
+    if(isNotificationPermissionStepCompleted) {
         TipFragment {
             coroutine.launch {
                 viewModel.confirmTip()

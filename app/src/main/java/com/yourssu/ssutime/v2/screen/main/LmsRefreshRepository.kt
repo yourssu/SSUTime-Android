@@ -19,6 +19,7 @@ import com.yourssu.ssutime.v2.lms.loginLms
 import com.yourssu.ssutime.v2.network.ApiRepository
 import com.yourssu.ssutime.v2.screen.login.LoginRepository
 import io.github.chlwhdtn03.LmsApi
+import io.github.chlwhdtn03.data.Lms.Submission
 import io.github.chlwhdtn03.data.Lms.Subject
 import io.ktor.http.HttpStatusCode
 import kotlinx.coroutines.CancellationException
@@ -251,7 +252,7 @@ class LmsRefreshRepository(
         reportRefreshResultToBackend(
             subjectInfos = subjectInfos,
             semester = currentTerm.toString(),
-            todos = todoData.todos + todoData.submitted.filter { it.isCompletedSubmission },
+            todos = todoData.todos + todoData.submitted.filter { it.isReportableSubmission },
             loginData,
         )
         TodoRefreshResult.Success(todoData, summary)
@@ -407,9 +408,15 @@ class LmsRefreshRepository(
             }
         }.sortedBy { it.due_date }
 
-        val newSubmitted = subjects.flatMap { subject ->
+        val reportedSubmitted = subjects.flatMap { subject ->
+            Log.i(
+                TAG,
+                "LMS submissions titles: subject=${subject.name}, titles=${
+                    subject.submissions.joinToString { it.name }
+                }",
+            )
             subject.submissions
-                .filter { it.submitted_at?.isNotEmpty() == true }
+                .filter { it.isReportableSubmission() }
                 .map { todo ->
                     TodoInfo(
                         todo.assignment_id ?: -1,
@@ -420,7 +427,9 @@ class LmsRefreshRepository(
                         submittedAt = todo.submitted_at.orEmpty(),
                     )
                 }
-        }.sortedByDescending { it.due_date }
+        }
+        val newSubmitted = reportedSubmitted
+            .sortedByDescending { it.due_date }
 
         return previousData.copy(
             todos = newTodos,
@@ -497,9 +506,15 @@ sealed interface TodoRefreshResult {
 private val LoginData.hasAutoLoginCredentials: Boolean
     get() = isAutoLogin && id.isNotBlank() && pw.isNotBlank()
 
-private val TodoInfo.isCompletedSubmission: Boolean
-    get() = submittedAt.isNotBlank() &&
-        (type == TodoType.SUBMITTED || type == TodoType.SUBMITTED_LATE)
+private val TodoInfo.isReportableSubmission: Boolean
+    get() = type == TodoType.SUBMITTED || type == TodoType.SUBMITTED_LATE
+
+private fun Submission.isReportableSubmission(): Boolean =
+    submitted_at?.isNotBlank() == true ||
+        workflow_state.equals("submitted", ignoreCase = true) ||
+        workflow_state.equals("graded", ignoreCase = true) ||
+        assignment_id == null ||
+        assignment_id == -1
 
 private const val TAG = "LmsRefreshRepository"
 

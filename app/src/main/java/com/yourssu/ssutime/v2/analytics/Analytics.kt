@@ -66,11 +66,8 @@ object Analytics {
     fun taskDetailExpand(
         todo: TodoInfo,
         dDay: Int,
-        hasAiSummary: Boolean? = null,
+        hasAiSummary: Boolean,
     ) {
-        if (hasAiSummary == null) {
-            return
-        }
         val properties = mutableMapOf<String, Any>(
             "task_type" to todo.type.kor,
             "d_day" to dDay,

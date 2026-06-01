@@ -127,7 +127,7 @@ class ApiRepository {
         }
         Log.i(
             "ApiRepository",
-            todo.title + " Todo Report Request Status Code : ${response.status.value}",
+            "[${todo.type}] ${todo.title} Todo Report Request(materialCode ${todo.materialCode} ${todo.type}) Status Code : ${response.status.value}",
         )
         return response.status
     }

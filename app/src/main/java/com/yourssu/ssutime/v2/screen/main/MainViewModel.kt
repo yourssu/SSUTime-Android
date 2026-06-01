@@ -281,7 +281,7 @@ class MainViewModel(
     }
 
     private fun shouldRefreshOnOpen(todoData: TodoData): Boolean {
-        if (todoData.submitted.any { it.submittedAt.isBlank() }) {
+        if (todoData.submitted.any { it.submittedAt.isBlank() && it.todoId != -1 }) {
             return true
         }
 

@@ -935,11 +935,7 @@ fun TodoItem(
                             Analytics.taskDetailExpand(
                                 todo = todoInfo,
                                 dDay = leftDay.toInt(),
-                                hasAiSummary = when (aiSummaryState) {
-                                    is AiSummaryUiState.Success -> true
-                                    AiSummaryUiState.Error -> false
-                                    else -> null
-                                },
+                                hasAiSummary = aiSummaryState is AiSummaryUiState.Success,
                             )
                             onExpandTodo(todoInfo)
                         } else {
