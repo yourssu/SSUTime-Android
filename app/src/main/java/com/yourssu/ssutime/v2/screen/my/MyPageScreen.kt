@@ -69,6 +69,7 @@ import com.yourssu.data.AlertData
 import com.yourssu.data.UiState
 import com.yourssu.ssutime.v2.R
 import com.yourssu.ssutime.v2.analytics.Analytics
+import com.yourssu.ssutime.v2.ui.theme.BLACK
 import com.yourssu.ssutime.v2.ui.theme.N100
 import com.yourssu.ssutime.v2.ui.theme.N200
 import com.yourssu.ssutime.v2.ui.theme.N300
@@ -556,15 +557,15 @@ fun ComboOption(
                 onDismissRequest = { expanded = false }
             ) {
                 DropdownMenuItem(
-                    text = { Text("1시간 전") },
+                    text = { Text("1시간 전", style = SSUType.Label3Medium, color = BLACK) },
                     onClick = { onValueChanged(1); expanded = false }
                 )
                 DropdownMenuItem(
-                    text = { Text("2시간 전") },
+                    text = { Text("2시간 전", style = SSUType.Label3Medium, color = BLACK) },
                     onClick = { onValueChanged(2); expanded = false }
                 )
                 DropdownMenuItem(
-                    text = { Text("6시간 전") },
+                    text = { Text("6시간 전", style = SSUType.Label3Medium, color = BLACK) },
                     onClick = { onValueChanged(6); expanded = false }
                 )
             }
