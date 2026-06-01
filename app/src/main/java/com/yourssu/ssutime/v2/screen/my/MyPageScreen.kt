@@ -385,6 +385,18 @@ fun MyPageScreen(
                 viewModel.openKakaoTalkQA(context)
             }
 
+            OptionButton(
+                text = "이용약관"
+            ) {
+                viewModel.openURL(context, "https://chlwhdtn03.github.io/ssutime/term.html")
+            }
+
+            OptionButton(
+                text = "개인정보처리방침"
+            ) {
+                viewModel.openURL(context, "https://chlwhdtn03.github.io/ssutime/privacy.html")
+            }
+
         }
 
         Spacer(Modifier.height(28.dp))
