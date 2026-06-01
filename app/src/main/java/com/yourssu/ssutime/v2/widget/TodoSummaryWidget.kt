@@ -64,7 +64,6 @@ import java.util.Locale
 
 private const val SUMMARY_EMPTY_TEXT = "모든 할 일을 수행했어요!"
 private const val SUMMARY_SECONDS_PER_DAY = 24 * 60 * 60L
-
 private val summaryBackground = ColorProvider(
     day = Color.White,
     night = Color.Black
@@ -214,7 +213,10 @@ internal fun TodoSummaryContent(
                             uiState = uiState,
                             availableHeight = surfaceHeight,
                         )
-                        TodoSummarySize.Large -> TodoLargeContent(uiState = uiState)
+                        TodoSummarySize.Large -> TodoLargeContent(
+                            uiState = uiState,
+                            availableHeight = surfaceHeight,
+                        )
                     }
                 }
             }
@@ -312,14 +314,23 @@ private fun TodoMediumContent(
 
 @Composable
 @GlanceComposable
-private fun TodoLargeContent(uiState: TodoSummaryUiState) {
+private fun TodoLargeContent(
+    uiState: TodoSummaryUiState,
+    availableHeight: Dp,
+) {
     val primary = uiState.primary ?: return
     val availableSize = LocalSize.current
+    val visibleSecondarySlots = if (availableHeight < 340.dp) 3 else 4
+    val verticalPadding = if (availableHeight < 430.dp) 10.dp else 14.dp
+    val hiddenByCompactLayout = uiState.items
+        .drop(1 + visibleSecondarySlots)
+        .size
+    val moreCount = uiState.hiddenCount + hiddenByCompactLayout
 
     Column(
         modifier = GlanceModifier
             .fillMaxSize()
-            .padding(horizontal = 18.dp, vertical = 14.dp),
+            .padding(horizontal = 18.dp, vertical = verticalPadding),
     ) {
         PrimaryCountdown(
             item = primary,
@@ -347,7 +358,7 @@ private fun TodoLargeContent(uiState: TodoSummaryUiState) {
         Spacer(modifier = GlanceModifier.height(2.dp))
 
         Column(modifier = GlanceModifier.fillMaxWidth()) {
-            repeat(4) { index ->
+            repeat(visibleSecondarySlots) { index ->
                 val item = uiState.items.getOrNull(index + 1)
                 CompactTodoSlot(
                     item = item,
@@ -362,18 +373,19 @@ private fun TodoLargeContent(uiState: TodoSummaryUiState) {
                     },
                     dDayTextWidth = 50.dp,
                 )
-                if (index != 3) {
+                if (index != visibleSecondarySlots - 1) {
                     Spacer(modifier = GlanceModifier.height(2.dp))
                 }
             }
         }
         Spacer(modifier = GlanceModifier.height(2.dp))
         MoreTodosText(
-            count = uiState.hiddenCount,
+            count = moreCount,
             height = 14.dp,
             fontSize = 10,
             barHeight = 12.dp,
         )
+        Spacer(modifier = GlanceModifier.height(4.dp))
     }
 }
 
