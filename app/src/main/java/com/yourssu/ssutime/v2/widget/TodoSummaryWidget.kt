@@ -1,5 +1,7 @@
 package com.yourssu.ssutime.v2.widget
 
+import android.appwidget.AppWidgetManager
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import androidx.compose.runtime.Composable
@@ -19,13 +21,13 @@ import androidx.glance.LocalSize
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.CircularProgressIndicator
 import androidx.glance.appwidget.GlanceAppWidget
+import androidx.glance.appwidget.GlanceAppWidgetManager
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
 import androidx.glance.appwidget.SizeMode
 import androidx.glance.appwidget.action.actionStartActivity
 import androidx.glance.appwidget.appWidgetBackground
 import androidx.glance.appwidget.cornerRadius
 import androidx.glance.appwidget.provideContent
-import androidx.glance.appwidget.updateAll
 import androidx.glance.background
 import androidx.glance.color.ColorProvider
 import androidx.glance.layout.Alignment
@@ -146,9 +148,21 @@ class TodoLargeWidgetReceiver : GlanceAppWidgetReceiver() {
 }
 
 internal suspend fun updateAllTodoWidgets(context: Context) {
-    DDayWidget().updateAll(context)
-    TodoMediumWidget().updateAll(context)
-    TodoLargeWidget().updateAll(context)
+    DDayWidget().updateAllForReceiver<DDayWidgetReceiver>(context)
+    TodoMediumWidget().updateAllForReceiver<TodoMediumWidgetReceiver>(context)
+    TodoLargeWidget().updateAllForReceiver<TodoLargeWidgetReceiver>(context)
+}
+
+private suspend inline fun <reified R : GlanceAppWidgetReceiver> GlanceAppWidget.updateAllForReceiver(
+    context: Context,
+) {
+    val appWidgetManager = AppWidgetManager.getInstance(context)
+    val glanceManager = GlanceAppWidgetManager(context)
+    val receiver = ComponentName(context, R::class.java)
+
+    appWidgetManager.getAppWidgetIds(receiver).forEach { appWidgetId ->
+        update(context, glanceManager.getGlanceIdBy(appWidgetId))
+    }
 }
 
 @Composable
