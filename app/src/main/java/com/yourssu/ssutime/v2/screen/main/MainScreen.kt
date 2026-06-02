@@ -598,7 +598,7 @@ fun WidgetHelperBadge(
         }
 
         Image(
-            imageVector = Icons.Outlined.Close,
+            painter = painterResource(R.drawable.ic_close),
             contentDescription = "close",
             modifier = Modifier.clickable { onClickDismiss() }
         )
