@@ -23,6 +23,7 @@ import androidx.compose.ui.unit.dp
 import com.yourssu.ssutime.v2.R
 import com.yourssu.ssutime.v2.component.SButton
 import com.yourssu.ssutime.v2.ui.theme.N100
+import com.yourssu.ssutime.v2.ui.theme.N500
 import com.yourssu.ssutime.v2.ui.theme.SSUType
 
 @Composable
@@ -41,9 +42,12 @@ fun WidgetHelperDialogContent(
                 style = SSUType.H2SemiBold
             )
 
+            Spacer(Modifier.height(5.dp))
+
             Text(
                 text = "홈화면 길게 누르고 위젯 버튼 눌러서\n슈타임 위젯을 추가하세요",
                 style = SSUType.Body1Medium,
+                color = N500,
                 textAlign = TextAlign.Center
             )
 

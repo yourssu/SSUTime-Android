@@ -44,8 +44,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Close
-import androidx.compose.material.icons.outlined.KeyboardArrowDown
-import androidx.compose.material.icons.outlined.KeyboardArrowUp
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -252,7 +250,7 @@ fun MainScreen(
             ) {
                 Box(
                     modifier = Modifier
-                        .clip(RoundedCornerShape(20.dp))
+                        .clip(RoundedCornerShape(24.dp))
                         .background(WHITE)
                         .padding(vertical = 20.dp),
                 ) {
@@ -490,14 +488,15 @@ fun MainFragment(
                     Spacer(Modifier.height(32.dp))
                     Text(
                         text = "완료하면 자동으로 사라져요",
-                        style = SSUType.H4SemiBold
+                        style = SSUType.H4SemiBold,
+                        color = N500
                     )
-                    Spacer(Modifier.height(3.dp))
+                    Spacer(Modifier.height(5.dp))
                     Text(
                         text = "${todos.size}건의 할 일이 있어요",
                         style = SSUType.H1SemiBold
                     )
-                    Spacer(Modifier.height(3.dp))
+                    Spacer(Modifier.height(5.dp))
                     Row(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -512,8 +511,11 @@ fun MainFragment(
                             } else {
                                 "업데이트 정보 없음"
                             },
-                            style = SSUType.Caption1Medium
+                            style = SSUType.Caption1Medium,
+                            color = N500
                         )
+
+                        Spacer(Modifier.width(5.dp))
 
                         Image(
                             modifier = Modifier
@@ -524,7 +526,7 @@ fun MainFragment(
                         )
                     }
 
-                    Spacer(Modifier.height(12.dp))
+                    Spacer(Modifier.height(18.dp))
                     if(showWidgetBadge)
                         WidgetHelperBadge(
                             onClickBadge = onClickWidgetBadge,
@@ -561,7 +563,7 @@ fun WidgetHelperBadge(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(10.dp))
+            .clip(RoundedCornerShape(16.dp))
             .clickable { onClickBadge() }
             .background(R100)
             .padding(16.dp),
@@ -585,6 +587,8 @@ fun WidgetHelperBadge(
                     style = SSUType.H4SemiBold,
                     color = R500
                 )
+
+                Spacer(Modifier.height(5.dp))
 
                 Text(
                     text = "마감 D-day를 보여드려요",
@@ -675,7 +679,8 @@ fun TodoList(
                         .clickable { onClickSubmitted() }
                         .padding(8.dp),
                     text = "제출 완료 $submittedSize",
-                    style = SSUType.Caption1SemiBold
+                    style = SSUType.Caption1SemiBold,
+                    color = N500,
                 )
             }
 
@@ -723,7 +728,8 @@ fun TodoList(
                         .clickable { onClickSubmitted() }
                         .padding(8.dp),
                     text = "제출 완료 $submittedSize",
-                    style = SSUType.Caption1SemiBold
+                    style = SSUType.Caption1SemiBold,
+                    color = N500,
                 )
             }
             freeTodos.forEach {
@@ -756,10 +762,11 @@ fun TodoList(
                 Text(
                     modifier = Modifier
                         .border(width = 1.dp, color = N300, shape = RoundedCornerShape(8.dp))
-                        .padding(8.dp)
-                        .clickable { onClickSubmitted() },
+                        .clickable { onClickSubmitted() }
+                        .padding(8.dp),
                     text = "제출 완료 $submittedSize",
-                    style = SSUType.Caption1SemiBold
+                    style = SSUType.Caption1SemiBold,
+                    color = N500,
                 )
             }
 
@@ -819,7 +826,7 @@ fun TodoItem(
     ) {
         Column(
             modifier = Modifier
-                .padding(12.dp),
+                .padding(horizontal = 12.dp, vertical = 18.dp),
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically
@@ -907,7 +914,8 @@ fun TodoItem(
                                 modifier = Modifier.fillMaxWidth(0.9f),
                                 maxLines = 1,
                                 text = todoInfo.subject?.name ?: "알 수 없는 과목",
-                                style = SSUType.H5SemiBold
+                                style = SSUType.H5SemiBold,
+                                color = N500
                             )
                         } else {
                             Text(
@@ -923,7 +931,7 @@ fun TodoItem(
                         modifier = Modifier.fillMaxWidth(0.9f),
                         maxLines = 1,
                         text = todoInfo.title,
-                        style = SSUType.H4SemiBold
+                        style = SSUType.H4SemiBold,
                     )
                 }
                 Spacer(Modifier.weight(1f))
@@ -943,7 +951,7 @@ fun TodoItem(
                         }
                         expanded = nextExpanded
                     },
-                    imageVector = if (!expanded) Icons.Outlined.KeyboardArrowDown else Icons.Outlined.KeyboardArrowUp,
+                    painter = if (!expanded) painterResource(R.drawable.icon_collapsed) else painterResource(R.drawable.icon_expand),
                     contentDescription = "과제 정보 확장"
                 )
             }

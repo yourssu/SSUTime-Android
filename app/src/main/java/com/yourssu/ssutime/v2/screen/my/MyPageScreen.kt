@@ -31,7 +31,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ArrowBackIosNew
-import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.KeyboardArrowDown
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -73,6 +72,8 @@ import com.yourssu.ssutime.v2.ui.theme.BLACK
 import com.yourssu.ssutime.v2.ui.theme.N100
 import com.yourssu.ssutime.v2.ui.theme.N200
 import com.yourssu.ssutime.v2.ui.theme.N300
+import com.yourssu.ssutime.v2.ui.theme.N400
+import com.yourssu.ssutime.v2.ui.theme.N500
 import com.yourssu.ssutime.v2.ui.theme.R400
 import com.yourssu.ssutime.v2.ui.theme.SSUType
 import com.yourssu.ssutime.v2.ui.theme.WHITE
@@ -313,8 +314,12 @@ fun MyPageScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "알림 설정"
+                    text = "알림 설정",
+                    style = SSUType.H5SemiBold,
+                    color = N500,
                 )
+
+                Spacer(Modifier.width(5.dp))
 
                 TooltipBox(
                     positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
@@ -331,12 +336,14 @@ fun MyPageScreen(
                     },
                     state = tooltipState
                 ) {
-                    IconButton(onClick = { coroutine.launch { tooltipState.show() } }) {
-                        Icon(
-                            imageVector = Icons.Outlined.Info,
-                            contentDescription = "About Notification"
-                        )
-                    }
+                    Icon(
+                        modifier = Modifier.clickable {
+                            coroutine.launch { tooltipState.show() }
+                        },
+                        painter = painterResource(R.drawable.ic_alret),
+                        tint = N400,
+                        contentDescription = "About Notification"
+                    )
                 }
             }
             ToggleOption(
