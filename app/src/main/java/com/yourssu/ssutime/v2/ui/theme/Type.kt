@@ -3,18 +3,31 @@ package com.yourssu.ssutime.v2.ui.theme
 import androidx.compose.material3.Typography
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import androidx.glance.color.ColorProvider
+import com.yourssu.ssutime.v2.R
 
 // Set of Material typography styles to start with
 private val White = ColorProvider(day = Color.White, night = Color.White)
 
+val pretendardFamily = FontFamily(
+    Font(R.font.pretendard_extralight, FontWeight.ExtraLight),
+    Font(R.font.pretendard_light, FontWeight.Light),
+    Font(R.font.pretendard_bold, FontWeight.Bold),
+    Font(R.font.pretendard_thin, FontWeight.Thin),
+    Font(R.font.pretendard_medium, FontWeight.Medium),
+    Font(R.font.pretendard_black, FontWeight.Black),
+    Font(R.font.pretendard_extrabold, FontWeight.ExtraBold),
+    Font(R.font.pretendard_regular, FontWeight.Normal),
+    Font(R.font.pretendard_semibold, FontWeight.SemiBold),
+)
 
 val Typography = Typography(
     bodyLarge = TextStyle(
-        fontFamily = FontFamily.Default,
+        fontFamily = pretendardFamily,
         fontWeight = FontWeight.Normal,
         fontSize = 16.sp,
         lineHeight = 24.sp,
@@ -22,14 +35,14 @@ val Typography = Typography(
     )
     /* Other default text styles to override
     titleLarge = TextStyle(
-        fontFamily = FontFamily.Default,
+        fontFamily = pretendardFamily,
         fontWeight = FontWeight.Normal,
         fontSize = 22.sp,
         lineHeight = 28.sp,
         letterSpacing = 0.sp
     ),
     labelSmall = TextStyle(
-        fontFamily = FontFamily.Default,
+        fontFamily = pretendardFamily,
         fontWeight = FontWeight.Medium,
         fontSize = 11.sp,
         lineHeight = 16.sp,
@@ -40,7 +53,7 @@ val Typography = Typography(
 
 internal object SSUType {
     val H1Medium = TextStyle(
-        fontFamily = FontFamily.Default,
+        fontFamily = pretendardFamily,
         fontWeight = FontWeight.W500,
         fontSize = 24.sp,
         lineHeight = 36.sp,
@@ -48,7 +61,7 @@ internal object SSUType {
     )
 
     val H1SemiBold = TextStyle(
-        fontFamily = FontFamily.Default,
+        fontFamily = pretendardFamily,
         fontWeight = FontWeight.W600,
         fontSize = 24.sp,
         lineHeight = 36.sp,
@@ -66,7 +79,7 @@ internal object SSUType {
     )
 
     val H2Medium = TextStyle(
-        fontFamily = FontFamily.Default,
+        fontFamily = pretendardFamily,
         fontWeight = FontWeight.W500,
         fontSize = 20.sp,
         lineHeight = 28.sp,
@@ -74,7 +87,7 @@ internal object SSUType {
     )
 
     val H2SemiBold = TextStyle(
-        fontFamily = FontFamily.Default,
+        fontFamily = pretendardFamily,
         fontWeight = FontWeight.W600,
         fontSize = 20.sp,
         lineHeight = 28.sp,
@@ -82,7 +95,7 @@ internal object SSUType {
     )
 
     val H3Medium = TextStyle(
-        fontFamily = FontFamily.Default,
+        fontFamily = pretendardFamily,
         fontWeight = FontWeight.W500,
         fontSize = 18.sp,
         lineHeight = 24.sp,
@@ -90,7 +103,7 @@ internal object SSUType {
     )
 
     val H3SemiBold = TextStyle(
-        fontFamily = FontFamily.Default,
+        fontFamily = pretendardFamily,
         fontWeight = FontWeight.W600,
         fontSize = 18.sp,
         lineHeight = 24.sp,
@@ -103,7 +116,7 @@ internal object SSUType {
     )
 
     val H4Medium = TextStyle(
-        fontFamily = FontFamily.Default,
+        fontFamily = pretendardFamily,
         fontWeight = FontWeight.W500,
         fontSize = 16.sp,
         lineHeight = 24.sp,
@@ -111,7 +124,7 @@ internal object SSUType {
     )
 
     val H4SemiBold = TextStyle(
-        fontFamily = FontFamily.Default,
+        fontFamily = pretendardFamily,
         fontWeight = FontWeight.W600,
         fontSize = 16.sp,
         lineHeight = 24.sp,
@@ -119,7 +132,7 @@ internal object SSUType {
     )
 
     val H4ExtraBold = TextStyle(
-        fontFamily = FontFamily.Default,
+        fontFamily = pretendardFamily,
         fontWeight = FontWeight.W800,
         fontSize = 16.sp,
         lineHeight = 24.sp,
@@ -127,7 +140,7 @@ internal object SSUType {
     )
 
     val H5SemiBold = TextStyle(
-        fontFamily = FontFamily.Default,
+        fontFamily = pretendardFamily,
         fontWeight = FontWeight.W600,
         fontSize = 14.sp,
         lineHeight = 20.sp,
@@ -135,7 +148,7 @@ internal object SSUType {
     )
 
     val Label1Regular = TextStyle(
-        fontFamily = FontFamily.Default,
+        fontFamily = pretendardFamily,
         fontWeight = FontWeight.W400,
         fontSize = 16.sp,
         lineHeight = 22.sp,
@@ -143,7 +156,7 @@ internal object SSUType {
     )
 
     val Label1Medium = TextStyle(
-        fontFamily = FontFamily.Default,
+        fontFamily = pretendardFamily,
         fontWeight = FontWeight.W500,
         fontSize = 16.sp,
         lineHeight = 22.sp,
@@ -151,7 +164,7 @@ internal object SSUType {
     )
 
     val Label1SemiBold = TextStyle(
-        fontFamily = FontFamily.Default,
+        fontFamily = pretendardFamily,
         fontWeight = FontWeight.W600,
         fontSize = 16.sp,
         lineHeight = 22.sp,
@@ -159,7 +172,7 @@ internal object SSUType {
     )
 
     val Label1Bold = TextStyle(
-        fontFamily = FontFamily.Default,
+        fontFamily = pretendardFamily,
         fontWeight = FontWeight.W700,
         fontSize = 16.sp,
         lineHeight = 22.sp,
@@ -167,7 +180,7 @@ internal object SSUType {
     )
 
     val Label2Regular = TextStyle(
-        fontFamily = FontFamily.Default,
+        fontFamily = pretendardFamily,
         fontWeight = FontWeight.W400,
         fontSize = 14.sp,
         lineHeight = 20.sp,
@@ -175,7 +188,7 @@ internal object SSUType {
     )
 
     val Label2Medium = TextStyle(
-        fontFamily = FontFamily.Default,
+        fontFamily = pretendardFamily,
         fontWeight = FontWeight.W500,
         fontSize = 14.sp,
         lineHeight = 20.sp,
@@ -183,7 +196,7 @@ internal object SSUType {
     )
 
     val Label2SemiBold = TextStyle(
-        fontFamily = FontFamily.Default,
+        fontFamily = pretendardFamily,
         fontWeight = FontWeight.W600,
         fontSize = 14.sp,
         lineHeight = 20.sp,
@@ -191,7 +204,7 @@ internal object SSUType {
     )
 
     val Label2Bold = TextStyle(
-        fontFamily = FontFamily.Default,
+        fontFamily = pretendardFamily,
         fontWeight = FontWeight.W700,
         fontSize = 14.sp,
         lineHeight = 20.sp,
@@ -199,7 +212,7 @@ internal object SSUType {
     )
 
     val Label3Regular = TextStyle(
-        fontFamily = FontFamily.Default,
+        fontFamily = pretendardFamily,
         fontWeight = FontWeight.W400,
         fontSize = 12.sp,
         lineHeight = 16.sp,
@@ -207,7 +220,7 @@ internal object SSUType {
     )
 
     val Label3Medium = TextStyle(
-        fontFamily = FontFamily.Default,
+        fontFamily = pretendardFamily,
         fontWeight = FontWeight.W500,
         fontSize = 12.sp,
         lineHeight = 16.sp,
@@ -215,7 +228,7 @@ internal object SSUType {
     )
 
     val Label3SemiBold = TextStyle(
-        fontFamily = FontFamily.Default,
+        fontFamily = pretendardFamily,
         fontWeight = FontWeight.W600,
         fontSize = 12.sp,
         lineHeight = 16.sp,
@@ -223,7 +236,7 @@ internal object SSUType {
     )
 
     val Label3Bold = TextStyle(
-        fontFamily = FontFamily.Default,
+        fontFamily = pretendardFamily,
         fontWeight = FontWeight.W700,
         fontSize = 12.sp,
         lineHeight = 16.sp,
@@ -231,7 +244,7 @@ internal object SSUType {
     )
 
     val Body1Regular = TextStyle(
-        fontFamily = FontFamily.Default,
+        fontFamily = pretendardFamily,
         fontWeight = FontWeight.W400,
         fontSize = 14.sp,
         lineHeight = 20.sp,
@@ -239,7 +252,7 @@ internal object SSUType {
     )
 
     val Body1Medium = TextStyle(
-        fontFamily = FontFamily.Default,
+        fontFamily = pretendardFamily,
         fontWeight = FontWeight.W500,
         fontSize = 14.sp,
         lineHeight = 20.sp,
@@ -247,7 +260,7 @@ internal object SSUType {
     )
 
     val Body2Regular = TextStyle(
-        fontFamily = FontFamily.Default,
+        fontFamily = pretendardFamily,
         fontWeight = FontWeight.W400,
         fontSize = 12.sp,
         lineHeight = 18.sp,
@@ -255,7 +268,7 @@ internal object SSUType {
     )
 
     val Body2Medium = TextStyle(
-        fontFamily = FontFamily.Default,
+        fontFamily = pretendardFamily,
         fontWeight = FontWeight.W500,
         fontSize = 12.sp,
         lineHeight = 18.sp,
@@ -263,7 +276,7 @@ internal object SSUType {
     )
 
     val Caption1Medium = TextStyle(
-        fontFamily = FontFamily.Default,
+        fontFamily = pretendardFamily,
         fontWeight = FontWeight.W500,
         fontSize = 12.sp,
         lineHeight = 12.sp,
@@ -271,7 +284,7 @@ internal object SSUType {
     )
 
     val Caption1SemiBold = TextStyle(
-        fontFamily = FontFamily.Default,
+        fontFamily = pretendardFamily,
         fontWeight = FontWeight.W600,
         fontSize = 12.sp,
         lineHeight = 12.sp,
@@ -284,7 +297,7 @@ internal object SSUType {
     )
 
     val Caption2Medium = TextStyle(
-        fontFamily = FontFamily.Default,
+        fontFamily = pretendardFamily,
         fontWeight = FontWeight.W500,
         fontSize = 10.sp,
         lineHeight = 10.sp,
@@ -297,7 +310,7 @@ internal object SSUType {
     )
 
     val Caption2SemiBold = TextStyle(
-        fontFamily = FontFamily.Default,
+        fontFamily = pretendardFamily,
         fontWeight = FontWeight.W600,
         fontSize = 10.sp,
         lineHeight = 10.sp,
@@ -310,7 +323,7 @@ internal object SSUType {
     )
 
     val Caption3Regular = TextStyle(
-        fontFamily = FontFamily.Default,
+        fontFamily = pretendardFamily,
         fontWeight = FontWeight.W400,
         fontSize = 8.sp,
         lineHeight = 10.sp,

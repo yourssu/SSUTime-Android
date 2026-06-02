@@ -492,12 +492,12 @@ fun MainFragment(
                         text = "완료하면 자동으로 사라져요",
                         style = SSUType.H4SemiBold
                     )
-
+                    Spacer(Modifier.height(3.dp))
                     Text(
                         text = "${todos.size}건의 할 일이 있어요",
                         style = SSUType.H1SemiBold
                     )
-
+                    Spacer(Modifier.height(3.dp))
                     Row(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -1105,6 +1105,7 @@ fun SSUTimeTopBar(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Image(
+            modifier = Modifier.height(18.dp),
             painter = painterResource(R.drawable.logo_red),
             contentDescription = "App Icon"
         )
