@@ -42,8 +42,6 @@ import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -1069,7 +1067,7 @@ fun SubmittedItem(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(
-                            modifier = Modifier.fillMaxWidth(0.9f),
+                            modifier = Modifier.fillMaxWidth(0.8f),
                             maxLines = 1,
                             text = todoInfo.subject?.name ?: "알 수 없는 과목",
                             style = SSUType.Caption1SemiBold
@@ -1079,7 +1077,7 @@ fun SubmittedItem(
                     Spacer(Modifier.height(4.dp))
 
                     Text(
-                        modifier = Modifier.fillMaxWidth(0.9f),
+                        modifier = Modifier.fillMaxWidth(0.8f),
                         maxLines = 1,
                         text = todoInfo.title,
                         style = SSUType.H5SemiBold
