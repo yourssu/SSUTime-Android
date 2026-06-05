@@ -40,6 +40,7 @@ class MainViewModel(
     var loadingProgress = mutableFloatStateOf(0f)
     var loadedAt = mutableStateOf("")
     var showNetworkError = mutableStateOf(false)
+    var showNetworkCause = mutableStateOf("")
     var showWidgetBadge = mutableStateOf(false)
     val aiSummaryStates = mutableStateMapOf<String, AiSummaryUiState>()
 
@@ -193,6 +194,7 @@ class MainViewModel(
                     is TodoRefreshResult.Failure -> {
                         Log.e(javaClass.name, refreshResult.message, refreshResult.throwable)
                         showNetworkError.value = true
+                        showNetworkCause.value = refreshResult.message
                         null
                     }
                 }
@@ -201,6 +203,7 @@ class MainViewModel(
             if(e is CancellationException) throw e
             Log.e(javaClass.name, "과제 정보를 갱신하지 못했습니다.", e)
             showNetworkError.value = true
+            showNetworkCause.value = e.localizedMessage ?: "알 수 없는 에러"
             null
         } finally {
             isLoading.value = false

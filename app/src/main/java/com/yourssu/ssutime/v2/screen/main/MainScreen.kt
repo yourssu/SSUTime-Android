@@ -201,7 +201,8 @@ fun MainScreen(
                             viewModel.showNetworkErrorScreen()
                         }
                     }
-                }
+                },
+                errorCause = viewModel.showNetworkCause.value
             )
         } else {
             MainFragment(
@@ -384,7 +385,8 @@ private fun List<TodoInfo>.urgentTodoCount(): Int =
 @Composable
 fun NetworkErrorFragment(
     modifier: Modifier = Modifier,
-    onRefreshClick: () -> Unit = {}
+    onRefreshClick: () -> Unit = {},
+    errorCause: String = ""
 ) {
     Column(
         modifier = modifier.fillMaxSize(),
@@ -401,6 +403,16 @@ fun NetworkErrorFragment(
                     "확인하고 다시 시도해주세요.",
             style = SSUType.Body2Regular
         )
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        if(errorCause.isNotEmpty()) {
+            Text(
+                text = "에러 : $errorCause",
+                style = SSUType.Body1Medium,
+                color = R400
+            )
+        }
 
         Spacer(modifier = Modifier.height(20.dp))
         Box(
