@@ -51,8 +51,8 @@ android {
         applicationId = "com.yourssu.ssutime.v2"
         minSdk = 26
         targetSdk = 36
-        versionCode = 32
-        versionName = "1.1.7"
+        versionCode = 36
+        versionName = "1.1.8"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         buildConfigField(
@@ -123,6 +123,8 @@ dependencies {
     implementation("androidx.glance:glance-material:$glanceVersion")
     compileOnly("androidx.glance:glance-preview:$glanceVersion")
     implementation(libs.androidx.work.runtime.ktx)
+
+    implementation("com.google.android.play:app-update:2.1.0")
 
     implementation(libs.ktor.client.core)
     implementation(libs.ktor.client.android)

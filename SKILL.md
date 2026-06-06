@@ -34,7 +34,12 @@ Follow this workflow when the user asks to deploy SSUTime.
    - Increase the hardcoded `versionName` by one patch step unless the user specified a version. Example: `1.0.7` -> `1.0.8`.
    - Use the bumped `versionName` as the GitHub Release tag with a `v` prefix, for example `v1.0.7`.
    - Do not rely on CI to derive app versions from the GitHub Release tag; the Play build uses the committed Gradle version.
-4. Run checks:
+4. Set the Play in-app update priority before the final release commit:
+   - Inspect the release changes and commits to decide whether they include an LMS API version change. Treat changes to the `libs.lms` dependency version, LMS API client compatibility code, or other LMS API version migration work as an LMS API version change.
+   - If the release includes an LMS API version change, set `.github/workflows/google-play-production.yml` `inAppUpdatePriority` to `5` so the app's immediate in-app update flow can run for that version.
+   - For all other releases, set `.github/workflows/google-play-production.yml` `inAppUpdatePriority` to a low value such as `0`; do not leave it at `4` or `5`, because that would trigger the app's immediate update prompt.
+   - Commit and push the workflow priority value together with the version bump and release changes. The GitHub Release workflow uses the committed workflow file, so this value must be correct before creating the GitHub Release.
+5. Run checks:
 
 ```bash
 ./gradlew test :app:compileReleaseKotlin :app:bundleRelease :app:assembleRelease

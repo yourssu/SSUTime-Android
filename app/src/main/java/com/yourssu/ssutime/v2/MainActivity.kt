@@ -2,9 +2,12 @@ package com.yourssu.ssutime.v2
 
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.ActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.mutableStateOf
@@ -13,6 +16,11 @@ import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.google.android.play.core.appupdate.AppUpdateInfo
+import com.google.android.play.core.appupdate.AppUpdateManagerFactory
+import com.google.android.play.core.appupdate.AppUpdateOptions
+import com.google.android.play.core.install.model.AppUpdateType
+import com.google.android.play.core.install.model.UpdateAvailability
 import com.yourssu.data.SubjectInfo
 import com.yourssu.data.TodoInfo
 import com.yourssu.data.TodoType
@@ -32,6 +40,30 @@ class MainActivity : ComponentActivity() {
     private val homeEntrySource = mutableStateOf(ENTRY_SOURCE_APP)
     private val homeEntryVersion = mutableStateOf(0)
 
+    private val appUpdateManager by lazy { AppUpdateManagerFactory.create(this) }
+
+    private val appUpdateLauncher =
+        registerForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) { result: ActivityResult ->
+            if (result.resultCode != RESULT_OK) {
+                Log.e(TAG, "Update flow failed! Result code: ${result.resultCode}")
+            }
+        }
+
+    override fun onResume() {
+        super.onResume()
+
+        appUpdateManager
+            .appUpdateInfo
+            .addOnSuccessListener { appUpdateInfo ->
+                if (
+                    appUpdateInfo.updateAvailability() ==
+                    UpdateAvailability.DEVELOPER_TRIGGERED_UPDATE_IN_PROGRESS
+                ) {
+                    startImmediateUpdate(appUpdateInfo)
+                }
+            }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
         super.onCreate(savedInstanceState)
@@ -42,6 +74,9 @@ class MainActivity : ComponentActivity() {
             intent.captureEntryAnalytics()
         }
         enableEdgeToEdge()
+
+        checkForImmediateUpdate()
+
         setContent {
             val navController = rememberNavController()
 
@@ -131,6 +166,26 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private fun checkForImmediateUpdate() {
+        appUpdateManager.appUpdateInfo.addOnSuccessListener { appUpdateInfo ->
+            if (
+                appUpdateInfo.updateAvailability() == UpdateAvailability.UPDATE_AVAILABLE &&
+                appUpdateInfo.updatePriority() >= IMMEDIATE_UPDATE_PRIORITY_THRESHOLD &&
+                appUpdateInfo.isUpdateTypeAllowed(AppUpdateType.IMMEDIATE)
+            ) {
+                startImmediateUpdate(appUpdateInfo)
+            }
+        }
+    }
+
+    private fun startImmediateUpdate(appUpdateInfo: AppUpdateInfo) {
+        appUpdateManager.startUpdateFlowForResult(
+            appUpdateInfo,
+            appUpdateLauncher,
+            AppUpdateOptions.newBuilder(AppUpdateType.IMMEDIATE).build()
+        )
+    }
+
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
@@ -142,6 +197,9 @@ class MainActivity : ComponentActivity() {
     }
 
     companion object {
+        private const val TAG = "In-App Update"
+        private const val IMMEDIATE_UPDATE_PRIORITY_THRESHOLD = 4
+
         const val EXTRA_SKIP_INITIAL_LMS_REFRESH = "extra_skip_initial_lms_refresh"
         const val EXTRA_ENTRY_SOURCE = "extra_entry_source"
         const val EXTRA_WIDGET_SIZE = "extra_widget_size"
