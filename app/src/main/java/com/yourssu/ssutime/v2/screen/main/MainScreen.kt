@@ -139,6 +139,9 @@ fun MainScreen(
         if (skipLoadFromMyPageBack) {
             return@LaunchedEffect
         }
+        if (!viewModel.shouldRunInitialLoad(homeEntryVersion)) {
+            return@LaunchedEffect
+        }
 
         if (context.isNetworkConnected()) {
             val todoData = viewModel.loadTodos(
@@ -733,21 +736,23 @@ fun TodoList(
                 }
             }
 
-            Spacer(Modifier.height(28.dp))
+            if (freeTodos.isNotEmpty()) {
+                Spacer(Modifier.height(28.dp))
 
-            Text(
-                text = "여유가 있는 할 일 리스트",
-                style = SSUType.H5SemiBold
-            )
+                Text(
+                    text = "여유가 있는 할 일 리스트",
+                    style = SSUType.H5SemiBold
+                )
 
-            freeTodos.forEach {
-                key(it.todoId) {
-                    Spacer(Modifier.height(8.dp))
-                    TodoItem(
-                        todoInfo = it,
-                        aiSummaryState = aiSummaryStates[it.aiSummaryKey()],
-                        onExpandTodo = onExpandTodo,
-                    )
+                freeTodos.forEach {
+                    key(it.todoId) {
+                        Spacer(Modifier.height(8.dp))
+                        TodoItem(
+                            todoInfo = it,
+                            aiSummaryState = aiSummaryStates[it.aiSummaryKey()],
+                            onExpandTodo = onExpandTodo,
+                        )
+                    }
                 }
             }
         } else if (freeTodos.isNotEmpty()) {

@@ -10,6 +10,7 @@ import androidx.activity.result.ActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
@@ -38,7 +39,7 @@ class MainActivity : ComponentActivity() {
     private val skipInitialLmsRefresh = mutableStateOf(false)
     private val forceInitialLmsRefresh = mutableStateOf(false)
     private val homeEntrySource = mutableStateOf(ENTRY_SOURCE_APP)
-    private val homeEntryVersion = mutableStateOf(0)
+    private val homeEntryVersion = mutableIntStateOf(0)
 
     private val appUpdateManager by lazy { AppUpdateManagerFactory.create(this) }
 
@@ -67,9 +68,11 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
         super.onCreate(savedInstanceState)
+
         skipInitialLmsRefresh.value = intent.shouldSkipInitialLmsRefresh()
         homeEntrySource.value = intent.homeEntrySource()
         forceInitialLmsRefresh.value = intent.shouldForceInitialLmsRefresh()
+
         if (savedInstanceState == null) {
             intent.captureEntryAnalytics()
         }
@@ -139,7 +142,7 @@ class MainActivity : ComponentActivity() {
                             skipInitialLmsRefresh = skipInitialLmsRefresh.value,
                             forceInitialLmsRefresh = forceInitialLmsRefresh.value,
                             homeEntrySource = homeEntrySource.value,
-                            homeEntryVersion = homeEntryVersion.value,
+                            homeEntryVersion = homeEntryVersion.intValue,
                             skipLoadFromMyPageBack = skipLoadFromMyPageBack,
                             onInitialLmsRefreshSkipConsumed = {
                                 skipInitialLmsRefresh.value = false

@@ -46,6 +46,7 @@ class MainViewModel(
     val aiSummaryStates = mutableStateMapOf<String, AiSummaryUiState>()
 
     var requiredShowAlertBottomSheet = mutableStateOf(false)
+    private var handledHomeEntryVersion: Int? = null
 
     init {
         viewModelScope.launch {
@@ -65,6 +66,15 @@ class MainViewModel(
                 onboardingInitialRefreshInProgress.value = isRefreshing
             }
         }
+    }
+
+    fun shouldRunInitialLoad(homeEntryVersion: Int): Boolean {
+        if (handledHomeEntryVersion == homeEntryVersion) {
+            return false
+        }
+
+        handledHomeEntryVersion = homeEntryVersion
+        return true
     }
 
     fun updateAlertState(alertData: AlertData) {
