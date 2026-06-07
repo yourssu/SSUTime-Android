@@ -42,6 +42,7 @@ class MainViewModel(
     var showNetworkError = mutableStateOf(false)
     var showNetworkCause = mutableStateOf("")
     var showWidgetBadge = mutableStateOf(false)
+    var onboardingInitialRefreshInProgress = mutableStateOf(false)
     val aiSummaryStates = mutableStateMapOf<String, AiSummaryUiState>()
 
     var requiredShowAlertBottomSheet = mutableStateOf(false)
@@ -56,6 +57,12 @@ class MainViewModel(
         viewModelScope.launch {
             mainRepository.todoData.collect { todoData ->
                 updateTodoState(todoData)
+            }
+        }
+
+        viewModelScope.launch {
+            lmsRefreshRepository.onboardingInitialRefreshInProgress.collect { isRefreshing ->
+                onboardingInitialRefreshInProgress.value = isRefreshing
             }
         }
     }

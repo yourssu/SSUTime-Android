@@ -29,6 +29,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
@@ -54,7 +57,10 @@ class LmsRefreshRepository(
     private val isRefreshing = AtomicBoolean(false)
     private val backendReportScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val appRefreshScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val _onboardingInitialRefreshInProgress = MutableStateFlow(false)
     private var onboardingInitialRefreshJob: Job? = null
+    val onboardingInitialRefreshInProgress: StateFlow<Boolean> =
+        _onboardingInitialRefreshInProgress.asStateFlow()
 
     suspend fun getLmsSessionRequest(): LmsSessionRequest {
         val loginData = loginRepository.getLoginData()
@@ -142,18 +148,23 @@ class LmsRefreshRepository(
         }
 
         onboardingInitialRefreshJob = appRefreshScope.launch {
-            when (val result = refreshTodos(source = RefreshSource.MANUAL)) {
-                is TodoRefreshResult.Success -> {
-                    Log.i(TAG, "온보딩 LMS 초기 새로고침이 완료되었습니다.")
-                }
+            _onboardingInitialRefreshInProgress.value = true
+            try {
+                when (val result = refreshTodos(source = RefreshSource.MANUAL)) {
+                    is TodoRefreshResult.Success -> {
+                        Log.i(TAG, "온보딩 LMS 초기 새로고침이 완료되었습니다.")
+                    }
 
-                is TodoRefreshResult.Failure -> {
-                    Log.e(TAG, "온보딩 LMS 초기 새로고침에 실패했습니다: ${result.message}", result.throwable)
-                }
+                    is TodoRefreshResult.Failure -> {
+                        Log.e(TAG, "온보딩 LMS 초기 새로고침에 실패했습니다: ${result.message}", result.throwable)
+                    }
 
-                is TodoRefreshResult.Skipped -> {
-                    Log.i(TAG, "온보딩 LMS 초기 새로고침을 건너뜁니다: ${result.reason}")
+                    is TodoRefreshResult.Skipped -> {
+                        Log.i(TAG, "온보딩 LMS 초기 새로고침을 건너뜁니다: ${result.reason}")
+                    }
                 }
+            } finally {
+                _onboardingInitialRefreshInProgress.value = false
             }
         }
     }

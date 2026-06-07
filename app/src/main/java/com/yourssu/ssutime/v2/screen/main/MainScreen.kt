@@ -127,6 +127,10 @@ fun MainScreen(
     val context = LocalContext.current
     var showSubmittedBottomSheet by remember { mutableStateOf(false) }
     var showWidgetHelperDialog by remember { mutableStateOf(false) }
+    val showOnboardingInitialLoading = remember { mutableStateOf(skipInitialLmsRefresh) }
+    val showInitialLmsLoading = showOnboardingInitialLoading.value &&
+        viewModel.onboardingInitialRefreshInProgress.value &&
+        viewModel.loadedAt.value.isEmpty()
     val fullScreenIntentSettingsLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult(),
         onResult = {},
@@ -380,6 +384,25 @@ fun MainScreen(
                 }
             }
         }
+
+        if (showInitialLmsLoading) {
+            InitialLmsLoadingOverlay()
+        }
+    }
+}
+
+@Composable
+private fun InitialLmsLoadingOverlay() {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0x80000000)),
+        contentAlignment = Alignment.Center,
+    ) {
+        CircularProgressIndicator(
+            color = R500,
+            trackColor = R100,
+        )
     }
 }
 
