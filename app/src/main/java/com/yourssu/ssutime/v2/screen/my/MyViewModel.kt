@@ -13,9 +13,11 @@ import com.yourssu.data.UiState
 import com.yourssu.ssutime.v2.accessToken
 import com.yourssu.ssutime.v2.analytics.Analytics
 import com.yourssu.ssutime.v2.lms.getLmsLoginInfo
+import com.yourssu.ssutime.v2.lms.getLmsTerms
 import com.yourssu.ssutime.v2.notification.showCallAlert
 import com.yourssu.ssutime.v2.screen.login.LoginRepository
 import com.yourssu.ssutime.v2.screen.main.MainRepository
+import com.yourssu.ssutime.v2.screen.main.currentTermAt
 import com.yourssu.ssutime.v2.screen.main.sortedForMainDisplay
 import io.github.chlwhdtn03.LmsApi
 import io.github.chlwhdtn03.data.Lms.Info
@@ -24,12 +26,16 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlin.time.Clock
+import kotlin.time.ExperimentalTime
 
+@OptIn(ExperimentalTime::class)
 class MyViewModel(
     private val loginRepository: LoginRepository,
     private val mainRepository: MainRepository,
 ) : ViewModel() {
     var loginInfo = mutableStateOf<Info?>(null)
+    var termInfo = mutableStateOf<String>("")
     var isLogout = mutableStateOf(false)
 
     private val _uiState = MutableStateFlow<UiState<AlertData>>(UiState.Loading)
@@ -40,8 +46,10 @@ class MyViewModel(
             _uiState.value = UiState.Success(
                 mainRepository.getAlertData()
             )
-            if(LmsApi.isLoggined)
+            if(LmsApi.isLoggined) {
                 loginInfo.value = getLmsLoginInfo()
+                termInfo.value = getLmsTerms().currentTermAt(now = Clock.System.now())?.name ?: "학기 정보 없음"
+            }
         }
     }
 

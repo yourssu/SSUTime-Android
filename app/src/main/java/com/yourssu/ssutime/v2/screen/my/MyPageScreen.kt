@@ -89,6 +89,7 @@ fun MyPageScreen(
 ) {
     val context = LocalContext.current
     val loginInfo = viewModel.loginInfo.value
+    val termInfo = viewModel.termInfo.value
     val isLogout by remember { viewModel.isLogout }
     var showLogoutPopup by remember { mutableStateOf(false) }
     val tooltipState = rememberTooltipState(
@@ -300,6 +301,10 @@ fun MyPageScreen(
             Text(
                 text = loginInfo?.dept_name ?: "",
                 style = SSUType.H4SemiBold,
+            )
+            Text(
+                text = termInfo,
+                style = SSUType.Caption1SemiBold,
             )
         }
 

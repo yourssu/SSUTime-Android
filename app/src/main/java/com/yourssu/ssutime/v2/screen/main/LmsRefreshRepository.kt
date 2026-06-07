@@ -19,8 +19,9 @@ import com.yourssu.ssutime.v2.lms.loginLms
 import com.yourssu.ssutime.v2.network.ApiRepository
 import com.yourssu.ssutime.v2.screen.login.LoginRepository
 import io.github.chlwhdtn03.LmsApi
-import io.github.chlwhdtn03.data.Lms.Submission
 import io.github.chlwhdtn03.data.Lms.Subject
+import io.github.chlwhdtn03.data.Lms.Submission
+import io.github.chlwhdtn03.data.Lms.Term
 import io.ktor.http.HttpStatusCode
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -34,7 +35,9 @@ import kotlinx.coroutines.withTimeout
 import java.time.Duration
 import java.time.Instant
 import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
+import kotlin.time.Instant as KotlinInstant
 
 private const val BACKGROUND_REFRESH_RUNNING = "running"
 private const val BACKGROUND_REFRESH_SUCCESS = "success"
@@ -203,8 +206,8 @@ class LmsRefreshRepository(
         loginIfNeeded(source, loginData, forceLogin)
 
         val terms = getLmsTerms()
-        val currentTerm = terms.firstOrNull()
-            ?: throw IllegalStateException("학기 정보를 불러오지 못했어요.")
+        val currentTerm = terms.currentTermAt(Clock.System.now())
+            ?: throw IllegalStateException("현재 진행 중인 학기 정보를 찾지 못했어요.")
         val subjects = getLmsTodoList(
             term = currentTerm,
             loadingState = loadingState,
@@ -508,6 +511,15 @@ private val LoginData.hasAutoLoginCredentials: Boolean
 
 private val TodoInfo.isReportableSubmission: Boolean
     get() = type == TodoType.SUBMITTED || type == TodoType.SUBMITTED_LATE
+
+@OptIn(ExperimentalTime::class)
+internal fun List<Term>.currentTermAt(now: KotlinInstant): Term? =
+    firstOrNull { term ->
+        val startAt = term.start_at ?: return@firstOrNull false
+        val endAt = term.end_at ?: return@firstOrNull false
+
+        now in startAt..endAt
+    }
 
 private fun Submission.isReportableSubmission(): Boolean =
     submitted_at?.isNotBlank() == true ||
