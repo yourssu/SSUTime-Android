@@ -119,6 +119,7 @@ fun MainScreen(
     forceInitialLmsRefresh: Boolean = false,
     homeEntrySource: String = MainActivity.ENTRY_SOURCE_APP,
     homeEntryVersion: Int = 0,
+    skipLoadFromMyPageBack: Boolean = false,
     onInitialLmsRefreshSkipConsumed: () -> Unit = {},
     onInitialLmsRefreshForceConsumed: () -> Unit = {},
     onProfileClick: () -> Unit = {},
@@ -131,6 +132,10 @@ fun MainScreen(
         onResult = {},
     )
     LaunchedEffect(homeEntryVersion) {
+        if (skipLoadFromMyPageBack) {
+            return@LaunchedEffect
+        }
+
         if (context.isNetworkConnected()) {
             val todoData = viewModel.loadTodos(
                 forceRefresh = forceInitialLmsRefresh,

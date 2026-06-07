@@ -130,12 +130,17 @@ class MainActivity : ComponentActivity() {
                         )
                     }
 
-                    composable(route = Screens.MAIN.name) {
+                    composable(route = Screens.MAIN.name) { backStackEntry ->
+                        val skipLoadFromMyPageBack =
+                            backStackEntry.savedStateHandle.remove<Boolean>(
+                                SKIP_MAIN_LOAD_FROM_MY_PAGE_BACK_KEY
+                            ) == true
                         MainScreen(
                             skipInitialLmsRefresh = skipInitialLmsRefresh.value,
                             forceInitialLmsRefresh = forceInitialLmsRefresh.value,
                             homeEntrySource = homeEntrySource.value,
                             homeEntryVersion = homeEntryVersion.value,
+                            skipLoadFromMyPageBack = skipLoadFromMyPageBack,
                             onInitialLmsRefreshSkipConsumed = {
                                 skipInitialLmsRefresh.value = false
                             },
@@ -150,6 +155,9 @@ class MainActivity : ComponentActivity() {
                     composable(route = Screens.MY.name) {
                         MyPageScreen(
                             onPressBack = {
+                                navController.previousBackStackEntry
+                                    ?.savedStateHandle
+                                    ?.set(SKIP_MAIN_LOAD_FROM_MY_PAGE_BACK_KEY, true)
                                 navController.popBackStack()
                             },
                             onLogout = {
@@ -232,6 +240,8 @@ private val knownHomeEntrySources = setOf(
     MainActivity.ENTRY_SOURCE_NOTIFICATION,
     MainActivity.ENTRY_SOURCE_CALL_ALERT,
 )
+
+private const val SKIP_MAIN_LOAD_FROM_MY_PAGE_BACK_KEY = "skip_main_load_from_my_page_back"
 
 private fun Intent.captureEntryAnalytics() {
     getStringExtra(MainActivity.EXTRA_WIDGET_SIZE)
