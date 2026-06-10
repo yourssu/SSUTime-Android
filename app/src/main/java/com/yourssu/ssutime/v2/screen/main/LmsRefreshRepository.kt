@@ -297,7 +297,7 @@ class LmsRefreshRepository(
         subjects.forEach { subject ->
             runCatching {
                 var status = apiRepository.addEnrollment(subject.toAddEnrollmentRequest(semester))
-                if (status == HttpStatusCode.Unauthorized && !tokenRefreshAttempted) {
+                if (status.isAuthFailure() && !tokenRefreshAttempted) {
                     tokenRefreshAttempted = true
                     if (refreshBackendToken(loginData)) {
                         status = apiRepository.addEnrollment(subject.toAddEnrollmentRequest(semester))
@@ -323,7 +323,7 @@ class LmsRefreshRepository(
             runCatching {
                 val request = todo.toTodoReportRequest()
                 var status = apiRepository.reportTodo(request)
-                if (status == HttpStatusCode.Unauthorized && !tokenRefreshAttempted) {
+                if (status.isAuthFailure() && !tokenRefreshAttempted) {
                     tokenRefreshAttempted = true
                     if (refreshBackendToken(loginData)) {
                         status = apiRepository.reportTodo(request)
@@ -522,6 +522,9 @@ private val LoginData.hasAutoLoginCredentials: Boolean
 
 private val TodoInfo.isReportableSubmission: Boolean
     get() = type == TodoType.SUBMITTED || type == TodoType.SUBMITTED_LATE
+
+private fun HttpStatusCode.isAuthFailure(): Boolean =
+    this == HttpStatusCode.Unauthorized || this == HttpStatusCode.Forbidden
 
 @OptIn(ExperimentalTime::class)
 internal fun List<Term>.currentTermAt(now: KotlinInstant): Term? =

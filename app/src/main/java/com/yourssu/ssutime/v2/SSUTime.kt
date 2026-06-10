@@ -83,7 +83,7 @@ val appModule = module {
         )
     }
     viewModel { MyViewModel(get(), get()) }
-    viewModel { SplashViewModel(get()) }
+    viewModel { SplashViewModel(get(), get()) }
     viewModel { LoginViewModel(get(), get()) }
     viewModel {
         OnBoardingViewModel(
@@ -129,7 +129,7 @@ val previewModule = module {
         )
     }
     viewModel { MyViewModel(get(), get()) }
-    viewModel { SplashViewModel(get()) }
+    viewModel { SplashViewModel(get(), get()) }
     viewModel { LoginViewModel(get(), get()) }
     viewModel {
         OnBoardingViewModel(
