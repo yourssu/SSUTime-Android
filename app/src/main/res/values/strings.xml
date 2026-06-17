@@ -1,8 +1,148 @@
 <resources>
-    <string name="app_name">SSUTime</string>
-    <string name="channel_description">과제 마감 알림을 전달해드려요.</string>
-    <string name="channel_name">과제 마감 알림</string>
-    <string name="widget_empty_text">모든 할 일을 수행했어요!</string>
-    <string name="todo_medium_widget_name">SSUTime 할 일 M</string>
-    <string name="todo_large_widget_name">SSUTime 할 일 L</string>
+    <string name="app_name" translatable="false">SSUTime</string>
+    <string name="channel_name">Assignment deadline alerts</string>
+    <string name="channel_description">Get notified about assignment deadlines.</string>
+    <string name="call_channel_name">Deadline call alerts</string>
+    <string name="call_channel_description">Full-screen call-style alerts right before a deadline.</string>
+    <string name="widget_empty_text">All tasks are done!</string>
+    <string name="todo_medium_widget_name">SSUTime Tasks M</string>
+    <string name="todo_large_widget_name">SSUTime Tasks L</string>
+
+    <string name="common_next">Next</string>
+    <string name="common_confirm">Confirm</string>
+    <string name="common_cancel">Cancel</string>
+    <string name="common_close">Close</string>
+    <string name="common_retry">Retry</string>
+    <string name="common_refresh">Refresh</string>
+    <string name="common_loading">Loading</string>
+    <string name="common_unknown_subject">Unknown course</string>
+    <string name="common_no_info">No information</string>
+
+    <string name="todo_type_lecture">Lecture</string>
+    <string name="todo_type_assignment">Assignment</string>
+    <string name="todo_type_quiz">Quiz</string>
+    <string name="todo_type_submitted">Submitted</string>
+    <string name="todo_type_submitted_late">Submitted late</string>
+
+    <string name="login_logo_content_description">Logo</string>
+    <string name="login_id_placeholder">Enter your u-SAINT ID</string>
+    <string name="login_password_placeholder">Enter your u-SAINT password</string>
+    <string name="login_auto_login">Keep me signed in</string>
+    <string name="login_button">Log in</string>
+    <string name="splash_logo_content_description">Logo</string>
+    <string name="splash_tagline">Missed an assignment and tanked your grade?</string>
+
+    <string name="onboarding_notification_title">Allow notifications\nto receive assignment alerts</string>
+    <string name="onboarding_notification_image_content_description">Notification permission example</string>
+    <string name="onboarding_tip_title">We will remind you of deadlines\nfor graded tasks</string>
+    <string name="onboarding_tip_assignment">LearningX [Assignment]</string>
+    <string name="onboarding_tip_quiz">LearningX [Quiz]</string>
+    <string name="onboarding_tip_lecture">LearningX [Lecture]</string>
+    <string name="onboarding_tip_cyber_excluded">Soongsil Cyber University lectures are not included.</string>
+
+    <string name="network_error_title">Your internet connection is unstable</string>
+    <string name="network_error_description">Check your Wi-Fi or cellular connection\nand try again.</string>
+    <string name="network_error_cause">Error: %1$s</string>
+
+    <string name="main_completed_auto_disappear">Completed tasks disappear automatically</string>
+    <string name="main_todo_count">You have %1$d tasks</string>
+    <string name="main_updated_at">Updated at %1$s</string>
+    <string name="main_updated_at_base">Updated at %1$s</string>
+    <string name="main_update_info_none">No update information</string>
+    <string name="main_submitted_title">Submitted assignments</string>
+    <string name="main_submitted_empty">No submitted assignments yet</string>
+    <string name="main_submitted_count">Submitted %1$d</string>
+    <string name="main_date_base">%1$s</string>
+    <string name="main_date_placeholder">No date</string>
+    <string name="main_widget_badge_title">Add the SSUTime widget</string>
+    <string name="main_widget_badge_description">See your deadline D-day</string>
+    <string name="main_urgent_tasks_title">These are the most urgent tasks!</string>
+    <string name="main_relaxed_tasks_title">Tasks with more time</string>
+    <string name="main_todo_list_title">Assignments</string>
+    <string name="main_empty_todos">No assignments to submit</string>
+    <string name="main_late_submission_available">Late submission is available</string>
+    <string name="main_expand_task_content_description">Expand assignment details</string>
+    <string name="main_deadline_label">Deadline</string>
+    <string name="main_due_until">Until %1$s</string>
+    <string name="ai_summary_title">AI Summary</string>
+    <string name="ai_estimated_duration">Estimated time: %1$d min</string>
+    <string name="ai_estimated_duration_unknown">Estimated time unknown</string>
+    <string name="ai_summary_loading">Loading AI summary.</string>
+    <string name="ai_summary_analyzing">AI analysis is in progress.</string>
+    <string name="ai_summary_empty">AI summary is being prepared.</string>
+    <string name="ai_summary_error">Could not load AI summary.</string>
+
+    <string name="widget_helper_title">Add a widget to see it</string>
+    <string name="widget_helper_description">Long-press the home screen and tap Widgets\nto add the SSUTime widget.</string>
+    <string name="widget_helper_preview_title">Widget preview</string>
+    <string name="widget_helper_preview_content_description_1">Widget preview 1</string>
+    <string name="widget_helper_preview_content_description_2">Widget preview 2</string>
+    <string name="widget_helper_preview_content_description_3">Widget preview 3</string>
+
+    <string name="call_alert_setup_title">Just set up call alerts!</string>
+    <string name="call_alert_setup_description">You can receive a call-style alert from your professor based on the time you set.\n(It does not make a real phone call!)</string>
+    <string name="call_alert_option_1h">1 hour before the deadline</string>
+    <string name="call_alert_option_2h">2 hours before the deadline</string>
+    <string name="call_alert_option_6h">6 hours before the deadline</string>
+    <string name="call_alert_disable">Do not receive call alerts</string>
+    <string name="call_alert_time_1h">1 hour before</string>
+    <string name="call_alert_time_2h">2 hours before</string>
+    <string name="call_alert_time_6h">6 hours before</string>
+    <string name="call_alert_time_dropdown_content_description">Open call alert time options</string>
+
+    <string name="my_back_content_description">Back</string>
+    <string name="my_avatar_content_description">Avatar</string>
+    <string name="my_notification_settings">Notification settings</string>
+    <string name="my_no_term_info">No term information</string>
+    <string name="my_notification_info_content_description">About notifications</string>
+    <string name="my_system_alert">System notifications</string>
+    <string name="my_call_alert">Call alerts</string>
+    <string name="my_time">Time</string>
+    <string name="my_hours_before">%1$d hours before</string>
+    <string name="my_contact">Report issues(KakaoTalk)</string>
+    <string name="my_terms">Terms of Service</string>
+    <string name="my_privacy_policy">Privacy Policy</string>
+    <string name="my_logout">Log out</string>
+    <string name="my_notification_tooltip_system_title">System push?</string>
+    <string name="my_notification_tooltip_system_desc">We will send a simple app push notification.</string>
+    <string name="my_notification_tooltip_call_title">Call alert?</string>
+    <string name="my_notification_tooltip_call_desc">If you have not completed an assignment by the time you set on its due date, we will send a call-style alert. * It is not a real phone call, so do not be surprised!</string>
+    <string name="my_logout_message">Are you sure you want to log out?</string>
+
+    <string name="call_alert_default_title">Deadline alert</string>
+    <string name="call_alert_default_avatar">Alert</string>
+    <string name="call_alert_display_title">Deadline alert</string>
+    <string name="call_alert_default_subject">LMS</string>
+    <string name="call_alert_due_date">Due %1$s</string>
+    <string name="call_alert_decline">Decline</string>
+    <string name="call_alert_answer">Answer</string>
+    <string name="call_alert_text">%1$s is due soon.</string>
+    <string name="call_alert_notification_title">Deadline alert</string>
+
+    <string name="deadline_common_subject">General</string>
+    <string name="deadline_no_title">No title</string>
+    <string name="deadline_default_item">Assignment</string>
+    <string name="deadline_today_message">%1$s is due today!</string>
+    <string name="deadline_d_day_message">%1$s is due in D-%2$d!</string>
+    <string name="deadline_multiple_message">%1$s and %2$d more are due soon!</string>
+    <string name="deadline_title_today">Due today, still not done?</string>
+    <string name="deadline_title_upcoming">Deadlines are coming up!</string>
+
+    <string name="widget_deadline_until">Until deadline</string>
+    <string name="widget_refreshing_title">Refreshing</string>
+    <string name="widget_refreshing_description">Loading tasks from LMS.</string>
+    <string name="widget_refresh_failed_title">Refresh failed</string>
+    <string name="widget_no_todo">No tasks to show</string>
+    <string name="widget_refresh_from_app">Refresh in the app</string>
+    <string name="widget_updated_before">Not updated yet</string>
+    <string name="widget_updated_at">Updated %1$s</string>
+    <string name="widget_updated_at_base">Updated %1$s</string>
+    <string name="widget_no_subject">No course name</string>
+    <string name="widget_refresh_failed_default">Could not refresh the widget.</string>
+    <string name="widget_refresh_error_lms_default">Could not load LMS information.</string>
+    <string name="widget_refresh_error_timeout">Refresh timed out.</string>
+    <string name="widget_refresh_error_network">Check your network connection.</string>
+    <string name="widget_late_submission">Late submission</string>
+    <string name="widget_late_short">Late</string>
+    <string name="widget_more_todos">%1$d more tasks</string>
 </resources>

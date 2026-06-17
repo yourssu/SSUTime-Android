@@ -2,6 +2,7 @@ package com.yourssu.ssutime.v2.widget
 
 import android.content.Context
 import com.yourssu.data.TodoData
+import com.yourssu.ssutime.v2.R
 import com.yourssu.ssutime.v2.screen.main.todoDataStore
 import java.time.Instant
 import java.util.Locale
@@ -31,13 +32,13 @@ internal suspend fun Context.markWidgetRefreshFailed(message: String) {
     todoDataStore.updateData { currentData ->
         currentData.copy(
             lastWidgetRefreshStatus = WIDGET_REFRESH_STATUS_FAILED,
-            lastWidgetRefreshErrorMessage = message.toWidgetRefreshReason(),
+            lastWidgetRefreshErrorMessage = message.toWidgetRefreshReason(this),
             lastWidgetRefreshFinishedAt = Instant.now().toString(),
         )
     }
 }
 
-private fun String.toWidgetRefreshReason(): String {
+private fun String.toWidgetRefreshReason(context: Context): String {
     val reason = trim()
         .lineSequence()
         .firstOrNull { it.isNotBlank() }
@@ -46,15 +47,15 @@ private fun String.toWidgetRefreshReason(): String {
     val lowerReason = reason.lowercase(Locale.US)
 
     return when {
-        reason.isBlank() -> "LMS 정보를 불러오지 못했어요."
+        reason.isBlank() -> context.getString(R.string.widget_refresh_error_lms_default)
         "시간이 초과" in reason || "timeout" in lowerReason || "timed out" in lowerReason ->
-            "새로고침 시간이 초과됐어요."
+            context.getString(R.string.widget_refresh_error_timeout)
         "네트워크" in reason ||
             "unable to resolve host" in lowerReason ||
             "failed to connect" in lowerReason ||
             "network" in lowerReason ||
             "socket" in lowerReason ->
-            "네트워크 연결을 확인해 주세요."
+            context.getString(R.string.widget_refresh_error_network)
         else -> reason.truncateWidgetReason()
     }
 }

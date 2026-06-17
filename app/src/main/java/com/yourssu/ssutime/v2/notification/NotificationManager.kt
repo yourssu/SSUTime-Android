@@ -16,6 +16,7 @@ import com.yourssu.data.TodoInfo
 import com.yourssu.ssutime.v2.CALL_CHANNEL_ID
 import com.yourssu.ssutime.v2.R
 import com.yourssu.ssutime.v2.analytics.Analytics
+import com.yourssu.ssutime.v2.todo.localizedLabel
 import java.util.concurrent.atomic.AtomicLong
 
 fun showCallAlert(context: Context, todo: TodoInfo) {
@@ -79,7 +80,7 @@ private fun showCallStyleAlert(context: Context, todo: TodoInfo, notificationId:
     val notification = Notification.Builder(context, CALL_CHANNEL_ID)
         .setSmallIcon(R.drawable.avatar_container)
         .setContentTitle(todo.title)
-        .setContentText(todo.toCallAlertText())
+        .setContentText(context.toCallAlertText(todo))
         .setContentIntent(contentIntent)
         .setOngoing(true)
         .setFullScreenIntent(fullScreenIntent, true)
@@ -100,9 +101,9 @@ private fun showFallbackNotification(context: Context, todo: TodoInfo, notificat
     val fullScreenIntent = context.callAlertActivityPendingIntent(notificationId, todo, ACTION_SHOW_CALL_ALERT)
     val notification = Notification.Builder(context, CALL_CHANNEL_ID)
         .setSmallIcon(R.drawable.ssutime_launcher_foreground)
-        .setContentTitle("마감 직전 알림")
-        .setContentText(todo.toCallAlertText())
-        .setStyle(Notification.BigTextStyle().bigText(todo.toCallAlertText()))
+        .setContentTitle(context.getString(R.string.call_alert_notification_title))
+        .setContentText(context.toCallAlertText(todo))
+        .setStyle(Notification.BigTextStyle().bigText(context.toCallAlertText(todo)))
         .setContentIntent(context.callAlertActivityPendingIntent(notificationId, todo, ACTION_OPEN_CALL_ALERT))
         .setFullScreenIntent(fullScreenIntent, true)
         .setAutoCancel(true)
@@ -173,7 +174,7 @@ internal fun Context.callAlertActivityIntent(notificationId: Int, todo: TodoInfo
         putExtra(EXTRA_CALL_TODO_ID, todo.todoId)
         putExtra(EXTRA_CALL_TITLE, todo.title)
         putExtra(EXTRA_CALL_DUE_DATE, todo.due_date)
-        putExtra(EXTRA_CALL_TODO_TYPE, todo.type.kor)
+        putExtra(EXTRA_CALL_TODO_TYPE, todo.type.localizedLabel(this@callAlertActivityIntent))
         putExtra(EXTRA_CALL_SUBJECT_NAME, todo.subject?.name.orEmpty())
         putExtra(EXTRA_CALL_PROFESSOR, todo.subject?.professor.orEmpty())
     }
@@ -190,13 +191,13 @@ private fun Context.startCallAlertActivity(todo: TodoInfo, notificationId: Int):
         Log.w(TAG, "통화 알림 Activity 실행이 시스템에 의해 거부되거나 실패했습니다.", exception)
     }.isSuccess
 
-private fun TodoInfo.toCallAlertText(): String {
-    val subjectName = subject?.name.orEmpty()
-    val target = listOf(subjectName, title)
+private fun Context.toCallAlertText(todo: TodoInfo): String {
+    val subjectName = todo.subject?.name.orEmpty()
+    val target = listOf(subjectName, todo.title)
         .filter { it.isNotBlank() }
         .joinToString(" · ")
 
-    return "$target 마감 직전이에요."
+    return getString(R.string.call_alert_text, target)
 }
 
 private const val TAG = "CallNotification"

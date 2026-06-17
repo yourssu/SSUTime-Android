@@ -23,6 +23,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.google.android.gms.tasks.OnCompleteListener
@@ -69,26 +70,26 @@ fun LoginScreen(
 
         Image(
             painter = painterResource(R.drawable.logo_red),
-            contentDescription = "logo"
+            contentDescription = stringResource(R.string.login_logo_content_description)
         )
 
         Spacer(Modifier.height(24.dp))
 
         STextField(
             state = idState,
-            "유세인트 아이디를 입력하세요"
+            stringResource(R.string.login_id_placeholder)
         )
         Spacer(Modifier.height(10.dp))
 
         SSecureTextField(
             state = pwState,
-            "유세인트 비밀번호를 입력하세요"
+            stringResource(R.string.login_password_placeholder)
         )
 
         Spacer(Modifier.height(12.dp))
 
         SCheckBox(
-            labelText = "자동 로그인 하기",
+            labelText = stringResource(R.string.login_auto_login),
             checked = viewModel.autoLoginState,
             onCheckedChanged = {}
         )
@@ -104,7 +105,7 @@ fun LoginScreen(
 
         SButton(
             modifier = Modifier.fillMaxWidth(),
-            labelText = "로그인",
+            labelText = stringResource(R.string.login_button),
             enable = idState.text.isNotEmpty() && pwState.text.isNotEmpty(),
             onClick = {
                 coroutine.launch {

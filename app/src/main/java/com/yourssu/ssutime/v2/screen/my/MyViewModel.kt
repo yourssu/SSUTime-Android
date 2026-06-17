@@ -48,7 +48,7 @@ class MyViewModel(
             )
             if(LmsApi.isLoggined) {
                 loginInfo.value = getLmsLoginInfo()
-                termInfo.value = getLmsTerms().currentTermAt(now = Clock.System.now())?.name ?: "학기 정보 없음"
+                termInfo.value = getLmsTerms().currentTermAt(now = Clock.System.now())?.name.orEmpty()
             }
         }
     }

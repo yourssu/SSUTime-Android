@@ -31,10 +31,10 @@ class MainApplication : android.app.Application() {
             }
             val callChannel = NotificationChannel(
                 CALL_CHANNEL_ID,
-                "마감 전화 알림",
+                getString(R.string.call_channel_name),
                 NotificationManager.IMPORTANCE_HIGH,
             ).apply {
-                description = "마감 직전 전화 형태의 전체화면 알림"
+                description = getString(R.string.call_channel_description)
                 lockscreenVisibility = android.app.Notification.VISIBILITY_PUBLIC
                 setSound(
                     RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE),

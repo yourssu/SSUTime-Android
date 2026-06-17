@@ -17,6 +17,7 @@ import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
 import androidx.glance.Image
 import androidx.glance.ImageProvider
+import androidx.glance.LocalContext
 import androidx.glance.LocalSize
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.CircularProgressIndicator
@@ -53,6 +54,7 @@ import com.yourssu.ssutime.v2.MainActivity
 import com.yourssu.ssutime.v2.R
 import com.yourssu.ssutime.v2.getStringSimpleDate
 import com.yourssu.ssutime.v2.screen.main.todoDataStore
+import com.yourssu.ssutime.v2.todo.localizedLabel
 import com.yourssu.ssutime.v2.todo.sortedByDeadlineThenName
 import com.yourssu.ssutime.v2.todo.toTodoDeadlineInstant
 import com.yourssu.ssutime.v2.ui.theme.SSUType
@@ -61,7 +63,6 @@ import java.time.Instant
 import java.time.temporal.ChronoUnit
 import java.util.Locale
 
-private const val SUMMARY_EMPTY_TEXT = "모든 할 일을 수행했어요!"
 private const val SUMMARY_SECONDS_PER_DAY = 24 * 60 * 60L
 private val summaryBackground = ColorProvider(
     day = Color.White,
@@ -403,6 +404,7 @@ private fun TodoLargeContent(
 @Composable
 @GlanceComposable
 private fun TodoSummaryEmptyContent(size: TodoSummarySize) {
+    val context = LocalContext.current
     Column(
         modifier = GlanceModifier.fillMaxSize(),
         verticalAlignment = Alignment.Vertical.CenterVertically,
@@ -419,7 +421,7 @@ private fun TodoSummaryEmptyContent(size: TodoSummarySize) {
         )
         Spacer(modifier = GlanceModifier.height(12.dp))
         Text(
-            text = SUMMARY_EMPTY_TEXT,
+            text = context.getString(R.string.widget_empty_text),
             maxLines = 1,
             style = SSUType.G_Caption2SemiBold
                 .copy(color = summaryPrimaryText),
@@ -430,6 +432,7 @@ private fun TodoSummaryEmptyContent(size: TodoSummarySize) {
 @Composable
 @GlanceComposable
 private fun TodoSummaryRefreshInProgressContent(size: TodoSummarySize) {
+    val context = LocalContext.current
     Column(
         modifier = GlanceModifier
             .fillMaxSize()
@@ -446,7 +449,7 @@ private fun TodoSummaryRefreshInProgressContent(size: TodoSummarySize) {
         )
         Spacer(modifier = GlanceModifier.height(8.dp))
         Text(
-            text = "새로고침 중",
+            text = context.getString(R.string.widget_refreshing_title),
             modifier = GlanceModifier.fillMaxWidth(),
             maxLines = 1,
             style = SSUType.G_Caption1SemiBold.copy(
@@ -456,7 +459,7 @@ private fun TodoSummaryRefreshInProgressContent(size: TodoSummarySize) {
         )
         Spacer(modifier = GlanceModifier.height(4.dp))
         Text(
-            text = "LMS에서 할 일을 불러오고 있어요.",
+            text = context.getString(R.string.widget_refreshing_description),
             modifier = GlanceModifier.fillMaxWidth(),
             maxLines = if (size == TodoSummarySize.Medium) 1 else 2,
             style = SSUType.G_Caption2Medium.copy(
@@ -473,6 +476,7 @@ private fun TodoSummaryRefreshErrorContent(
     size: TodoSummarySize,
     message: String,
 ) {
+    val context = LocalContext.current
     Column(
         modifier = GlanceModifier
             .fillMaxSize()
@@ -484,7 +488,7 @@ private fun TodoSummaryRefreshErrorContent(
         horizontalAlignment = Alignment.Horizontal.CenterHorizontally,
     ) {
         Text(
-            text = "새로고침 실패",
+            text = context.getString(R.string.widget_refresh_failed_title),
             modifier = GlanceModifier.fillMaxWidth(),
             maxLines = 1,
             style = SSUType.G_Caption1SemiBold.copy(
@@ -505,7 +509,7 @@ private fun TodoSummaryRefreshErrorContent(
         Spacer(modifier = GlanceModifier.height(10.dp))
         Image(
             provider = ImageProvider(R.drawable.refreshbtn),
-            contentDescription = "새로고침",
+            contentDescription = context.getString(R.string.common_refresh),
             contentScale = ContentScale.Fit,
             colorFilter = ColorFilter.tint(summarySecondaryText),
             modifier = GlanceModifier
@@ -521,20 +525,21 @@ private fun PrimaryCountdown(
     item: TodoSummaryItem,
     countdownSize: Int,
 ) {
+    val context = LocalContext.current
     Column {
         Row(
             verticalAlignment = Alignment.Vertical.CenterVertically,
         ) {
             if (item.isLate) {
                 LateBadge(
-                    text = "지각 제출",
+                    text = context.getString(R.string.widget_late_submission),
                     fontSizeSp = 9,
                     modifier = GlanceModifier.size(52.dp, 18.dp),
                 )
                 Spacer(modifier = GlanceModifier.width(4.dp))
             }
             Text(
-                text = "마감까지",
+                text = context.getString(R.string.widget_deadline_until),
                 maxLines = 1,
                 style = SSUType.G_Caption2Medium
                     .copy(color = headlineTextColor),
@@ -623,6 +628,7 @@ private fun CompactTodoSlot(
     dDayContainerWidth: Dp,
     dDayTextWidth: Dp,
 ) {
+    val context = LocalContext.current
     if (item == null) {
         Spacer(
             modifier = GlanceModifier
@@ -678,7 +684,7 @@ private fun CompactTodoSlot(
             if (item.isLate) {
                 Spacer(modifier = GlanceModifier.width(4.dp))
                 LateBadge(
-                    text = "지각",
+                    text = context.getString(R.string.widget_late_short),
                     fontSizeSp = 9,
                     modifier = GlanceModifier.size(30.dp, 18.dp),
                 )
@@ -695,6 +701,7 @@ private fun WidgetUpdatedAt(
     fontSize: Int = 9,
     iconSize: Dp = 24.dp,
 ) {
+    val context = LocalContext.current
     Row(
         modifier = GlanceModifier.fillMaxWidth(),
         horizontalAlignment = Alignment.Horizontal.End,
@@ -709,7 +716,7 @@ private fun WidgetUpdatedAt(
         Spacer(modifier = GlanceModifier.width(4.dp))
         Image(
             provider = ImageProvider(R.drawable.refreshbtn),
-            contentDescription = "새로고침",
+            contentDescription = context.getString(R.string.common_refresh),
             contentScale = ContentScale.Fit,
             colorFilter = ColorFilter.tint(summarySecondaryText),
             modifier = GlanceModifier
@@ -727,6 +734,7 @@ private fun MoreTodosText(
     fontSize: Int,
     barHeight: Dp,
 ) {
+    val context = LocalContext.current
     if (count <= 0) {
         Spacer(modifier = GlanceModifier.height(height))
         return
@@ -747,7 +755,7 @@ private fun MoreTodosText(
         ) {}
         Spacer(modifier = GlanceModifier.width(8.dp))
         Text(
-            text = "그 외 ${count}건의 할 일이 있어요",
+            text = context.getString(R.string.widget_more_todos, count),
             maxLines = 1,
             style = SSUType.G_Caption2Medium
                 .copy(color = summarySecondaryText),
@@ -789,7 +797,7 @@ internal fun TodoData.toTodoSummaryUiState(
     val now = Instant.now()
     val sortedTodos = todos
         .sortedByDeadlineThenName()
-        .map { it.toTodoSummaryItem(now) }
+        .map { it.toTodoSummaryItem(context, now) }
 
     return TodoSummaryUiState(
         primary = sortedTodos.firstOrNull(),
@@ -801,7 +809,7 @@ internal fun TodoData.toTodoSummaryUiState(
     )
 }
 
-private fun TodoInfo.toTodoSummaryItem(now: Instant): TodoSummaryItem {
+private fun TodoInfo.toTodoSummaryItem(context: Context, now: Instant): TodoSummaryItem {
     val dueInstant = widgetDueInstant()
     val rawRemainingSeconds = ChronoUnit.SECONDS.between(now, dueInstant)
     val remainingSeconds = rawRemainingSeconds.coerceAtLeast(0L)
@@ -809,9 +817,9 @@ private fun TodoInfo.toTodoSummaryItem(now: Instant): TodoSummaryItem {
     val dDayText = "D-$remainingDays"
 
     return TodoSummaryItem(
-        subjectName = subject?.name.toWidgetSubjectName(),
-        title = title.takeIf { it.isNotBlank() } ?: type.kor,
-        type = type.kor,
+        subjectName = subject?.name.toWidgetSubjectName(context),
+        title = title.takeIf { it.isNotBlank() } ?: type.localizedLabel(context),
+        type = type.localizedLabel(context),
         countdownText = if (remainingSeconds <= SUMMARY_SECONDS_PER_DAY) {
             remainingSeconds.toSummaryCountdownText()
         } else {
@@ -825,13 +833,13 @@ private fun TodoInfo.toTodoSummaryItem(now: Instant): TodoSummaryItem {
     )
 }
 
-private fun String?.toWidgetSubjectName(): String =
+private fun String?.toWidgetSubjectName(context: Context): String =
     this
         ?.substringBefore(" (")
         ?.substringBefore("(")
         ?.trim()
         ?.takeIf { it.isNotBlank() }
-        ?: "과목명 없음"
+        ?: context.getString(R.string.widget_no_subject)
 
 private fun TodoInfo.widgetDueInstant(): Instant {
     return due_date.toTodoDeadlineInstant()
@@ -846,9 +854,9 @@ private fun Long.toSummaryCountdownText(): String {
 
 private fun String.toSummaryUpdatedAtText(context: Context): String {
     if (isBlank()) {
-        return "업데이트 전"
+        return context.getString(R.string.widget_updated_before)
     }
-    return "업데이트 ${getStringSimpleDate(context, this)} 기준"
+    return context.getString(R.string.widget_updated_at_base, getStringSimpleDate(context, this))
 }
 
 private fun summaryTextStyle(

@@ -14,6 +14,7 @@ import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
 import androidx.glance.Image
 import androidx.glance.ImageProvider
+import androidx.glance.LocalContext
 import androidx.glance.LocalSize
 import androidx.glance.action.ActionParameters
 import androidx.glance.action.actionParametersOf
@@ -53,6 +54,7 @@ import com.yourssu.ssutime.v2.screen.main.LmsRefreshRepository
 import com.yourssu.ssutime.v2.screen.main.RefreshSource
 import com.yourssu.ssutime.v2.screen.main.TodoRefreshResult
 import com.yourssu.ssutime.v2.screen.main.todoDataStore
+import com.yourssu.ssutime.v2.todo.localizedLabel
 import com.yourssu.ssutime.v2.todo.sortedByDeadlineThenName
 import com.yourssu.ssutime.v2.todo.toTodoDeadlineInstant
 import com.yourssu.ssutime.v2.ui.theme.SSUType
@@ -66,7 +68,6 @@ import kotlin.math.abs
 private const val TAG = "DDayWidget"
 private const val SECONDS_PER_DAY = 24 * 60 * 60L
 private const val WIDGET_REFRESH_TIMEOUT_MILLIS = 30_000L
-private const val EMPTY_DDAY_TEXT = "모든 할 일을 수행했어요!"
 private val WidgetRefreshSizeKey = ActionParameters.Key<String>("widget_size")
 
 private val widgetWhite = ColorProvider(day = Color.White, night = Color.White)
@@ -152,6 +153,7 @@ private fun DDayTodoContent(
     uiState: DDayWidgetUiState,
     backgroundResId: Int,
 ) {
+    val context = LocalContext.current
     Image(
         provider = ImageProvider(backgroundResId),
         contentDescription = null,
@@ -185,7 +187,7 @@ private fun DDayTodoContent(
     ) {
         Column {
             Text(
-                text = "마감까지",
+                text = context.getString(R.string.widget_deadline_until),
                 style = SSUType.G_Caption2Medium.copy(color = widgetTextColor),
             )
             if (uiState.isRemainingTimeText) {
@@ -222,7 +224,7 @@ private fun DDayTodoContent(
     ) {
         Image(
             provider = ImageProvider(R.drawable.ic_widget_refresh),
-            contentDescription = "새로고침",
+            contentDescription = context.getString(R.string.common_refresh),
             modifier = GlanceModifier
                 .size(34.dp)
                 .clickable(widgetRefreshAction(WidgetAnalyticsSize.Small)),
@@ -233,6 +235,7 @@ private fun DDayTodoContent(
 @Composable
 @GlanceComposable
 private fun DDayEmptyContent() {
+    val context = LocalContext.current
     Column(
         modifier = GlanceModifier
             .fillMaxSize()
@@ -248,7 +251,7 @@ private fun DDayEmptyContent() {
         )
         Spacer(modifier = GlanceModifier.height(7.dp))
         Text(
-            text = EMPTY_DDAY_TEXT,
+            text = context.getString(R.string.widget_empty_text),
             maxLines = 1,
             style = SSUType.G_Caption2SemiBold.copy(color = widgetTextColor),
         )
@@ -258,6 +261,7 @@ private fun DDayEmptyContent() {
 @Composable
 @GlanceComposable
 private fun DDayRefreshInProgressContent() {
+    val context = LocalContext.current
     Column(
         modifier = GlanceModifier
             .fillMaxSize()
@@ -272,7 +276,7 @@ private fun DDayRefreshInProgressContent() {
         )
         Spacer(modifier = GlanceModifier.height(8.dp))
         Text(
-            text = "새로고침 중",
+            text = context.getString(R.string.widget_refreshing_title),
             modifier = GlanceModifier.fillMaxWidth(),
             maxLines = 1,
             style = SSUType.G_Caption1SemiBold.copy(
@@ -282,7 +286,7 @@ private fun DDayRefreshInProgressContent() {
         )
         Spacer(modifier = GlanceModifier.height(4.dp))
         Text(
-            text = "LMS에서 할 일을 불러오고 있어요.",
+            text = context.getString(R.string.widget_refreshing_description),
             modifier = GlanceModifier.fillMaxWidth(),
             maxLines = 2,
             style = SSUType.G_Caption2Medium.copy(
@@ -296,6 +300,7 @@ private fun DDayRefreshInProgressContent() {
 @Composable
 @GlanceComposable
 private fun DDayRefreshErrorContent(message: String) {
+    val context = LocalContext.current
     Column(
         modifier = GlanceModifier
             .fillMaxSize()
@@ -305,7 +310,7 @@ private fun DDayRefreshErrorContent(message: String) {
         horizontalAlignment = Alignment.Horizontal.CenterHorizontally,
     ) {
         Text(
-            text = "새로고침 실패",
+            text = context.getString(R.string.widget_refresh_failed_title),
             modifier = GlanceModifier.fillMaxWidth(),
             maxLines = 1,
             style = SSUType.G_Caption1SemiBold.copy(
@@ -326,7 +331,7 @@ private fun DDayRefreshErrorContent(message: String) {
         Spacer(modifier = GlanceModifier.height(8.dp))
         Image(
             provider = ImageProvider(R.drawable.ic_widget_refresh),
-            contentDescription = "새로고침",
+            contentDescription = context.getString(R.string.common_refresh),
             modifier = GlanceModifier
                 .size(28.dp)
                 .clickable(widgetRefreshAction(WidgetAnalyticsSize.Small)),
@@ -364,9 +369,9 @@ private fun TodoData.toWidgetUiState(context: Context): DDayWidgetUiState {
 
     return DDayWidgetUiState(
         hasTodo = selectedTodo != null,
-        subjectName = selectedTodo?.subject?.name ?: "표시할 과제가 없어요",
-        type = selectedTodo?.type?.kor
-            ?: "앱에서 새로고침해 주세요",
+        subjectName = selectedTodo?.subject?.name ?: context.getString(R.string.widget_no_todo),
+        type = selectedTodo?.type?.localizedLabel(context)
+            ?: context.getString(R.string.widget_refresh_from_app),
         dDayText = selectedTodo.toDdayText(remainingDays, displayRemainingSeconds),
         isRemainingTimeText = isRemainingTimeText,
         updatedAtText = loadedAt.toUpdatedAtText(context),
@@ -411,9 +416,9 @@ private fun Long.toWidgetRemainingTimeText(): String {
 
 private fun String.toUpdatedAtText(context: Context): String {
     if (isBlank()) {
-        return "업데이트 전"
+        return context.getString(R.string.widget_updated_before)
     }
-    return "업데이트 ${getStringSimpleDate(context, this)}"
+    return context.getString(R.string.widget_updated_at, getStringSimpleDate(context, this))
 }
 
 private fun backgroundFor(
@@ -577,7 +582,7 @@ class DDayWidgetRefreshAction : ActionCallback, KoinComponent {
         }.onFailure { exception ->
             context.markWidgetRefreshFailed(
                 exception.message?.takeIf { it.isNotBlank() }
-                    ?: "위젯 새로고침을 실행하지 못했어요.",
+                    ?: context.getString(R.string.widget_refresh_failed_default),
             )
             Log.e(TAG, "위젯 새로고침을 실행하지 못했습니다.", exception)
         }

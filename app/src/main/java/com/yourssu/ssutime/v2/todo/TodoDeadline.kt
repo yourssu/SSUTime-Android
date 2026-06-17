@@ -49,7 +49,11 @@ internal fun remainingTimeTextUntilDeadline(
     val remainingSeconds = max(0, ChronoUnit.SECONDS.between(now, targetInstant))
 
     return if (remainingSeconds < 60) {
-        "${remainingSeconds}초"
+        if (Locale.getDefault().language == Locale.KOREAN.language) {
+            "${remainingSeconds}초"
+        } else {
+            "${remainingSeconds}s"
+        }
     } else {
         val hours = remainingSeconds / 3600
         val minutes = (remainingSeconds % 3600) / 60

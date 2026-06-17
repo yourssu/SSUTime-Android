@@ -72,6 +72,7 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -93,6 +94,8 @@ import com.yourssu.ssutime.v2.getRemainingTimeText
 import com.yourssu.ssutime.v2.getStringDate
 import com.yourssu.ssutime.v2.getStringDateWithTime
 import com.yourssu.ssutime.v2.getStringSimpleDate
+import com.yourssu.ssutime.v2.todo.localizedLabel
+import com.yourssu.ssutime.v2.todo.toTodoDeadlineInstant
 import com.yourssu.ssutime.v2.ui.theme.G100
 import com.yourssu.ssutime.v2.ui.theme.G400
 import com.yourssu.ssutime.v2.ui.theme.N100
@@ -109,6 +112,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.koin.compose.viewmodel.koinViewModel
 import java.time.Instant
+import java.time.temporal.ChronoUnit
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -334,7 +338,7 @@ fun MainScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "제출한 과제",
+                            text = stringResource(R.string.main_submitted_title),
                             style = SSUType.H3SemiBold
                         )
                         Spacer(Modifier.width(6.dp))
@@ -345,9 +349,9 @@ fun MainScreen(
                         Spacer(Modifier.weight(1f))
                         Text( //TODO
                             text = if(viewModel.loadedAt.value.isNotEmpty()) {
-                                "${getStringDate(viewModel.loadedAt.value)} 기준"
+                                stringResource(R.string.main_date_base, getStringDate(viewModel.loadedAt.value))
                             } else {
-                                "00월 00일 기준"
+                                stringResource(R.string.main_date_placeholder)
                             },
                             style = SSUType.Caption1SemiBold
                         )
@@ -375,7 +379,7 @@ fun MainScreen(
                             Text(
                                 modifier = Modifier
                                     .padding(vertical = 50.dp),
-                                text = "아직 제출한 과제가 없어요",
+                                text = stringResource(R.string.main_submitted_empty),
                                 style = SSUType.H3Medium
                             )
                         }
@@ -383,7 +387,7 @@ fun MainScreen(
 
                     SButton(
                         modifier = Modifier.fillMaxWidth(),
-                        labelText = "닫기",
+                        labelText = stringResource(R.string.common_close),
                         onClick = {
                             coroutine.launch {
                                 sheetState.hide()
@@ -433,13 +437,12 @@ fun NetworkErrorFragment(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
-            text = "인터넷 연결이 불안정해요",
+            text = stringResource(R.string.network_error_title),
             style = SSUType.H3Medium
         )
         Text(
             textAlign = TextAlign.Center,
-            text = "Wi-Fi나 셀룰러 데이터 연결 상태를\n" +
-                    "확인하고 다시 시도해주세요.",
+            text = stringResource(R.string.network_error_description),
             style = SSUType.Body2Regular
         )
 
@@ -447,7 +450,7 @@ fun NetworkErrorFragment(
 
         if(errorCause.isNotEmpty()) {
             Text(
-                text = "에러 : $errorCause",
+                text = stringResource(R.string.network_error_cause, errorCause),
                 style = SSUType.Body1Medium,
                 color = R400
             )
@@ -462,7 +465,7 @@ fun NetworkErrorFragment(
                 .padding(horizontal = 24.dp, vertical = 8.dp)
         ) {
             Text(
-                text = "재시도",
+                text = stringResource(R.string.common_retry),
                 style = SSUType.Label2Medium,
             )
         }
@@ -536,13 +539,13 @@ fun MainFragment(
                 ) {
                     Spacer(Modifier.height(32.dp))
                     Text(
-                        text = "완료하면 자동으로 사라져요",
+                        text = stringResource(R.string.main_completed_auto_disappear),
                         style = SSUType.H4SemiBold,
                         color = N500
                     )
                     Spacer(Modifier.height(5.dp))
                     Text(
-                        text = "${todos.size}건의 할 일이 있어요",
+                        text = stringResource(R.string.main_todo_count, todos.size),
                         style = SSUType.H1SemiBold
                     )
                     Spacer(Modifier.height(5.dp))
@@ -551,14 +554,9 @@ fun MainFragment(
                     ) {
                         Text(
                             text = if(loadedAt.isNotEmpty()) {
-                                "업데이트 ${
-                                    getStringSimpleDate(
-                                        context,
-                                        loadedAt
-                                    )
-                                } 기준"
+                                stringResource(R.string.main_updated_at, getStringSimpleDate(context, loadedAt))
                             } else {
-                                "업데이트 정보 없음"
+                                stringResource(R.string.main_update_info_none)
                             },
                             style = SSUType.Caption1Medium,
                             color = N500
@@ -571,7 +569,7 @@ fun MainFragment(
                                 .height(13.dp)
                                 .clickable { onClickRefresh() },
                             painter = painterResource(R.drawable.refreshbtn),
-                            contentDescription = "새로고침"
+                            contentDescription = stringResource(R.string.common_refresh)
                         )
                     }
 
@@ -625,14 +623,14 @@ fun WidgetHelperBadge(
         ) {
             Image(
                 painter = painterResource(R.drawable.checkbox),
-                contentDescription = "chkbox"
+                contentDescription = null
             )
 
             Spacer(Modifier.width(10.dp))
 
             Column {
                 Text(
-                    text = "슈타임 위젯 등록하기",
+                    text = stringResource(R.string.main_widget_badge_title),
                     style = SSUType.H4SemiBold,
                     color = R500
                 )
@@ -640,7 +638,7 @@ fun WidgetHelperBadge(
                 Spacer(Modifier.height(5.dp))
 
                 Text(
-                    text = "마감 D-day를 보여드려요",
+                    text = stringResource(R.string.main_widget_badge_description),
                     style = SSUType.Body2Medium,
                 )
             }
@@ -648,7 +646,7 @@ fun WidgetHelperBadge(
 
         Image(
             painter = painterResource(R.drawable.ic_close),
-            contentDescription = "close",
+            contentDescription = stringResource(R.string.common_close),
             modifier = Modifier.clickable { onClickDismiss() }
         )
     }
@@ -718,7 +716,7 @@ fun TodoList(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "가장 급한 과제예요!",
+                    text = stringResource(R.string.main_urgent_tasks_title),
                     style = SSUType.H3SemiBold
                 )
                 Spacer(Modifier.weight(1f))
@@ -727,7 +725,7 @@ fun TodoList(
                         .border(width = 1.dp, color = N300, shape = RoundedCornerShape(8.dp))
                         .clickable { onClickSubmitted() }
                         .padding(8.dp),
-                    text = "제출 완료 $submittedSize",
+                    text = stringResource(R.string.main_submitted_count, submittedSize),
                     style = SSUType.Caption1SemiBold,
                     color = N500,
                 )
@@ -748,7 +746,7 @@ fun TodoList(
                 Spacer(Modifier.height(28.dp))
 
                 Text(
-                    text = "여유가 있는 할 일 리스트",
+                    text = stringResource(R.string.main_relaxed_tasks_title),
                     style = SSUType.H5SemiBold
                 )
 
@@ -769,7 +767,7 @@ fun TodoList(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "여유가 있는 할 일 리스트",
+                    text = stringResource(R.string.main_relaxed_tasks_title),
                     style = SSUType.H5SemiBold
                 )
                 Spacer(Modifier.weight(1f))
@@ -778,7 +776,7 @@ fun TodoList(
                         .border(width = 1.dp, color = N300, shape = RoundedCornerShape(8.dp))
                         .clickable { onClickSubmitted() }
                         .padding(8.dp),
-                    text = "제출 완료 $submittedSize",
+                    text = stringResource(R.string.main_submitted_count, submittedSize),
                     style = SSUType.Caption1SemiBold,
                     color = N500,
                 )
@@ -806,7 +804,7 @@ fun TodoList(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "과제 목록",
+                    text = stringResource(R.string.main_todo_list_title),
                     style = SSUType.H3SemiBold
                 )
                 Spacer(Modifier.weight(1f))
@@ -815,7 +813,7 @@ fun TodoList(
                         .border(width = 1.dp, color = N300, shape = RoundedCornerShape(8.dp))
                         .clickable { onClickSubmitted() }
                         .padding(8.dp),
-                    text = "제출 완료 $submittedSize",
+                    text = stringResource(R.string.main_submitted_count, submittedSize),
                     style = SSUType.Caption1SemiBold,
                     color = N500,
                 )
@@ -830,11 +828,11 @@ fun TodoList(
             ) {
                 Image(
                     painter = painterResource(R.drawable.done),
-                    contentDescription = "Done All Assignment"
+                    contentDescription = null
                 )
                 Spacer(modifier = Modifier.height(12.dp))
                 Text(
-                    text = "제출할 과제가 없어요",
+                    text = stringResource(R.string.main_empty_todos),
                     style = SSUType.H3Medium,
                 )
             }
@@ -862,6 +860,10 @@ fun TodoItem(
     }
 
     val leftDay = getRemainingDays(todoInfo.due_date, now)
+    val remainingSeconds = ChronoUnit.SECONDS.between(
+        now,
+        todoInfo.due_date.toTodoDeadlineInstant(),
+    ).coerceAtLeast(0L)
 
 //    Log.d("리컴포지션", "${todoInfo.todoId} 리컴포지션 발생 (남은시간: ${
 //        getRemainingTimeText(
@@ -899,10 +901,10 @@ fun TodoItem(
                                 todoInfo.due_date,
                                 now
                             )
-                            if(txt == "0초") {
+                            if(remainingSeconds == 0L) {
                                 isLate = true
                                 R.drawable.late
-                            } else if(txt.contains("초"))
+                            } else if(remainingSeconds < 60L)
                                 R.drawable.seconds
                             else
                                 R.drawable.timer
@@ -950,7 +952,7 @@ fun TodoItem(
                                         }
                                     )
                                     .padding(horizontal = 6.dp, vertical = 3.dp),
-                                text = todoInfo.type.kor,
+                                text = todoInfo.type.localizedLabel(),
                                 style = SSUType.Caption1SemiBold,
                                 color = when(todoInfo.type) {
                                     TodoType.COMMONS -> Color(0xFFFF39D0)
@@ -964,13 +966,13 @@ fun TodoItem(
                             Text(
                                 modifier = Modifier.fillMaxWidth(0.9f),
                                 maxLines = 1,
-                                text = todoInfo.subject?.name ?: "알 수 없는 과목",
+                                text = todoInfo.subject?.name ?: stringResource(R.string.common_unknown_subject),
                                 style = SSUType.H5SemiBold,
                                 color = N500
                             )
                         } else {
                             Text(
-                                text = "지각 제출 가능해요",
+                                text = stringResource(R.string.main_late_submission_available),
                                 style = SSUType.H5SemiBold.copy(color = R500)
                             )
                         }
@@ -1003,7 +1005,7 @@ fun TodoItem(
                         expanded = nextExpanded
                     },
                     painter = if (!expanded) painterResource(R.drawable.icon_collapsed) else painterResource(R.drawable.icon_expand),
-                    contentDescription = "과제 정보 확장"
+                    contentDescription = stringResource(R.string.main_expand_task_content_description)
                 )
             }
 
@@ -1014,12 +1016,15 @@ fun TodoItem(
                             .padding(top = 12.dp)
                     ) {
                         Text(
-                            text = "마감기한",
+                            text = stringResource(R.string.main_deadline_label),
                             style = SSUType.H5SemiBold
                         )
                         Spacer(Modifier.weight(1f))
                         Text(
-                            text = getStringDateWithTime(todoInfo.due_date) + "까지",
+                            text = stringResource(
+                                R.string.main_due_until,
+                                getStringDateWithTime(todoInfo.due_date),
+                            ),
                             style = SSUType.H5SemiBold
                         )
                     }
@@ -1040,9 +1045,9 @@ private fun AiSummaryBlock(
     val estimatedDurationText = when (aiSummaryState) {
         is AiSummaryUiState.Success -> aiSummaryState.estimatedDurationMinutes
             ?.takeIf { it > 0 }
-            ?.let { "예상 소요시간 ${it}분" }
-            ?: "예상 소요시간 알 수 없음"
-        else -> "예상 소요시간 알 수 없음"
+            ?.let { stringResource(R.string.ai_estimated_duration, it) }
+            ?: stringResource(R.string.ai_estimated_duration_unknown)
+        else -> stringResource(R.string.ai_estimated_duration_unknown)
     }
 
     Column(
@@ -1063,7 +1068,7 @@ private fun AiSummaryBlock(
             )
             Spacer(Modifier.width(8.dp))
             Text(
-                text = "AI 요약",
+                text = stringResource(R.string.ai_summary_title),
                 style = SSUType.H5SemiBold,
                 color = Color.Black,
             )
@@ -1084,11 +1089,11 @@ private fun AiSummaryBlock(
             Text(
                 text = when (state) {
                     is AiSummaryUiState.Success -> state.summary
-                    AiSummaryUiState.Loading -> "AI 요약을 불러오는 중이에요."
-                    AiSummaryUiState.Analyzing -> "AI 분석을 진행 중이에요."
-                    AiSummaryUiState.Empty -> "AI 요약을 준비 중이에요."
-                    AiSummaryUiState.Error -> "AI 요약을 불러오지 못했어요."
-                    null -> "AI 요약을 불러오는 중이에요."
+                    AiSummaryUiState.Loading -> stringResource(R.string.ai_summary_loading)
+                    AiSummaryUiState.Analyzing -> stringResource(R.string.ai_summary_analyzing)
+                    AiSummaryUiState.Empty -> stringResource(R.string.ai_summary_empty)
+                    AiSummaryUiState.Error -> stringResource(R.string.ai_summary_error)
+                    null -> stringResource(R.string.ai_summary_loading)
                 },
                 style = SSUType.Body1Medium,
                 color = N500,
@@ -1122,7 +1127,7 @@ fun SubmittedItem(
                         Text(
                             modifier = Modifier.fillMaxWidth(0.8f),
                             maxLines = 1,
-                            text = todoInfo.subject?.name ?: "알 수 없는 과목",
+                            text = todoInfo.subject?.name ?: stringResource(R.string.common_unknown_subject),
                             style = SSUType.Caption1SemiBold
                         )
                     }
@@ -1143,7 +1148,7 @@ fun SubmittedItem(
                         .clip(RoundedCornerShape(6.dp))
                         .background(if (todoInfo.type == TodoType.SUBMITTED_LATE) R100 else G100)
                         .padding(6.dp),
-                    text = todoInfo.type.kor,
+                    text = todoInfo.type.localizedLabel(),
                     style = SSUType.Caption2Medium.copy(color = if(todoInfo.type == TodoType.SUBMITTED_LATE) R400 else G400)
                 )
             }
@@ -1166,7 +1171,7 @@ fun SSUTimeTopBar(
         Image(
             modifier = Modifier.height(18.dp),
             painter = painterResource(R.drawable.logo_red),
-            contentDescription = "App Icon"
+            contentDescription = stringResource(R.string.app_name)
         )
 
         Spacer(Modifier.weight(1f))
@@ -1177,7 +1182,7 @@ fun SSUTimeTopBar(
                 .clickable { onProfileClick() }
             ,
             painter = painterResource(R.drawable.ic_user),
-            contentDescription = "User"
+            contentDescription = stringResource(R.string.my_avatar_content_description)
         )
     }
 }
@@ -1215,7 +1220,11 @@ fun CallingAlertBody(
     onConfirmClick: (Long) -> Unit = {}
 ) {
 
-    val radioOptions = listOf("마감 당일 1시간 전", "마감 당일 2시간 전", "마감 당일 6시간 전")
+    val radioOptions = listOf(
+        stringResource(R.string.call_alert_option_1h),
+        stringResource(R.string.call_alert_option_2h),
+        stringResource(R.string.call_alert_option_6h),
+    )
     val (selectedOption, onOptionSelected) = remember { mutableStateOf("") }
 
     var enableCallingAlert = remember { mutableStateOf(false) }
@@ -1228,11 +1237,11 @@ fun CallingAlertBody(
     ) {
         Column {
             Text(
-                text = "전화 알림 설정만 하면 끝이에요!",
+                text = stringResource(R.string.call_alert_setup_title),
                 style = SSUType.H2SemiBold
             )
             Text(
-                text = "설정한 시간 기준으로 교수님한테 전화 알림을 받을 수 있어요\n(진짜 전화 연결이 되는 것은 아니에요!)",
+                text = stringResource(R.string.call_alert_setup_description),
                 style = SSUType.Body1Medium
             )
         }
@@ -1263,7 +1272,7 @@ fun CallingAlertBody(
             contentAlignment = Alignment.Center
         ) {
             SCheckBox(
-                labelText = "전화 알림 받지 않기",
+                labelText = stringResource(R.string.call_alert_disable),
                 checked = enableCallingAlert,
                 onCheckedChanged = {
                     if(it)
@@ -1274,7 +1283,7 @@ fun CallingAlertBody(
         }
         SButton(
             modifier = Modifier.fillMaxWidth(),
-            labelText = "확인",
+            labelText = stringResource(R.string.common_confirm),
             onClick = {
                 onConfirmClick(
                     if(enableCallingAlert.value)

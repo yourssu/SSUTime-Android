@@ -25,11 +25,11 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -104,7 +104,7 @@ fun NotificationFragment(
         verticalArrangement = Arrangement.Center
     ) {
         Text(
-            text = "과제 알림을 받으려면\n알림을 허용해주세요",
+            text = stringResource(R.string.onboarding_notification_title),
             style = SSUType.H2SemiBold,
             textAlign = TextAlign.Center
         )
@@ -112,7 +112,7 @@ fun NotificationFragment(
         Image(
             modifier = Modifier.fillMaxWidth(),
             painter = painterResource(R.drawable.noti_guide),
-            contentDescription = "알림 권한 요청 예시"
+            contentDescription = stringResource(R.string.onboarding_notification_image_content_description)
         )
     }
     Box(
@@ -124,7 +124,7 @@ fun NotificationFragment(
     ) {
         SButton(
             modifier = Modifier.fillMaxWidth(),
-            labelText = "다음",
+            labelText = stringResource(R.string.common_next),
             onClick = onClick
         )
     }
@@ -144,28 +144,28 @@ fun TipFragment(
         verticalArrangement = Arrangement.Center
     ) {
         Text(
-            text = "성적에 반영되는 할 일의\n마감일을 알려줄게요",
+            text = stringResource(R.string.onboarding_tip_title),
             style = SSUType.H2SemiBold,
             textAlign = TextAlign.Center
         )
         Spacer(Modifier.height(30.dp))
         TipItem(
             key = "1",
-            tipText = "LearningX [과제]"
+            tipText = stringResource(R.string.onboarding_tip_assignment)
         )
         Spacer(Modifier.height(12.dp))
         TipItem(
             key = "1",
-            tipText = "LearningX [퀴즈]"
+            tipText = stringResource(R.string.onboarding_tip_quiz)
         )
         Spacer(Modifier.height(12.dp))
         TipItem(
             key = "1",
-            tipText = "LearningX [강의]"
+            tipText = stringResource(R.string.onboarding_tip_lecture)
         )
         Spacer(Modifier.height(12.dp))
         TipItem(
-            tipText = "숭실 사이버 강의는 포함되지 않아요",
+            tipText = stringResource(R.string.onboarding_tip_cyber_excluded),
             isWarning = true
         )
     }
@@ -179,7 +179,7 @@ fun TipFragment(
     ) {
         SButton(
             modifier = Modifier.fillMaxWidth(),
-            labelText = "다음",
+            labelText = stringResource(R.string.common_next),
             onClick = onClick
         )
     }
@@ -240,11 +240,11 @@ fun TipItem(
 @Composable
 @Preview
 fun previewTipItem() {
-    TipItem(key = "1", tipText = "LearningX [과제]")
+    TipItem(key = "1", tipText = stringResource(R.string.onboarding_tip_assignment))
 }
 
 @Composable
 @Preview
 fun previewTipItemWarning() {
-    TipItem(tipText = "숭실 사이버대학 강의는 포함되지 않아요", isWarning = true)
+    TipItem(tipText = stringResource(R.string.onboarding_tip_cyber_excluded), isWarning = true)
 }

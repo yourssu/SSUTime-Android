@@ -21,6 +21,7 @@ import com.yourssu.ssutime.v2.screen.main.notificationStore
 import com.yourssu.ssutime.v2.screen.main.todoDataStore
 import com.yourssu.ssutime.v2.todo.TODO_DEADLINE_ZONE_ID
 import com.yourssu.ssutime.v2.todo.compareTodosByDeadlineThenName
+import com.yourssu.ssutime.v2.todo.localizedLabel
 import com.yourssu.ssutime.v2.todo.toTodoDeadlineInstantOrNull
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -46,8 +47,6 @@ private const val DEADLINE_REMINDER_KEY_SEPARATOR = "\u001F"
 private val D_DAY_NOTIFY_TIME: LocalTime = LocalTime.of(9, 0)
 private val UPCOMING_NOTIFY_TIME: LocalTime = LocalTime.of(18, 0)
 private val REFRESH_NOTIFICATION_WINDOW: Duration = Duration.ofMinutes(15)
-private val DEADLINE_DATE_TIME_FORMATTER: DateTimeFormatter =
-    DateTimeFormatter.ofPattern("MM월 dd일 HH:mm", Locale.KOREA)
 
 data class DeadlineReminderSendResult(
     val sentKeys: List<String> = emptyList(),
@@ -95,8 +94,8 @@ fun sendDeadlineNotificationsIfNeeded(
                 reminders.forEach { reminder ->
                     context.showDeadlineNotification(
                         key = reminder.key,
-                        title = buildDeadlineNotificationTitle(reminder.daysBefore),
-                        message = buildDdayDeadlineMessage(reminder.todo),
+                        title = context.buildDeadlineNotificationTitle(reminder.daysBefore),
+                        message = context.buildDdayDeadlineMessage(reminder.todo),
                         representativeTodo = reminder.todo,
                         dDay = reminder.daysBefore,
                         notificationTaskCount = 1,
@@ -112,11 +111,11 @@ fun sendDeadlineNotificationsIfNeeded(
                 val sortedReminders = reminders.sortedWith { left, right ->
                     compareTodosByDeadlineThenName(left.todo, right.todo)
                 }
-                val message = buildUpcomingDeadlineMessage(daysBefore, sortedReminders)
+                val message = context.buildUpcomingDeadlineMessage(daysBefore, sortedReminders)
                 val notificationKey = sortedReminders.joinToString(separator = "|") { it.key }
                 context.showDeadlineNotification(
                     key = notificationKey,
-                    title = buildDeadlineNotificationTitle(daysBefore),
+                    title = context.buildDeadlineNotificationTitle(daysBefore),
                     message = message,
                     representativeTodo = sortedReminders.first().todo,
                     dDay = daysBefore,
@@ -220,23 +219,27 @@ private fun TodoInfo.toPendingReminderCandidates(now: Instant): List<DeadlineRem
     }
 }
 
-private fun buildUpcomingDeadlineMessage(
+private fun Context.buildUpcomingDeadlineMessage(
     daysBefore: Int,
     reminders: List<DeadlineReminderCandidate>,
 ): String {
-    val firstItemName = reminders.first().todo.toNotificationItemName()
+    val firstItemName = reminders.first().todo.toNotificationItemName(this)
     return if (reminders.size == 1) {
-        "$firstItemName 마감 D-${daysBefore}이에요!"
+        getString(R.string.deadline_d_day_message, firstItemName, daysBefore)
     } else {
-        "$firstItemName 외 ${reminders.size - 1}건, 곧 마감이에요!"
+        getString(R.string.deadline_multiple_message, firstItemName, reminders.size - 1)
     }
 }
 
-private fun buildDdayDeadlineMessage(todo: TodoInfo): String =
-    "${todo.toNotificationItemName()} 오늘 마감이에요!"
+private fun Context.buildDdayDeadlineMessage(todo: TodoInfo): String =
+    getString(R.string.deadline_today_message, todo.toNotificationItemName(this))
 
-private fun buildDeadlineNotificationTitle(daysBefore: Int): String =
-    if (daysBefore == 0) "오늘 마감, 아직 안 했죠?" else "마감이 다가오고 있어요!"
+private fun Context.buildDeadlineNotificationTitle(daysBefore: Int): String =
+    if (daysBefore == 0) {
+        getString(R.string.deadline_title_today)
+    } else {
+        getString(R.string.deadline_title_upcoming)
+    }
 
 private fun Context.showDeadlineNotification(
     key: String,
@@ -268,13 +271,13 @@ private fun Context.showDeadlineNotification(
     NotificationManagerCompat.from(this).notify(notificationId, notification)
 }
 
-private fun TodoInfo.toNotificationItemName(): String =
+private fun TodoInfo.toNotificationItemName(context: Context): String =
     listOf(
         subject?.name.orEmpty(),
-        type.kor,
+        type.localizedLabel(context),
     ).filter { it.isNotBlank() }
         .joinToString(" ")
-        .ifBlank { title.ifBlank { "과제" } }
+        .ifBlank { title.ifBlank { context.getString(R.string.deadline_default_item) } }
 
 internal fun TodoInfo.deadlineReminderKey(daysBefore: Int): String {
     val digest = listOf(
@@ -409,8 +412,13 @@ private fun Context.mainActivityPendingIntent(
 
 internal fun String.toDeadlineText(): String = toTodoDeadlineInstantOrNull()
     ?.atZone(TODO_DEADLINE_ZONE_ID)
-    ?.format(DEADLINE_DATE_TIME_FORMATTER)
+    ?.format(deadlineDateTimeFormatter())
     .orEmpty()
+
+private fun deadlineDateTimeFormatter(): DateTimeFormatter = DateTimeFormatter.ofPattern(
+    if (Locale.getDefault().language == Locale.KOREAN.language) "MM월 dd일 HH:mm" else "MMM dd HH:mm",
+    Locale.getDefault(),
+)
 
 private data class DeadlineReminderCandidate(
     val todo: TodoInfo,

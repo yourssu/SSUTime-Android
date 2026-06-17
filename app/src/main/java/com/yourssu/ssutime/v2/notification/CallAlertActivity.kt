@@ -33,11 +33,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.yourssu.ssutime.v2.MainActivity
+import com.yourssu.ssutime.v2.R
 import com.yourssu.ssutime.v2.analytics.Analytics
 import com.yourssu.ssutime.v2.ui.theme.G400
 import com.yourssu.ssutime.v2.ui.theme.R500
@@ -58,7 +61,7 @@ class CallAlertActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         configureCallWindow()
-        val state = intent.toCallAlertState()
+        val state = intent.toCallAlertState(this)
         currentNotificationId = state.notificationId
         if (intent.action == ACTION_ANSWER_CALL) {
             answerCall(state)
@@ -71,7 +74,7 @@ class CallAlertActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        val state = intent.toCallAlertState()
+        val state = intent.toCallAlertState(this)
         currentNotificationId = state.notificationId
         if (intent.action == ACTION_ANSWER_CALL) {
             answerCall(state)
@@ -155,11 +158,13 @@ private data class CallAlertUiState(
     val dueDate: String,
 )
 
-private fun Intent.toCallAlertState(): CallAlertUiState =
+private fun Intent.toCallAlertState(context: android.content.Context): CallAlertUiState =
     CallAlertUiState(
         notificationId = getIntExtra(EXTRA_CALL_NOTIFICATION_ID, 0),
         todoId = getIntExtra(EXTRA_CALL_TODO_ID, 0),
-        title = getStringExtra(EXTRA_CALL_TITLE).orEmpty().ifBlank { "마감 직전 알림" },
+        title = getStringExtra(EXTRA_CALL_TITLE).orEmpty().ifBlank {
+            context.getString(R.string.call_alert_default_title)
+        },
         subjectName = getStringExtra(EXTRA_CALL_SUBJECT_NAME).orEmpty(),
         professor = getStringExtra(EXTRA_CALL_PROFESSOR).orEmpty(),
         todoType = getStringExtra(EXTRA_CALL_TODO_TYPE).orEmpty(),
@@ -172,6 +177,7 @@ private fun IncomingCallScreen(
     onDecline: () -> Unit,
     onAnswer: () -> Unit,
 ) {
+    val context = LocalContext.current
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -189,12 +195,12 @@ private fun IncomingCallScreen(
         Spacer(Modifier.height(54.dp))
         CallerAvatar(
             text = state.professor.ifBlank {
-                state.subjectName.ifBlank { "알림" }
+                state.subjectName.ifBlank { stringResource(R.string.call_alert_default_avatar) }
             }.take(2),
         )
         Spacer(Modifier.height(28.dp))
         Text(
-            text = state.professor.ifBlank { "마감 알림" },
+            text = state.professor.ifBlank { stringResource(R.string.call_alert_display_title) },
             style = SSUType.H1SemiBold,
             color = WHITE,
             textAlign = TextAlign.Center,
@@ -203,7 +209,7 @@ private fun IncomingCallScreen(
         )
         Spacer(Modifier.height(8.dp))
         Text(
-            text = state.subjectName.ifBlank { state.todoType.ifBlank { "LMS" } },
+            text = state.subjectName.ifBlank { state.todoType.ifBlank { stringResource(R.string.call_alert_default_subject) } },
             style = SSUType.H4Medium,
             color = Color(0xFFCED4DA),
             textAlign = TextAlign.Center,
@@ -225,7 +231,7 @@ private fun IncomingCallScreen(
                 overflow = TextOverflow.Ellipsis,
             )
             Text(
-                text = "마감 ${state.dueDate.toDisplayDueDate()}",
+                text = stringResource(R.string.call_alert_due_date, state.dueDate.toDisplayDueDate(context)),
                 style = SSUType.H5SemiBold,
                 color = Color(0xFFFFD6D5),
                 textAlign = TextAlign.Center,
@@ -241,25 +247,25 @@ private fun IncomingCallScreen(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             CallActionButton(
-                label = "거절",
+                label = stringResource(R.string.call_alert_decline),
                 color = R500,
                 onClick = onDecline,
             ) {
                 Icon(
                     imageVector = Icons.Outlined.Close,
-                    contentDescription = "거절",
+                    contentDescription = stringResource(R.string.call_alert_decline),
                     tint = WHITE,
                 )
             }
             Spacer(Modifier.weight(1f))
             CallActionButton(
-                label = "응답",
+                label = stringResource(R.string.call_alert_answer),
                 color = G400,
                 onClick = onAnswer,
             ) {
                 Icon(
                     imageVector = Icons.Filled.Check,
-                    contentDescription = "응답",
+                    contentDescription = stringResource(R.string.call_alert_answer),
                     tint = WHITE,
                 )
             }
@@ -302,7 +308,7 @@ private fun CallerAvatar(text: String) {
         contentAlignment = Alignment.Center,
     ) {
         Text(
-            text = text.ifBlank { "알림" },
+            text = text.ifBlank { stringResource(R.string.call_alert_default_avatar) },
             style = SSUType.H1SemiBold,
             color = WHITE,
             textAlign = TextAlign.Center,
@@ -339,13 +345,16 @@ private fun CallActionButton(
     }
 }
 
-private fun String.toDisplayDueDate(): String =
+private fun String.toDisplayDueDate(context: android.content.Context): String =
     if (isBlank()) {
-        "정보 없음"
+        context.getString(R.string.common_no_info)
     } else {
         runCatching {
-            DateTimeFormatter.ofPattern("M월 d일 HH:mm", Locale.KOREA)
+            DateTimeFormatter.ofPattern(callAlertDatePattern(), Locale.getDefault())
                 .withZone(ZoneId.of("Asia/Seoul"))
                 .format(Instant.parse(this))
         }.getOrElse { this }
     }
+
+private fun callAlertDatePattern(): String =
+    if (Locale.getDefault().language == Locale.KOREAN.language) "M월 d일 HH:mm" else "MMM d HH:mm"

@@ -59,6 +59,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -277,7 +278,7 @@ fun MyPageScreen(
             IconButton(onClick = onPressBack) {
                 Image(
                     imageVector = Icons.Outlined.ArrowBackIosNew,
-                    contentDescription = "back"
+                    contentDescription = stringResource(R.string.my_back_content_description)
                 )
             }
         }
@@ -291,11 +292,11 @@ fun MyPageScreen(
         ) {
             Image(
                 painter = painterResource(R.drawable.avatar_container),
-                contentDescription = "avatar",
+                contentDescription = stringResource(R.string.my_avatar_content_description),
                 modifier = Modifier.size(100.dp, 100.dp)
             )
             Text(
-                text = loginInfo?.user_name ?: "불러오는 중",
+                text = loginInfo?.user_name ?: stringResource(R.string.common_loading),
                 style = SSUType.H3SemiBold,
             )
             Text(
@@ -303,7 +304,7 @@ fun MyPageScreen(
                 style = SSUType.H4SemiBold,
             )
             Text(
-                text = termInfo,
+                text = termInfo.ifBlank { stringResource(R.string.my_no_term_info) },
                 style = SSUType.Caption1SemiBold,
             )
         }
@@ -319,7 +320,7 @@ fun MyPageScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "알림 설정",
+                    text = stringResource(R.string.my_notification_settings),
                     style = SSUType.H5SemiBold,
                     color = N500,
                 )
@@ -347,12 +348,12 @@ fun MyPageScreen(
                         },
                         painter = painterResource(R.drawable.ic_alret),
                         tint = N400,
-                        contentDescription = "About Notification"
+                        contentDescription = stringResource(R.string.my_notification_info_content_description)
                     )
                 }
             }
             ToggleOption(
-                text = "시스템 알림",
+                text = stringResource(R.string.my_system_alert),
                 value = alertData.allowSystemAlert,
                 onValueChanged = { enabled ->
                     if (enabled) {
@@ -364,7 +365,7 @@ fun MyPageScreen(
                 childOption = null
             )
             ToggleOption(
-                text = "전화 알림",
+                text = stringResource(R.string.my_call_alert),
                 value = alertData.allowCallAlert,
                 onValueChanged = { enabled ->
                     if (enabled) {
@@ -375,8 +376,11 @@ fun MyPageScreen(
                 },
                 childOption = {
                     ComboOption(
-                        text = "시간",
-                        value = "${(alertData.callingAlertThresholdMinutes / 60).toInt()}시간 전"
+                        text = stringResource(R.string.my_time),
+                        value = stringResource(
+                            R.string.my_hours_before,
+                            (alertData.callingAlertThresholdMinutes / 60).toInt(),
+                        )
                     ) { hours ->
                         val thresholdMinutes = hours * 60L
                         if (alertData.allowCallAlert) {
@@ -392,19 +396,19 @@ fun MyPageScreen(
             )
 
             OptionButton(
-                text = "문의하기"
+                text = stringResource(R.string.my_contact)
             ) {
                 viewModel.openKakaoTalkQA(context)
             }
 
             OptionButton(
-                text = "이용약관"
+                text = stringResource(R.string.my_terms)
             ) {
                 viewModel.openURL(context, "https://chlwhdtn03.github.io/ssutime/term.html")
             }
 
             OptionButton(
-                text = "개인정보처리방침"
+                text = stringResource(R.string.my_privacy_policy)
             ) {
                 viewModel.openURL(context, "https://chlwhdtn03.github.io/ssutime/privacy.html")
             }
@@ -414,7 +418,7 @@ fun MyPageScreen(
         Spacer(Modifier.height(28.dp))
 
         OptionButton(
-            text = "로그아웃"
+            text = stringResource(R.string.my_logout)
         ) {
             Analytics.logoutClick()
             showLogoutPopup = true
@@ -571,7 +575,7 @@ fun ComboOption(
                 Box {
                     Icon(
                         imageVector = Icons.Outlined.KeyboardArrowDown,
-                        contentDescription = "전화알림 시간 펼치기"
+                        contentDescription = stringResource(R.string.call_alert_time_dropdown_content_description)
                     )
                 }
             }
@@ -581,15 +585,15 @@ fun ComboOption(
                 onDismissRequest = { expanded = false }
             ) {
                 DropdownMenuItem(
-                    text = { Text("1시간 전", style = SSUType.Label3Medium, color = BLACK) },
+                    text = { Text(stringResource(R.string.call_alert_time_1h), style = SSUType.Label3Medium, color = BLACK) },
                     onClick = { onValueChanged(1); expanded = false }
                 )
                 DropdownMenuItem(
-                    text = { Text("2시간 전", style = SSUType.Label3Medium, color = BLACK) },
+                    text = { Text(stringResource(R.string.call_alert_time_2h), style = SSUType.Label3Medium, color = BLACK) },
                     onClick = { onValueChanged(2); expanded = false }
                 )
                 DropdownMenuItem(
-                    text = { Text("6시간 전", style = SSUType.Label3Medium, color = BLACK) },
+                    text = { Text(stringResource(R.string.call_alert_time_6h), style = SSUType.Label3Medium, color = BLACK) },
                     onClick = { onValueChanged(6); expanded = false }
                 )
             }
@@ -664,20 +668,20 @@ fun NotificationTooltip() {
             .padding(16.dp)
     ) {
         Text(
-            text = "시스템 푸시?",
+            text = stringResource(R.string.my_notification_tooltip_system_title),
             style = SSUType.Caption1SemiBold
         )
         Text(
-            text = "앱 푸시 메시지로 간편하게 알려드려요",
+            text = stringResource(R.string.my_notification_tooltip_system_desc),
             style = SSUType.Body2Medium
         )
         Spacer(Modifier.height(12.dp))
         Text(
-            text = "전화 알림?",
+            text = stringResource(R.string.my_notification_tooltip_call_title),
             style = SSUType.Caption1SemiBold
         )
         Text(
-            text = "과제 마감 당일 설정한 시간까지 완료하지 않았다면, 전화 알림을 드려요! * 진짜 전화는 아니니 놀라지 않으셔도 돼요!",
+            text = stringResource(R.string.my_notification_tooltip_call_desc),
             style = SSUType.Body2Medium
         )
     }
@@ -699,11 +703,11 @@ fun LogoutPopup(
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Text(
-            text = "로그아웃",
+            text = stringResource(R.string.my_logout),
             style = SSUType.H4SemiBold
         )
         Text(
-            text = "정말 로그아웃 하시겠어요?",
+            text = stringResource(R.string.my_logout_message),
             style = SSUType.Body1Medium
         )
         Row(
@@ -712,14 +716,14 @@ fun LogoutPopup(
             PopupButton(
                 modifier = Modifier
                     .weight(1f),
-                text = "취소",
+                text = stringResource(R.string.common_cancel),
                 color = N200,
                 onClick = onCancel
             )
             PopupButton(
                 modifier = Modifier
                     .weight(1f),
-                text = "확인",
+                text = stringResource(R.string.common_confirm),
                 color = R400,
                 textColor = WHITE,
                 onClick = onConfirm

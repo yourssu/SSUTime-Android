@@ -17,6 +17,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -38,14 +39,14 @@ fun WidgetHelperDialogContent(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = "위젯을 추가하면 볼 수 있어요",
+                text = stringResource(R.string.widget_helper_title),
                 style = SSUType.H2SemiBold
             )
 
             Spacer(Modifier.height(5.dp))
 
             Text(
-                text = "홈화면 길게 누르고 위젯 버튼 눌러서\n슈타임 위젯을 추가하세요",
+                text = stringResource(R.string.widget_helper_description),
                 style = SSUType.Body1Medium,
                 color = N500,
                 textAlign = TextAlign.Center
@@ -63,7 +64,7 @@ fun WidgetHelperDialogContent(
                 .padding(horizontal = 10.dp, vertical = 14.dp)
         ) {
             Text(
-                text = "위젯 미리보기",
+                text = stringResource(R.string.widget_helper_preview_title),
                 style = SSUType.H5SemiBold
             )
             Row(
@@ -76,7 +77,7 @@ fun WidgetHelperDialogContent(
                         .weight(1f)
                         .fillMaxHeight(),
                     painter = painterResource(R.drawable.widget1),
-                    contentDescription = "위젯 미리보기 1"
+                    contentDescription = stringResource(R.string.widget_helper_preview_content_description_1)
                 )
 
                 Image(
@@ -84,7 +85,7 @@ fun WidgetHelperDialogContent(
                         .weight(1.18f)
                         .fillMaxHeight(),
                     painter = painterResource(R.drawable.widget3),
-                    contentDescription = "위젯 미리보기 2"
+                    contentDescription = stringResource(R.string.widget_helper_preview_content_description_2)
                 )
 
                 Image(
@@ -92,7 +93,7 @@ fun WidgetHelperDialogContent(
                         .weight(1f)
                         .fillMaxHeight(),
                     painter = painterResource(R.drawable.widget2),
-                    contentDescription = "위젯 미리보기 3"
+                    contentDescription = stringResource(R.string.widget_helper_preview_content_description_3)
                 )
             }
         }
@@ -103,7 +104,7 @@ fun WidgetHelperDialogContent(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 20.dp),
-            labelText = "확인",
+            labelText = stringResource(R.string.common_confirm),
             onClick = { onDismissClick() }
         )
     }

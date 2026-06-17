@@ -208,11 +208,7 @@ fun getRemainingTimeText(targetTime: String, now: Instant = Instant.now()): Stri
 
 fun getStringDate(targetTime: String): String {
     val targetInstant = Instant.parse(targetTime)
-    val formatter = DateTimeFormatter.ofPattern(
-//        "yyyy년 MM월 dd일 HH:mm:ss",
-        "MM월 dd일",
-        Locale.KOREA
-    )
+    val formatter = DateTimeFormatter.ofPattern(monthDayPattern(), Locale.getDefault())
 
     return targetInstant
         .atZone(TODO_DEADLINE_ZONE_ID)
@@ -221,11 +217,7 @@ fun getStringDate(targetTime: String): String {
 
 fun getStringDateWithTime(targetTime: String): String {
     val targetInstant = Instant.parse(targetTime)
-    val formatter = DateTimeFormatter.ofPattern(
-//        "yyyy년 MM월 dd일 HH:mm:ss",
-        "MM월 dd일 HH:mm:ss",
-        Locale.KOREA
-    )
+    val formatter = DateTimeFormatter.ofPattern(monthDayTimePattern(), Locale.getDefault())
 
     return targetInstant
         .atZone(TODO_DEADLINE_ZONE_ID)
@@ -237,10 +229,16 @@ fun getStringSimpleDate(context: Context, targetTime: String): String {
     val targetInstant = Instant.parse(targetTime)
     val formatter = DateTimeFormatter.ofPattern(
         if (DateFormat.is24HourFormat(context)) "HH:mm" else "a hh:mm",
-        Locale.KOREA
+        Locale.getDefault()
     )
 
     return targetInstant
         .atZone(TODO_DEADLINE_ZONE_ID)
         .format(formatter)
 }
+
+private fun monthDayPattern(): String =
+    if (Locale.getDefault().language == Locale.KOREAN.language) "MM월 dd일" else "MMM dd"
+
+private fun monthDayTimePattern(): String =
+    if (Locale.getDefault().language == Locale.KOREAN.language) "MM월 dd일 HH:mm:ss" else "MMM dd HH:mm:ss"
