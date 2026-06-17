@@ -219,51 +219,23 @@ class LmsRefreshRepository(
         val terms = getLmsTerms()
         val currentTerm = terms.currentTermAt(Clock.System.now())
             ?: throw IllegalStateException("현재 진행 중인 학기 정보를 찾지 못했어요.")
-        val subjects = getLmsTodoList(
-            term = currentTerm,
-            loadingState = loadingState,
-            postHogDistinctId = Analytics.currentPostHogDistinctId()
-                ?: Analytics.postHogDistinctId(loginData.id),
-        )
+        val subjects = fetchSubjects(currentTerm, loginData, loadingState)
         val subjectInfos = buildSubjectInfos(subjects)
         val completedAt = Instant.now()
-        val summary = TodoRefreshSummary(
+        val summary = buildRefreshSummary(
             completedAt = completedAt,
-            semesterCount = terms.size,
-            subjectCount = subjects.size,
-            todoCount = subjects.sumOf { it.todoList.size },
-            submittedCount = subjects.sumOf { subject ->
-                subject.submissions.count { it.submitted_at?.isNotEmpty() == true }
-            },
+            terms = terms,
+            subjects = subjects,
         )
-        val completedAtText = completedAt.toString()
-        val todoData = mainRepository.updateTodoData { currentData ->
-            val refreshedTodoData = buildTodoData(
-                subjects = subjects,
-                subjectInfos = subjectInfos,
-                previousData = currentData,
-                loadedAt = completedAtText,
-            ).copy(
-                lastWidgetRefreshStatus = "",
-                lastWidgetRefreshErrorMessage = "",
-                lastWidgetRefreshFinishedAt = completedAtText,
-            )
+        val todoData = saveRefreshResult(
+            source = source,
+            requestId = requestId,
+            subjects = subjects,
+            subjectInfos = subjectInfos,
+            completedAt = completedAt,
+            summary = summary,
+        )
 
-            if (source == RefreshSource.FCM) {
-                refreshedTodoData.copy(
-                    lastBackgroundRefreshFinishedAt = completedAtText,
-                    lastBackgroundRefreshSuccessAt = completedAtText,
-                    lastBackgroundRefreshStatus = BACKGROUND_REFRESH_SUCCESS,
-                    lastBackgroundRefreshErrorMessage = "",
-                    lastBackgroundRefreshTodoCount = summary.todoCount,
-                    lastBackgroundRefreshSubmittedCount = summary.submittedCount,
-                    lastBackgroundRefreshSemesterCount = summary.semesterCount,
-                    lastBackgroundRefreshRequestId = requestId.orEmpty(),
-                )
-            } else {
-                refreshedTodoData
-            }
-        }
         reportRefreshResultToBackend(
             subjectInfos = subjectInfos,
             semester = currentTerm.toString(),
@@ -272,6 +244,81 @@ class LmsRefreshRepository(
         )
         TodoRefreshResult.Success(todoData, summary)
     }
+
+    @OptIn(ExperimentalTime::class)
+    private suspend fun fetchSubjects(
+        currentTerm: Term,
+        loginData: LoginData,
+        loadingState: (Float) -> Unit,
+    ): List<Subject> = getLmsTodoList(
+        term = currentTerm,
+        loadingState = loadingState,
+        postHogDistinctId = Analytics.currentPostHogDistinctId()
+            ?: Analytics.postHogDistinctId(loginData.id),
+    )
+
+    @OptIn(ExperimentalTime::class)
+    private fun buildRefreshSummary(
+        completedAt: Instant,
+        terms: List<Term>,
+        subjects: List<Subject>,
+    ): TodoRefreshSummary = TodoRefreshSummary(
+        completedAt = completedAt,
+        semesterCount = terms.size,
+        subjectCount = subjects.size,
+        todoCount = subjects.sumOf { it.todoList.size },
+        submittedCount = subjects.sumOf { subject ->
+            subject.submissions.count { it.submitted_at?.isNotEmpty() == true }
+        },
+    )
+
+    private suspend fun saveRefreshResult(
+        source: RefreshSource,
+        requestId: String?,
+        subjects: List<Subject>,
+        subjectInfos: List<SubjectInfo>,
+        completedAt: Instant,
+        summary: TodoRefreshSummary,
+    ): TodoData {
+        val completedAtText = completedAt.toString()
+
+        // 새로고침 중 갱신된 AI 캐시/알림 기록을 잃지 않도록 최신 DataStore 값에 병합한다.
+        return mainRepository.updateTodoData { currentData ->
+            val refreshedTodoData = buildTodoData(
+                subjects = subjects,
+                subjectInfos = subjectInfos,
+                previousData = currentData,
+                loadedAt = completedAtText,
+            ).withWidgetRefreshCompleted(completedAtText)
+
+            if (source == RefreshSource.FCM) {
+                refreshedTodoData.withBackgroundRefreshSucceeded(completedAtText, requestId, summary)
+            } else {
+                refreshedTodoData
+            }
+        }
+    }
+
+    private fun TodoData.withWidgetRefreshCompleted(finishedAt: String): TodoData = copy(
+        lastWidgetRefreshStatus = "",
+        lastWidgetRefreshErrorMessage = "",
+        lastWidgetRefreshFinishedAt = finishedAt,
+    )
+
+    private fun TodoData.withBackgroundRefreshSucceeded(
+        finishedAt: String,
+        requestId: String?,
+        summary: TodoRefreshSummary,
+    ): TodoData = copy(
+        lastBackgroundRefreshFinishedAt = finishedAt,
+        lastBackgroundRefreshSuccessAt = finishedAt,
+        lastBackgroundRefreshStatus = BACKGROUND_REFRESH_SUCCESS,
+        lastBackgroundRefreshErrorMessage = "",
+        lastBackgroundRefreshTodoCount = summary.todoCount,
+        lastBackgroundRefreshSubmittedCount = summary.submittedCount,
+        lastBackgroundRefreshSemesterCount = summary.semesterCount,
+        lastBackgroundRefreshRequestId = requestId.orEmpty(),
+    )
 
     private fun reportRefreshResultToBackend(
         subjectInfos: List<SubjectInfo>,
