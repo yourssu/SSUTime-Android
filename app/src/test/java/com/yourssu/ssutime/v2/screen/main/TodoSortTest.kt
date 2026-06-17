@@ -64,6 +64,71 @@ class TodoSortTest {
         )
     }
 
+    @Test
+    fun sortedForMainDisplay_tiesByKoreanNameTitleThenTodoId() {
+        val subjectSecond = todoInfo(
+            todoId = 4,
+            title = "가 과제",
+            subjectName = "나 과목",
+        )
+        val subjectFirstTitleSecond = todoInfo(
+            todoId = 3,
+            title = "나 과제",
+            subjectName = "가 과목",
+        )
+        val subjectFirstTitleFirstHigherId = todoInfo(
+            todoId = 2,
+            title = "가 과제",
+            subjectName = "가 과목",
+        )
+        val subjectFirstTitleFirstLowerId = todoInfo(
+            todoId = 1,
+            title = "가 과제",
+            subjectName = "가 과목",
+        )
+
+        val sorted = listOf(
+            subjectSecond,
+            subjectFirstTitleSecond,
+            subjectFirstTitleFirstHigherId,
+            subjectFirstTitleFirstLowerId,
+        ).sortedForMainDisplay()
+
+        assertEquals(
+            listOf(
+                subjectFirstTitleFirstLowerId,
+                subjectFirstTitleFirstHigherId,
+                subjectFirstTitleSecond,
+                subjectSecond,
+            ),
+            sorted,
+        )
+    }
+
+    @Test
+    fun sortedForMainDisplay_treatsDeadlineWithoutOffsetAsSeoulTime() {
+        val seoulLocalDeadline = todoInfo(
+            todoId = 1,
+            title = "서울 시간 과제",
+            dueDate = "2026-05-31T09:00:00",
+            subjectName = "하 과목",
+        )
+        val utcDeadline = todoInfo(
+            todoId = 2,
+            title = "UTC 과제",
+            dueDate = "2026-05-31T00:30:00Z",
+            subjectName = "가 과목",
+        )
+
+        val sorted = listOf(utcDeadline, seoulLocalDeadline)
+            .sortedForMainDisplay()
+
+        assertEquals(
+            listOf(seoulLocalDeadline, utcDeadline),
+            sorted,
+        )
+    }
+
     private fun todoInfo(
         todoId: Int,
         title: String,
