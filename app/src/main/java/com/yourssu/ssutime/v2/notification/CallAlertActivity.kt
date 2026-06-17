@@ -53,11 +53,13 @@ class CallAlertActivity : ComponentActivity() {
     private val notificationManager: NotificationManager by lazy {
         getSystemService(NotificationManager::class.java)
     }
+    private var currentNotificationId: Int? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         configureCallWindow()
         val state = intent.toCallAlertState()
+        currentNotificationId = state.notificationId
         if (intent.action == ACTION_ANSWER_CALL) {
             answerCall(state)
             return
@@ -70,6 +72,7 @@ class CallAlertActivity : ComponentActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         val state = intent.toCallAlertState()
+        currentNotificationId = state.notificationId
         if (intent.action == ACTION_ANSWER_CALL) {
             answerCall(state)
             return
@@ -97,6 +100,7 @@ class CallAlertActivity : ComponentActivity() {
         Analytics.callAlertReject()
         notificationManager.cancel(state.notificationId)
         CallAlertRinger.stop(this)
+        CallAlertSession.finish(state.notificationId)
         closeAppAfterDecline()
     }
 
@@ -104,6 +108,7 @@ class CallAlertActivity : ComponentActivity() {
         Analytics.callAlertAccept()
         notificationManager.cancel(state.notificationId)
         CallAlertRinger.stop(this)
+        CallAlertSession.finish(state.notificationId)
         startActivity(
             Intent(this, MainActivity::class.java).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
@@ -135,6 +140,7 @@ class CallAlertActivity : ComponentActivity() {
 
     override fun onDestroy() {
         CallAlertRinger.stop(this)
+        currentNotificationId?.let(CallAlertSession::finish)
         super.onDestroy()
     }
 }

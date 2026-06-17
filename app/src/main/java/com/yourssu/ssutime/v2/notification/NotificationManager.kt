@@ -16,13 +16,24 @@ import com.yourssu.data.TodoInfo
 import com.yourssu.ssutime.v2.CALL_CHANNEL_ID
 import com.yourssu.ssutime.v2.R
 import com.yourssu.ssutime.v2.analytics.Analytics
+import java.util.concurrent.atomic.AtomicLong
 
 fun showCallAlert(context: Context, todo: TodoInfo) {
     val notificationId = todo.todoId
+    if (!CallAlertSession.tryStart(notificationId)) {
+        Log.i(
+            TAG,
+            "이미 전화 알림이 표시 중이라 새 전화 알림을 건너뜁니다. " +
+                "activeNotificationId=${CallAlertSession.activeNotificationId()}, skippedNotificationId=$notificationId",
+        )
+        return
+    }
+
     Analytics.callAlertReceived(subjectName = todo.subject?.name.orEmpty())
     CallAlertRinger.start(context)
 
-    if (context.canPostNotifications()) {
+    val notificationShown = context.canPostNotifications()
+    if (notificationShown) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             showCallStyleAlert(context, todo, notificationId)
         } else {
@@ -30,7 +41,26 @@ fun showCallAlert(context: Context, todo: TodoInfo) {
         }
     }
 
-    context.startCallAlertActivity(todo, notificationId)
+    val activityStarted = context.startCallAlertActivity(todo, notificationId)
+    if (!notificationShown && !activityStarted) {
+        CallAlertRinger.stop(context)
+        CallAlertSession.finish(notificationId)
+    }
+}
+
+internal object CallAlertSession {
+    private const val NO_ACTIVE_NOTIFICATION_ID = Long.MIN_VALUE
+    private val activeNotificationId = AtomicLong(NO_ACTIVE_NOTIFICATION_ID)
+
+    fun tryStart(notificationId: Int): Boolean =
+        activeNotificationId.compareAndSet(NO_ACTIVE_NOTIFICATION_ID, notificationId.toLong())
+
+    fun finish(notificationId: Int) {
+        activeNotificationId.compareAndSet(notificationId.toLong(), NO_ACTIVE_NOTIFICATION_ID)
+    }
+
+    fun activeNotificationId(): Long? = activeNotificationId.get()
+        .takeIf { it != NO_ACTIVE_NOTIFICATION_ID }
 }
 
 @RequiresApi(Build.VERSION_CODES.S)
@@ -91,6 +121,7 @@ class CallNotificationActionReceiver : BroadcastReceiver() {
             val notificationId = intent.getIntExtra(EXTRA_CALL_NOTIFICATION_ID, 0)
             context.getSystemService(NotificationManager::class.java).cancel(notificationId)
             CallAlertRinger.stop(context)
+            CallAlertSession.finish(notificationId)
         }
     }
 }
@@ -147,7 +178,7 @@ internal fun Context.callAlertActivityIntent(notificationId: Int, todo: TodoInfo
         putExtra(EXTRA_CALL_PROFESSOR, todo.subject?.professor.orEmpty())
     }
 
-private fun Context.startCallAlertActivity(todo: TodoInfo, notificationId: Int) {
+private fun Context.startCallAlertActivity(todo: TodoInfo, notificationId: Int): Boolean =
     runCatching {
         startActivity(
             callAlertActivityIntent(notificationId, todo).apply {
@@ -157,8 +188,7 @@ private fun Context.startCallAlertActivity(todo: TodoInfo, notificationId: Int) 
         )
     }.onFailure { exception ->
         Log.w(TAG, "통화 알림 Activity 실행이 시스템에 의해 거부되거나 실패했습니다.", exception)
-    }
-}
+    }.isSuccess
 
 private fun TodoInfo.toCallAlertText(): String {
     val subjectName = subject?.name.orEmpty()
