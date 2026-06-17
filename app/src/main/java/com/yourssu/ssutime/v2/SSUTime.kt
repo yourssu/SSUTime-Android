@@ -26,6 +26,9 @@ import com.yourssu.ssutime.v2.screen.onboarding.OnBoardingViewModel
 import com.yourssu.ssutime.v2.screen.onboarding.onBoardingDataStore
 import com.yourssu.ssutime.v2.screen.splash.SplashViewModel
 import com.yourssu.ssutime.v2.security.LoginDataCrypto
+import com.yourssu.ssutime.v2.todo.TODO_DEADLINE_ZONE_ID
+import com.yourssu.ssutime.v2.todo.remainingDaysUntilDeadline
+import com.yourssu.ssutime.v2.todo.remainingTimeTextUntilDeadline
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 import org.koin.android.ext.koin.androidContext
@@ -36,14 +39,8 @@ import java.io.InputStream
 import java.io.OutputStream
 import java.security.GeneralSecurityException
 import java.time.Instant
-import java.time.LocalDateTime
-import java.time.OffsetDateTime
-import java.time.ZoneId
-import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
-import java.time.temporal.ChronoUnit
 import java.util.Locale
-import kotlin.math.max
 
 const val CHANNEL_ID = "ASSIGNMENT"
 const val CALL_CHANNEL_ID = "ASSIGNMENT_CALL_V2"
@@ -202,47 +199,15 @@ private object LoginDataEncryptionMigration : DataMigration<LoginData> {
 }
 
 fun getRemainingDays(targetTime: String, now: Instant = Instant.now()): Long {
-    val targetInstant = parseTargetInstant(targetTime)
-    return max(0, ChronoUnit.DAYS.between(now, targetInstant))
+    return remainingDaysUntilDeadline(targetTime, now)
 }
 
 fun getRemainingTimeText(targetTime: String, now: Instant = Instant.now()): String {
-    val targetInstant = parseTargetInstant(targetTime)
-
-    val remainingSeconds = max(
-        0,
-        ChronoUnit.SECONDS.between(now, targetInstant)
-    )
-
-    return if (remainingSeconds < 60) {
-        "${remainingSeconds}초"
-    } else {
-        val hours = remainingSeconds / 3600
-        val minutes = (remainingSeconds % 3600) / 60
-
-        "%02d:%02d".format(hours, minutes)
-    }
-}
-
-private fun parseTargetInstant(targetTime: String): Instant {
-    val parsedTime = DateTimeFormatter.ISO_DATE_TIME.parseBest(
-        targetTime,
-        ZonedDateTime::from,
-        OffsetDateTime::from,
-        LocalDateTime::from,
-    )
-
-    return when (parsedTime) {
-        is ZonedDateTime -> parsedTime.toInstant()
-        is OffsetDateTime -> parsedTime.toInstant()
-        is LocalDateTime -> parsedTime.atZone(ZoneId.of("Asia/Seoul")).toInstant()
-        else -> error("Unsupported target time format: $targetTime")
-    }
+    return remainingTimeTextUntilDeadline(targetTime, now)
 }
 
 fun getStringDate(targetTime: String): String {
     val targetInstant = Instant.parse(targetTime)
-    val zoneId = ZoneId.of("Asia/Seoul")
     val formatter = DateTimeFormatter.ofPattern(
 //        "yyyy년 MM월 dd일 HH:mm:ss",
         "MM월 dd일",
@@ -250,13 +215,12 @@ fun getStringDate(targetTime: String): String {
     )
 
     return targetInstant
-        .atZone(zoneId)
+        .atZone(TODO_DEADLINE_ZONE_ID)
         .format(formatter)
 }
 
 fun getStringDateWithTime(targetTime: String): String {
     val targetInstant = Instant.parse(targetTime)
-    val zoneId = ZoneId.of("Asia/Seoul")
     val formatter = DateTimeFormatter.ofPattern(
 //        "yyyy년 MM월 dd일 HH:mm:ss",
         "MM월 dd일 HH:mm:ss",
@@ -264,20 +228,19 @@ fun getStringDateWithTime(targetTime: String): String {
     )
 
     return targetInstant
-        .atZone(zoneId)
+        .atZone(TODO_DEADLINE_ZONE_ID)
         .format(formatter)
 }
 
 
 fun getStringSimpleDate(context: Context, targetTime: String): String {
     val targetInstant = Instant.parse(targetTime)
-    val zoneId = ZoneId.of("Asia/Seoul")
     val formatter = DateTimeFormatter.ofPattern(
         if (DateFormat.is24HourFormat(context)) "HH:mm" else "a hh:mm",
         Locale.KOREA
     )
 
     return targetInstant
-        .atZone(zoneId)
+        .atZone(TODO_DEADLINE_ZONE_ID)
         .format(formatter)
 }

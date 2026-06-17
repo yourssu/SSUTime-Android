@@ -165,6 +165,7 @@ class MainViewModel(
         forceLogin: Boolean = false,
         allowRefresh: Boolean = true,
         showBlockingLoading: Boolean = true,
+        source: RefreshSource = RefreshSource.APP_START,
     ): TodoData? {
         if(isLoading.value) {
             return null
@@ -188,7 +189,7 @@ class MainViewModel(
             } else {
                 showLoading.value = showBlockingLoading
                 when (val refreshResult = lmsRefreshRepository.refreshTodos(
-                    source = RefreshSource.MANUAL,
+                    source = source,
                     forceLogin = forceLogin,
                     loadingState = {
                         viewModelScope.launch {

@@ -40,6 +40,30 @@ class TodoSortTest {
         )
     }
 
+    @Test
+    fun sortedForMainDisplay_sortsByParsedDeadlineBeforeKoreanName() {
+        val earlierDeadline = todoInfo(
+            todoId = 1,
+            title = "늦은 가나다 과목",
+            dueDate = "2026-05-31T23:00:00+09:00",
+            subjectName = "하 과목",
+        )
+        val laterDeadline = todoInfo(
+            todoId = 2,
+            title = "이른 가나다 과목",
+            dueDate = "2026-05-31T15:00:00Z",
+            subjectName = "가 과목",
+        )
+
+        val sorted = listOf(laterDeadline, earlierDeadline)
+            .sortedForMainDisplay()
+
+        assertEquals(
+            listOf(earlierDeadline, laterDeadline),
+            sorted,
+        )
+    }
+
     private fun todoInfo(
         todoId: Int,
         title: String,

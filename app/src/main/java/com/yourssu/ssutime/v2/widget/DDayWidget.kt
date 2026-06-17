@@ -53,16 +53,13 @@ import com.yourssu.ssutime.v2.screen.main.LmsRefreshRepository
 import com.yourssu.ssutime.v2.screen.main.RefreshSource
 import com.yourssu.ssutime.v2.screen.main.TodoRefreshResult
 import com.yourssu.ssutime.v2.screen.main.todoDataStore
+import com.yourssu.ssutime.v2.todo.sortedByDeadlineThenName
+import com.yourssu.ssutime.v2.todo.toTodoDeadlineInstant
 import com.yourssu.ssutime.v2.ui.theme.SSUType
 import kotlinx.coroutines.flow.first
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 import java.time.Instant
-import java.time.LocalDateTime
-import java.time.OffsetDateTime
-import java.time.ZoneId
-import java.time.ZonedDateTime
-import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
 import kotlin.math.abs
 
@@ -354,7 +351,7 @@ private fun TodoData.toWidgetUiState(context: Context): DDayWidgetUiState {
     val selectedTodo = todos.selectMostUrgentTodo()
     val now = Instant.now()
     val targetInstant = selectedTodo?.let {
-        parseWidgetTargetInstant(it.due_date)
+        it.due_date.toTodoDeadlineInstant()
     }
     val remainingDays = selectedTodo?.let {
         getRemainingDays(it.due_date, now)
@@ -392,10 +389,7 @@ private fun TodoData.toWidgetUiState(context: Context): DDayWidgetUiState {
 }
 
 private fun List<TodoInfo>.selectMostUrgentTodo(): TodoInfo? =
-    minWithOrNull(
-        compareBy<TodoInfo> { getRemainingDays(it.due_date) }
-            .thenBy { it.due_date },
-    )
+    sortedByDeadlineThenName().firstOrNull()
 
 private fun TodoInfo?.toDdayText(remainingDays: Long, remainingSeconds: Long): String {
     if (this == null) {
@@ -413,22 +407,6 @@ private fun Long.toWidgetRemainingTimeText(): String {
     val minutes = (this % 3600) / 60
     val seconds = this % 60
     return "%02d:%02d:%02d".format(hours, minutes, seconds)
-}
-
-private fun parseWidgetTargetInstant(targetTime: String): Instant {
-    val parsedTime = DateTimeFormatter.ISO_DATE_TIME.parseBest(
-        targetTime,
-        ZonedDateTime::from,
-        OffsetDateTime::from,
-        LocalDateTime::from,
-    )
-
-    return when (parsedTime) {
-        is ZonedDateTime -> parsedTime.toInstant()
-        is OffsetDateTime -> parsedTime.toInstant()
-        is LocalDateTime -> parsedTime.atZone(ZoneId.of("Asia/Seoul")).toInstant()
-        else -> error("Unsupported target time format: $targetTime")
-    }
 }
 
 private fun String.toUpdatedAtText(context: Context): String {
@@ -579,7 +557,7 @@ class DDayWidgetRefreshAction : ActionCallback, KoinComponent {
 
         runCatching {
             when (val result = lmsRefreshRepository.refreshTodos(
-                source = RefreshSource.MANUAL,
+                source = RefreshSource.WIDGET,
                 timeoutMillis = WIDGET_REFRESH_TIMEOUT_MILLIS,
                 forceLogin = true,
             )) {

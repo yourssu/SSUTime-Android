@@ -19,6 +19,9 @@ import com.yourssu.ssutime.v2.R
 import com.yourssu.ssutime.v2.analytics.Analytics
 import com.yourssu.ssutime.v2.screen.main.notificationStore
 import com.yourssu.ssutime.v2.screen.main.todoDataStore
+import com.yourssu.ssutime.v2.todo.TODO_DEADLINE_ZONE_ID
+import com.yourssu.ssutime.v2.todo.compareTodosByDeadlineThenName
+import com.yourssu.ssutime.v2.todo.toTodoDeadlineInstantOrNull
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -27,10 +30,7 @@ import kotlinx.coroutines.launch
 import java.security.MessageDigest
 import java.time.Duration
 import java.time.Instant
-import java.time.LocalDateTime
 import java.time.LocalTime
-import java.time.OffsetDateTime
-import java.time.ZoneId
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -43,7 +43,6 @@ private const val MAX_SENT_DEADLINE_REMINDER_KEYS = 500
 private const val DEADLINE_REMINDER_KEY_VERSION = "deadline:v2"
 private const val DEADLINE_REMINDER_KEY_SEPARATOR = "\u001F"
 
-private val DEADLINE_ZONE_ID: ZoneId = ZoneId.of("Asia/Seoul")
 private val D_DAY_NOTIFY_TIME: LocalTime = LocalTime.of(9, 0)
 private val UPCOMING_NOTIFY_TIME: LocalTime = LocalTime.of(18, 0)
 private val REFRESH_NOTIFICATION_WINDOW: Duration = Duration.ofMinutes(15)
@@ -110,7 +109,9 @@ fun sendDeadlineNotificationsIfNeeded(
                     sentKeys += reminder.key
                 }
             } else {
-                val sortedReminders = reminders.sortedBy { it.todo.due_date }
+                val sortedReminders = reminders.sortedWith { left, right ->
+                    compareTodosByDeadlineThenName(left.todo, right.todo)
+                }
                 val message = buildUpcomingDeadlineMessage(daysBefore, sortedReminders)
                 val notificationKey = sortedReminders.joinToString(separator = "|") { it.key }
                 context.showDeadlineNotification(
@@ -195,15 +196,15 @@ internal fun buildDeadlineNotificationBigText(
 }
 
 private fun TodoInfo.toPendingReminderCandidates(now: Instant): List<DeadlineReminderCandidate> {
-    val dueInstant = due_date.toInstantOrNull() ?: return emptyList()
-    val dueDate = dueInstant.atZone(DEADLINE_ZONE_ID).toLocalDate()
+    val dueInstant = due_date.toTodoDeadlineInstantOrNull() ?: return emptyList()
+    val dueDate = dueInstant.atZone(TODO_DEADLINE_ZONE_ID).toLocalDate()
 
     return listOf(3, 2, 1, 0).mapNotNull { daysBefore ->
         val notifyTime = if (daysBefore == 0) D_DAY_NOTIFY_TIME else UPCOMING_NOTIFY_TIME
         val notifyAt = dueDate
             .minusDays(daysBefore.toLong())
             .atTime(notifyTime)
-            .atZone(DEADLINE_ZONE_ID)
+            .atZone(TODO_DEADLINE_ZONE_ID)
             .toInstant()
 
         if (!now.isInRefreshWindowAfter(notifyAt)) {
@@ -325,7 +326,7 @@ private fun scheduleDeadlineReminderAlarm(
 ) {
     val alarmManager = context.getSystemService(AlarmManager::class.java)
     val triggerAtMillis = nextDeadlineReminderTriggerTime(
-        now = ZonedDateTime.now(DEADLINE_ZONE_ID),
+        now = ZonedDateTime.now(TODO_DEADLINE_ZONE_ID),
         triggerTime = triggerTime,
     ).toInstant().toEpochMilli()
     val pendingIntent = deadlineReminderPendingIntent(
@@ -353,10 +354,10 @@ internal fun nextDeadlineReminderTriggerTime(
     now: ZonedDateTime,
     triggerTime: LocalTime,
 ): ZonedDateTime {
-    val seoulNow = now.withZoneSameInstant(DEADLINE_ZONE_ID)
+    val seoulNow = now.withZoneSameInstant(TODO_DEADLINE_ZONE_ID)
     val todayTrigger = seoulNow.toLocalDate()
         .atTime(triggerTime)
-        .atZone(DEADLINE_ZONE_ID)
+        .atZone(TODO_DEADLINE_ZONE_ID)
     return if (todayTrigger.isAfter(seoulNow)) todayTrigger else todayTrigger.plusDays(1)
 }
 
@@ -406,24 +407,8 @@ private fun Context.mainActivityPendingIntent(
     PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
 )
 
-private fun String.toInstantOrNull(): Instant? = runCatching {
-    val parsedTime = DateTimeFormatter.ISO_DATE_TIME.parseBest(
-        this,
-        ZonedDateTime::from,
-        OffsetDateTime::from,
-        LocalDateTime::from,
-    )
-
-    when (parsedTime) {
-        is ZonedDateTime -> parsedTime.toInstant()
-        is OffsetDateTime -> parsedTime.toInstant()
-        is LocalDateTime -> parsedTime.atZone(DEADLINE_ZONE_ID).toInstant()
-        else -> error("Unsupported deadline time format: $this")
-    }
-}.getOrNull()
-
-internal fun String.toDeadlineText(): String = toInstantOrNull()
-    ?.atZone(DEADLINE_ZONE_ID)
+internal fun String.toDeadlineText(): String = toTodoDeadlineInstantOrNull()
+    ?.atZone(TODO_DEADLINE_ZONE_ID)
     ?.format(DEADLINE_DATE_TIME_FORMATTER)
     .orEmpty()
 

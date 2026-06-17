@@ -53,14 +53,11 @@ import com.yourssu.ssutime.v2.MainActivity
 import com.yourssu.ssutime.v2.R
 import com.yourssu.ssutime.v2.getStringSimpleDate
 import com.yourssu.ssutime.v2.screen.main.todoDataStore
+import com.yourssu.ssutime.v2.todo.sortedByDeadlineThenName
+import com.yourssu.ssutime.v2.todo.toTodoDeadlineInstant
 import com.yourssu.ssutime.v2.ui.theme.SSUType
 import kotlinx.coroutines.flow.first
 import java.time.Instant
-import java.time.LocalDateTime
-import java.time.OffsetDateTime
-import java.time.ZoneId
-import java.time.ZonedDateTime
-import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
 import java.util.Locale
 
@@ -791,7 +788,7 @@ internal fun TodoData.toTodoSummaryUiState(
 ): TodoSummaryUiState {
     val now = Instant.now()
     val sortedTodos = todos
-        .sortedBy { it.widgetDueInstant() }
+        .sortedByDeadlineThenName()
         .map { it.toTodoSummaryItem(now) }
 
     return TodoSummaryUiState(
@@ -837,19 +834,7 @@ private fun String?.toWidgetSubjectName(): String =
         ?: "과목명 없음"
 
 private fun TodoInfo.widgetDueInstant(): Instant {
-    val parsedTime = DateTimeFormatter.ISO_DATE_TIME.parseBest(
-        due_date,
-        ZonedDateTime::from,
-        OffsetDateTime::from,
-        LocalDateTime::from,
-    )
-
-    return when (parsedTime) {
-        is ZonedDateTime -> parsedTime.toInstant()
-        is OffsetDateTime -> parsedTime.toInstant()
-        is LocalDateTime -> parsedTime.atZone(ZoneId.of("Asia/Seoul")).toInstant()
-        else -> error("Unsupported target time format: $due_date")
-    }
+    return due_date.toTodoDeadlineInstant()
 }
 
 private fun Long.toSummaryCountdownText(): String {

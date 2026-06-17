@@ -18,6 +18,7 @@ import com.yourssu.ssutime.v2.lms.getLmsTodoList
 import com.yourssu.ssutime.v2.lms.loginLms
 import com.yourssu.ssutime.v2.network.ApiRepository
 import com.yourssu.ssutime.v2.screen.login.LoginRepository
+import com.yourssu.ssutime.v2.todo.sortedByDeadlineThenName
 import io.github.chlwhdtn03.LmsApi
 import io.github.chlwhdtn03.data.Lms.Subject
 import io.github.chlwhdtn03.data.Lms.Submission
@@ -64,7 +65,7 @@ class LmsRefreshRepository(
 
     suspend fun getLmsSessionRequest(): LmsSessionRequest {
         val loginData = loginRepository.getLoginData()
-        loginIfNeeded(RefreshSource.MANUAL, loginData, forceLogin = false)
+        loginIfNeeded(RefreshSource.FOREGROUND, loginData, forceLogin = false)
         val lmsSession = getLmsCookies()
 
         return LmsSessionRequest(
@@ -150,7 +151,7 @@ class LmsRefreshRepository(
         onboardingInitialRefreshJob = appRefreshScope.launch {
             _onboardingInitialRefreshInProgress.value = true
             try {
-                when (val result = refreshTodos(source = RefreshSource.MANUAL)) {
+                when (val result = refreshTodos(source = RefreshSource.ONBOARDING)) {
                     is TodoRefreshResult.Success -> {
                         Log.i(TAG, "온보딩 LMS 초기 새로고침이 완료되었습니다.")
                     }
@@ -468,7 +469,7 @@ class LmsRefreshRepository(
                     description = todo.description.orEmpty(),
                 )
             }
-        }.sortedBy { it.due_date }
+        }.sortedByDeadlineThenName()
 
         val reportedSubmitted = subjects.flatMap { subject ->
             Log.i(
@@ -490,8 +491,7 @@ class LmsRefreshRepository(
                     )
                 }
         }
-        val newSubmitted = reportedSubmitted
-            .sortedByDescending { it.due_date }
+        val newSubmitted = reportedSubmitted.sortedByDeadlineThenName()
 
         return previousData.copy(
             todos = newTodos,
@@ -537,7 +537,12 @@ class LmsRefreshRepository(
 }
 
 enum class RefreshSource {
-    MANUAL,
+    FOREGROUND,
+    APP_START,
+    PULL_TO_REFRESH,
+    REFRESH_BUTTON,
+    WIDGET,
+    ONBOARDING,
     FCM,
 }
 

@@ -149,6 +149,7 @@ fun MainScreen(
                 forceLogin = forceInitialLmsRefresh,
                 allowRefresh = !skipInitialLmsRefresh,
                 showBlockingLoading = !skipInitialLmsRefresh,
+                source = RefreshSource.APP_START,
             )
             if (!viewModel.showNetworkError.value && todoData != null) {
                 Analytics.viewHome(
@@ -173,6 +174,7 @@ fun MainScreen(
     )
     fun refreshTodos(
         showBlockingLoading: Boolean,
+        source: RefreshSource,
         captureRefreshEvent: () -> Unit,
     ) {
         captureRefreshEvent()
@@ -181,6 +183,7 @@ fun MainScreen(
                 viewModel.loadTodos(
                     forceRefresh = true,
                     showBlockingLoading = showBlockingLoading,
+                    source = source,
                 )
             } else {
                 viewModel.showNetworkErrorScreen()
@@ -208,7 +211,10 @@ fun MainScreen(
                     Analytics.refreshClick()
                     coroutine.launch {
                         if (context.isNetworkConnected()) {
-                            viewModel.loadTodos(forceRefresh = true)
+                            viewModel.loadTodos(
+                                forceRefresh = true,
+                                source = RefreshSource.REFRESH_BUTTON,
+                            )
                         } else {
                             viewModel.showNetworkErrorScreen()
                         }
@@ -229,12 +235,14 @@ fun MainScreen(
                 onRefresh = {
                     refreshTodos(
                         showBlockingLoading = false,
+                        source = RefreshSource.PULL_TO_REFRESH,
                         captureRefreshEvent = Analytics::pullToRefresh,
                     )
                 },
                 onClickRefresh = {
                     refreshTodos(
                         showBlockingLoading = true,
+                        source = RefreshSource.REFRESH_BUTTON,
                         captureRefreshEvent = Analytics::refreshClick,
                     )
                 },
