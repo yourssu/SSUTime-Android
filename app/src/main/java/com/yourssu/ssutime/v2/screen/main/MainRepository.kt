@@ -28,10 +28,11 @@ class MainRepository(
     val todoData: Flow<TodoData> = todoDataStore.data
     val alertData: Flow<AlertData> = alertDataStore.data
 
-    suspend fun updateTodoData(todoData: TodoData) {
-        todoDataStore.updateData { todoData }
+    suspend fun updateTodoData(todoData: TodoData): TodoData {
+        val updatedTodoData = todoDataStore.updateData { todoData }
         updateAllTodoWidgets(context)
-        updateDeadlineNotifications(todoData)
+        updateDeadlineNotifications(updatedTodoData)
+        return updatedTodoData
     }
 
     suspend fun updateAlertData(alertData: AlertData) {
@@ -53,10 +54,11 @@ class MainRepository(
         )
     }
 
-    suspend fun updateTodoData(transform: (TodoData) -> TodoData) {
+    suspend fun updateTodoData(transform: (TodoData) -> TodoData): TodoData {
         val updatedTodoData = todoDataStore.updateData(transform)
         updateAllTodoWidgets(context)
         updateDeadlineNotifications(updatedTodoData)
+        return updatedTodoData
     }
 
     suspend fun clearTodoData() {

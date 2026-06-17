@@ -227,7 +227,6 @@ class LmsRefreshRepository(
         )
         val subjectInfos = buildSubjectInfos(subjects)
         val completedAt = Instant.now()
-        val previousData = mainRepository.getTodoData()
         val summary = TodoRefreshSummary(
             completedAt = completedAt,
             semesterCount = terms.size,
@@ -237,32 +236,34 @@ class LmsRefreshRepository(
                 subject.submissions.count { it.submitted_at?.isNotEmpty() == true }
             },
         )
-        val refreshedTodoData = buildTodoData(
-            subjects = subjects,
-            subjectInfos = subjectInfos,
-            previousData = previousData,
-            loadedAt = completedAt.toString(),
-        ).copy(
-            lastWidgetRefreshStatus = "",
-            lastWidgetRefreshErrorMessage = "",
-            lastWidgetRefreshFinishedAt = completedAt.toString(),
-        )
-        val todoData = if (source == RefreshSource.FCM) {
-            refreshedTodoData.copy(
-                lastBackgroundRefreshFinishedAt = completedAt.toString(),
-                lastBackgroundRefreshSuccessAt = completedAt.toString(),
-                lastBackgroundRefreshStatus = BACKGROUND_REFRESH_SUCCESS,
-                lastBackgroundRefreshErrorMessage = "",
-                lastBackgroundRefreshTodoCount = summary.todoCount,
-                lastBackgroundRefreshSubmittedCount = summary.submittedCount,
-                lastBackgroundRefreshSemesterCount = summary.semesterCount,
-                lastBackgroundRefreshRequestId = requestId.orEmpty(),
+        val completedAtText = completedAt.toString()
+        val todoData = mainRepository.updateTodoData { currentData ->
+            val refreshedTodoData = buildTodoData(
+                subjects = subjects,
+                subjectInfos = subjectInfos,
+                previousData = currentData,
+                loadedAt = completedAtText,
+            ).copy(
+                lastWidgetRefreshStatus = "",
+                lastWidgetRefreshErrorMessage = "",
+                lastWidgetRefreshFinishedAt = completedAtText,
             )
-        } else {
-            refreshedTodoData
-        }
 
-        mainRepository.updateTodoData(todoData)
+            if (source == RefreshSource.FCM) {
+                refreshedTodoData.copy(
+                    lastBackgroundRefreshFinishedAt = completedAtText,
+                    lastBackgroundRefreshSuccessAt = completedAtText,
+                    lastBackgroundRefreshStatus = BACKGROUND_REFRESH_SUCCESS,
+                    lastBackgroundRefreshErrorMessage = "",
+                    lastBackgroundRefreshTodoCount = summary.todoCount,
+                    lastBackgroundRefreshSubmittedCount = summary.submittedCount,
+                    lastBackgroundRefreshSemesterCount = summary.semesterCount,
+                    lastBackgroundRefreshRequestId = requestId.orEmpty(),
+                )
+            } else {
+                refreshedTodoData
+            }
+        }
         reportRefreshResultToBackend(
             subjectInfos = subjectInfos,
             semester = currentTerm.toString(),
