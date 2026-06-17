@@ -97,7 +97,21 @@ git log <latest-tag>..HEAD --no-merges --pretty=format:'- %s'
 
 If there is no previous GitHub Release, use the project history that is reasonable for the first release.
 
-3. Write release notes in Korean for general users, not developers.
+3. Write release notes for general users, not developers, in every language supported by the app.
+
+Supported release note languages currently include:
+- English (`en`, default)
+- Korean (`ko-KR`)
+
+Use these exact section headings in the GitHub Release body:
+- `## English`
+- `## 한국어`
+
+The Google Play production workflow parses those sections and creates separate Play Store patch note files:
+- `distribution/whatsnew/whatsnew-en-US`
+- `distribution/whatsnew/whatsnew-ko-KR`
+
+If either section is missing or empty, the release workflow fails. Do not put multiple languages in the same section; English-speaking users should see only English notes, and Korean users should see only Korean notes.
 
 Include:
 - User-visible feature additions
@@ -113,9 +127,17 @@ Exclude:
 - Implementation terms like API repository, DTO, polling, Gradle, ProGuard, R8
 - Commit hashes and PR numbers
 
-The release body must be Korean because it is used as the Play Store `ko-KR` patch note. Keep it concise because the Play Store release notes are generated from the GitHub Release body and truncated to 500 characters by CI. Use Korean bullets. Example:
+The release body must include separate sections for each supported language so Play Store notes can be provided consistently for all localized store listings. Keep each language concise because each Play Store release note file is truncated to 500 characters by CI. Use user-facing bullets in each language. Example:
 
 ```markdown
+## English
+
+- You can now check estimated time in AI summary cards.
+- Improved widget update information and refresh button placement.
+- Fixed assignment completion status to update more reliably.
+
+## 한국어
+
 - AI 요약 카드에서 예상 소요시간을 확인할 수 있어요.
 - 위젯의 업데이트 정보와 새로고침 버튼 배치를 개선했어요.
 - 과제 완료 상태가 더 안정적으로 반영되도록 수정했어요.

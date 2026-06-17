@@ -14,7 +14,6 @@ concurrency:
 
 env:
   PACKAGE_NAME: com.yourssu.ssutime.v2
-  RELEASE_NOTES_LOCALE: ko-KR
 
 jobs:
   publish:
@@ -61,17 +60,58 @@ jobs:
       - name: Create Play release notes
         env:
           RELEASE_BODY: ${{ github.event.release.body }}
-          RELEASE_TAG: ${{ github.event.release.tag_name }}
         run: |
-          node -e "
+          node <<'NODE'
             const fs = require('fs');
-            const locale = process.env.RELEASE_NOTES_LOCALE || 'ko-KR';
-            const fallback = process.env.RELEASE_TAG || 'Release';
+
+            const requiredSections = [
+              { locale: 'en-US', title: 'English', headings: ['english', 'en', 'en-us'] },
+              { locale: 'ko-KR', title: '한국어', headings: ['한국어', 'korean', 'ko', 'ko-kr'] },
+            ];
+            const headingToLocale = new Map();
+            for (const section of requiredSections) {
+              for (const heading of section.headings) {
+                headingToLocale.set(normalizeHeading(heading), section.locale);
+              }
+            }
+
             const body = (process.env.RELEASE_BODY || '').replace(/\r\n/g, '\n').trim();
-            const notes = Array.from(body || fallback).slice(0, 500).join('');
+            const sections = new Map(requiredSections.map((section) => [section.locale, '']));
+            let currentLocale = null;
+
+            for (const line of body.split('\n')) {
+              const headingMatch = line.match(/^#{2,6}\s+(.+?)\s*#*\s*$/);
+              if (headingMatch) {
+                const locale = headingToLocale.get(normalizeHeading(headingMatch[1]));
+                if (locale) {
+                  currentLocale = locale;
+                  continue;
+                }
+              }
+
+              if (currentLocale) {
+                sections.set(currentLocale, sections.get(currentLocale) + line + '\n');
+              }
+            }
+
+            const missingSections = requiredSections.filter((section) => !sections.get(section.locale).trim());
+            if (missingSections.length > 0) {
+              const missing = missingSections.map((section) => '## ' + section.title).join(', ');
+              console.error('::error::Missing required release note section(s): ' + missing);
+              process.exit(1);
+            }
+
             fs.mkdirSync('distribution/whatsnew', { recursive: true });
-            fs.writeFileSync('distribution/whatsnew/whatsnew-' + locale, notes + '\n');
-          "
+            for (const section of requiredSections) {
+              const notes = Array.from(sections.get(section.locale).trim()).slice(0, 500).join('');
+              fs.writeFileSync('distribution/whatsnew/whatsnew-' + section.locale, notes + '\n');
+              console.log('Created Play release notes for ' + section.locale + '.');
+            }
+
+            function normalizeHeading(value) {
+              return value.trim().toLowerCase();
+            }
+          NODE
 
       - name: Build release APK and AAB
         env:
