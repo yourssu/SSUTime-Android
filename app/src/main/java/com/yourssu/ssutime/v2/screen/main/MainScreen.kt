@@ -38,9 +38,12 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
@@ -158,7 +161,7 @@ fun MainScreen(
                 source = RefreshSource.APP_START,
             )
             if (isLargeScreen) {
-                viewModel.loadTimetable()
+                viewModel.loadLargeScreenData()
             }
             if (!viewModel.showNetworkError.value && todoData != null) {
                 Analytics.viewHome(
@@ -195,7 +198,7 @@ fun MainScreen(
                     source = source,
                 )
                 if (isLargeScreen) {
-                    viewModel.loadTimetable(forceRefresh = true)
+                    viewModel.loadLargeScreenData(forceRefresh = true)
                 }
             } else {
                 viewModel.showNetworkErrorScreen()
@@ -317,12 +320,42 @@ fun MainScreen(
                         },
                         onExpandTodo = viewModel::loadAiSummary,
                     )
-                    TimeTableFragment(
-                        viewModel = viewModel,
+                    val pagerState = rememberPagerState(pageCount = { 4 })
+                    Column(
                         modifier = Modifier
                             .weight(1f)
                             .fillMaxHeight()
-                    )
+                    ) {
+                        HorizontalPager(
+                            state = pagerState,
+                            modifier = Modifier.weight(1f)
+                        ) { page ->
+                            when (page) {
+                                0 -> TimeTableFragment(viewModel = viewModel, modifier = Modifier.fillMaxSize())
+                                1 -> ScholarshipHistoryView(state = viewModel.scholarshipState.value, onRefresh = { viewModel.loadScholarship(forceRefresh = true) }, modifier = Modifier.fillMaxSize())
+                                2 -> TuitionHistoryView(state = viewModel.tuitionState.value, onRefresh = { viewModel.loadTuition(forceRefresh = true) }, modifier = Modifier.fillMaxSize())
+                                3 -> GraduateRequirementsView(state = viewModel.graduateState.value, onRefresh = { viewModel.loadGraduate(forceRefresh = true) }, modifier = Modifier.fillMaxSize())
+                            }
+                        }
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 12.dp),
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            repeat(4) { index ->
+                                val isSelected = pagerState.currentPage == index
+                                Box(
+                                    modifier = Modifier
+                                        .padding(horizontal = 4.dp)
+                                        .size(if (isSelected) 8.dp else 6.dp)
+                                        .clip(CircleShape)
+                                        .background(if (isSelected) R500 else N300)
+                                )
+                            }
+                        }
+                    }
                 }
             }
         }

@@ -9,7 +9,10 @@ import androidx.datastore.core.Serializer
 import androidx.datastore.core.handlers.ReplaceFileCorruptionHandler
 import androidx.datastore.dataStore
 import com.yourssu.data.AlertData
+import com.yourssu.data.LocalGraduate
+import com.yourssu.data.LocalScholarship
 import com.yourssu.data.LocalTimetable
+import com.yourssu.data.LocalTuition
 import com.yourssu.data.LoginData
 import com.yourssu.data.TodoData
 import com.yourssu.ssutime.v2.network.ApiRepository
@@ -18,9 +21,12 @@ import com.yourssu.ssutime.v2.screen.login.LoginViewModel
 import com.yourssu.ssutime.v2.screen.main.LmsRefreshRepository
 import com.yourssu.ssutime.v2.screen.main.MainRepository
 import com.yourssu.ssutime.v2.screen.main.MainViewModel
+import com.yourssu.ssutime.v2.screen.main.graduateDataStore
 import com.yourssu.ssutime.v2.screen.main.notificationStore
+import com.yourssu.ssutime.v2.screen.main.scholarshipDataStore
 import com.yourssu.ssutime.v2.screen.main.timetableDataStore
 import com.yourssu.ssutime.v2.screen.main.todoDataStore
+import com.yourssu.ssutime.v2.screen.main.tuitionDataStore
 import com.yourssu.ssutime.v2.screen.my.MyViewModel
 import com.yourssu.ssutime.v2.screen.onboarding.OnBoardingData
 import com.yourssu.ssutime.v2.screen.onboarding.OnBoardingRepository
@@ -55,6 +61,9 @@ val appModule = module {
     single<DataStore<OnBoardingData>>(named("onBoardingDataStore")) { androidContext().onBoardingDataStore }
     single<DataStore<AlertData>>(named("alertDataStore")) { androidContext().notificationStore }
     single<DataStore<LocalTimetable>>(named("timetableDataStore")) { androidContext().timetableDataStore }
+    single<DataStore<LocalScholarship>>(named("scholarshipDataStore")) { androidContext().scholarshipDataStore }
+    single<DataStore<LocalTuition>>(named("tuitionDataStore")) { androidContext().tuitionDataStore }
+    single<DataStore<LocalGraduate>>(named("graduateDataStore")) { androidContext().graduateDataStore }
 
     single { LoginRepository(get()) }
     single {
@@ -62,6 +71,9 @@ val appModule = module {
             get(named("todoDataStore")),
             get(named("alertDataStore")),
             get(named("timetableDataStore")),
+            get(named("scholarshipDataStore")),
+            get(named("tuitionDataStore")),
+            get(named("graduateDataStore")),
             get(),
             androidContext()
         )
@@ -103,6 +115,9 @@ val previewModule = module {
     single<DataStore<OnBoardingData>>(named("onBoardingDataStore")) { androidContext().onBoardingDataStore }
     single<DataStore<AlertData>>(named("alertDataStore")) { androidContext().notificationStore }
     single<DataStore<LocalTimetable>>(named("timetableDataStore")) { androidContext().timetableDataStore }
+    single<DataStore<LocalScholarship>>(named("scholarshipDataStore")) { androidContext().scholarshipDataStore }
+    single<DataStore<LocalTuition>>(named("tuitionDataStore")) { androidContext().tuitionDataStore }
+    single<DataStore<LocalGraduate>>(named("graduateDataStore")) { androidContext().graduateDataStore }
 
     single { LoginRepository(get()) }
     single {
@@ -113,6 +128,9 @@ val previewModule = module {
             get(named("todoDataStore")),
             get(named("alertDataStore")),
             get(named("timetableDataStore")),
+            get(named("scholarshipDataStore")),
+            get(named("tuitionDataStore")),
+            get(named("graduateDataStore")),
             get(),
             androidContext()
         )

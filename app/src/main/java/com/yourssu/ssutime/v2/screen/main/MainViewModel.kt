@@ -74,6 +74,42 @@ class MainViewModel(
         }
 
         viewModelScope.launch {
+            mainRepository.scholarshipData.collect { localData ->
+                if (localData.items.isNotEmpty()) {
+                    scholarshipState.value = ScholarshipUiState.Success(localData.toDomain())
+                } else {
+                    if (scholarshipState.value !is ScholarshipUiState.Loading) {
+                        scholarshipState.value = ScholarshipUiState.Empty
+                    }
+                }
+            }
+        }
+
+        viewModelScope.launch {
+            mainRepository.tuitionData.collect { localData ->
+                if (localData.items.isNotEmpty()) {
+                    tuitionState.value = TuitionUiState.Success(localData.toDomain())
+                } else {
+                    if (tuitionState.value !is TuitionUiState.Loading) {
+                        tuitionState.value = TuitionUiState.Empty
+                    }
+                }
+            }
+        }
+
+        viewModelScope.launch {
+            mainRepository.graduateData.collect { localData ->
+                if (localData.items.isNotEmpty()) {
+                    graduateState.value = GraduateUiState.Success(localData.toDomain())
+                } else {
+                    if (graduateState.value !is GraduateUiState.Loading) {
+                        graduateState.value = GraduateUiState.Empty
+                    }
+                }
+            }
+        }
+
+        viewModelScope.launch {
             lmsRefreshRepository.onboardingInitialRefreshInProgress.collect { isRefreshing ->
                 onboardingInitialRefreshInProgress.value = isRefreshing
             }
@@ -330,6 +366,20 @@ class MainViewModel(
             .toLocalDate()
     }.getOrNull()
 
+    private fun Throwable.isNetworkOrAuthError(): Boolean {
+        val name = this.javaClass.name
+        val msg = this.message.orEmpty()
+        return this is java.io.IOException ||
+               name.contains("Connect") ||
+               name.contains("Timeout") ||
+               name.contains("Host") ||
+               name.contains("Http") ||
+               msg.contains("로그인") ||
+               msg.contains("세션") ||
+               msg.contains("인증") ||
+               msg.contains("Unauthorized")
+    }
+
     var timetableState = mutableStateOf<TimetableUiState>(TimetableUiState.Loading)
         private set
 
@@ -359,12 +409,142 @@ class MainViewModel(
                 if (e is CancellationException) throw e
                 Log.e(javaClass.name, "시간표 정보를 갱신하지 못했습니다.", e)
                 if (currentState !is TimetableUiState.Success) {
-                    timetableState.value = TimetableUiState.Error(e.localizedMessage ?: "시간표를 불러오지 못했어요.")
+                    if (e.isNetworkOrAuthError()) {
+                        timetableState.value = TimetableUiState.Error(e.localizedMessage ?: "시간표를 불러오지 못했어요.")
+                    } else {
+                        timetableState.value = TimetableUiState.Empty
+                    }
                 }
             } finally {
                 isTimetableLoading = false
             }
         }
+    }
+
+    var scholarshipState = mutableStateOf<ScholarshipUiState>(ScholarshipUiState.Loading)
+        private set
+    var tuitionState = mutableStateOf<TuitionUiState>(TuitionUiState.Loading)
+        private set
+    var graduateState = mutableStateOf<GraduateUiState>(GraduateUiState.Loading)
+        private set
+
+    private var isScholarshipLoading = false
+    private var isTuitionLoading = false
+    private var isGraduateLoading = false
+
+    fun loadScholarship(forceRefresh: Boolean = false) {
+        if (isScholarshipLoading) return
+        viewModelScope.launch {
+            isScholarshipLoading = true
+            val currentState = scholarshipState.value
+            if (currentState !is ScholarshipUiState.Success) {
+                scholarshipState.value = ScholarshipUiState.Loading
+            }
+            try {
+                val table = lmsRefreshRepository.fetchScholarshipTable()
+                if (table.items.isEmpty()) {
+                    if (currentState is ScholarshipUiState.Success) {
+                        Log.w(javaClass.name, "새로 불러온 장학 내역이 비어있어 기존 데이터를 유지합니다.")
+                    } else {
+                        mainRepository.updateScholarshipData(table.toLocal())
+                        scholarshipState.value = ScholarshipUiState.Empty
+                    }
+                } else {
+                    mainRepository.updateScholarshipData(table.toLocal())
+                }
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                Log.e(javaClass.name, "장학 정보를 갱신하지 못했습니다.", e)
+                if (currentState !is ScholarshipUiState.Success) {
+                    if (e.isNetworkOrAuthError()) {
+                        scholarshipState.value = ScholarshipUiState.Error(e.localizedMessage ?: "장학 정보를 불러오지 못했어요.")
+                    } else {
+                        scholarshipState.value = ScholarshipUiState.Empty
+                    }
+                }
+            } finally {
+                isScholarshipLoading = false
+            }
+        }
+    }
+
+    fun loadTuition(forceRefresh: Boolean = false) {
+        if (isTuitionLoading) return
+        viewModelScope.launch {
+            isTuitionLoading = true
+            val currentState = tuitionState.value
+            if (currentState !is TuitionUiState.Success) {
+                tuitionState.value = TuitionUiState.Loading
+            }
+            try {
+                val table = lmsRefreshRepository.fetchTuitionTable()
+                if (table.items.isEmpty()) {
+                    if (currentState is TuitionUiState.Success) {
+                        Log.w(javaClass.name, "새로 불러온 등록금 내역이 비어있어 기존 데이터를 유지합니다.")
+                    } else {
+                        mainRepository.updateTuitionData(table.toLocal())
+                        tuitionState.value = TuitionUiState.Empty
+                    }
+                } else {
+                    mainRepository.updateTuitionData(table.toLocal())
+                }
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                Log.e(javaClass.name, "등록금 정보를 갱신하지 못했습니다.", e)
+                if (currentState !is TuitionUiState.Success) {
+                    if (e.isNetworkOrAuthError()) {
+                        tuitionState.value = TuitionUiState.Error(e.localizedMessage ?: "등록금 정보를 불러오지 못했어요.")
+                    } else {
+                        tuitionState.value = TuitionUiState.Empty
+                    }
+                }
+            } finally {
+                isTuitionLoading = false
+            }
+        }
+    }
+
+    fun loadGraduate(forceRefresh: Boolean = false) {
+        if (isGraduateLoading) return
+        viewModelScope.launch {
+            isGraduateLoading = true
+            val currentState = graduateState.value
+            if (currentState !is GraduateUiState.Success) {
+                graduateState.value = GraduateUiState.Loading
+            }
+            try {
+                val table = lmsRefreshRepository.fetchGraduateTable()
+                if (table.items.isEmpty()) {
+                    if (currentState is GraduateUiState.Success) {
+                        Log.w(javaClass.name, "새로 불러온 졸업 사정 내역이 비어있어 기존 데이터를 유지합니다.")
+                    } else {
+                        mainRepository.updateGraduateData(table.toLocal())
+                        graduateState.value = GraduateUiState.Empty
+                    }
+                } else {
+                    mainRepository.updateGraduateData(table.toLocal())
+                }
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                Log.e(javaClass.name, "졸업 사정 정보를 갱신하지 못했습니다.", e)
+                if (currentState !is GraduateUiState.Success) {
+                    if (e.isNetworkOrAuthError()) {
+                        graduateState.value = GraduateUiState.Error(e.localizedMessage ?: "졸업 사정 정보를 불러오지 못했어요.")
+                    } else {
+                        graduateState.value = GraduateUiState.Empty
+                    }
+                }
+            } finally {
+                isGraduateLoading = false
+            }
+        }
+    }
+
+    fun loadLargeScreenData(forceRefresh: Boolean = false) {
+        loadTimetable(forceRefresh)
+        loadScholarship(forceRefresh)
+        loadTuition(forceRefresh)
+        loadGraduate(forceRefresh)
     }
 
 }
@@ -374,6 +554,27 @@ sealed interface TimetableUiState {
     data class Success(val timetable: io.github.chlwhdtn03.data.Lms.Timetable) : TimetableUiState
     data class Error(val message: String) : TimetableUiState
     data object Empty : TimetableUiState
+}
+
+sealed interface ScholarshipUiState {
+    data object Loading : ScholarshipUiState
+    data class Success(val table: io.github.chlwhdtn03.data.Lms.ScholarshipHistoryTable) : ScholarshipUiState
+    data class Error(val message: String) : ScholarshipUiState
+    data object Empty : ScholarshipUiState
+}
+
+sealed interface TuitionUiState {
+    data object Loading : TuitionUiState
+    data class Success(val table: io.github.chlwhdtn03.data.Lms.TuitionTable) : TuitionUiState
+    data class Error(val message: String) : TuitionUiState
+    data object Empty : TuitionUiState
+}
+
+sealed interface GraduateUiState {
+    data object Loading : GraduateUiState
+    data class Success(val table: io.github.chlwhdtn03.data.Lms.GraduateTable) : GraduateUiState
+    data class Error(val message: String) : GraduateUiState
+    data object Empty : GraduateUiState
 }
 
 sealed interface AiSummaryUiState {

@@ -68,4 +68,21 @@ class LmsCurrentTermTest {
             start_at = Instant.parse(startAt),
             end_at = Instant.parse(endAt),
         )
+
+    @Test
+    fun printLmsPropertyNullability() {
+        val classes = listOf(
+            io.github.chlwhdtn03.data.Lms.ScholarshipHistoryCell::class,
+            io.github.chlwhdtn03.data.Lms.TuitionCell::class,
+            io.github.chlwhdtn03.data.Lms.GraduateTableCell::class
+        )
+        classes.forEach { clazz ->
+            println("=== Class: ${clazz.qualifiedName} ===")
+            clazz.members.forEach { member ->
+                if (member is kotlin.reflect.KProperty) {
+                    println("  Property: ${member.name}, Nullable: ${member.returnType.isMarkedNullable}")
+                }
+            }
+        }
+    }
 }

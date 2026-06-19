@@ -5,7 +5,10 @@ import android.util.Log
 import androidx.datastore.core.DataStore
 import com.yourssu.data.AiSummaryCache
 import com.yourssu.data.AlertData
+import com.yourssu.data.LocalGraduate
+import com.yourssu.data.LocalScholarship
 import com.yourssu.data.LocalTimetable
+import com.yourssu.data.LocalTuition
 import com.yourssu.data.TodoData
 import com.yourssu.data.TodoInfo
 import com.yourssu.data.network.LmsSessionRequest
@@ -24,17 +27,38 @@ class MainRepository(
     private val todoDataStore: DataStore<TodoData>,
     private val alertDataStore: DataStore<AlertData>,
     private val timetableDataStore: DataStore<LocalTimetable>,
+    private val scholarshipDataStore: DataStore<LocalScholarship>,
+    private val tuitionDataStore: DataStore<LocalTuition>,
+    private val graduateDataStore: DataStore<LocalGraduate>,
     private val apiRepository: ApiRepository,
     private val context: Context,
 ) {
     val todoData: Flow<TodoData> = todoDataStore.data
     val alertData: Flow<AlertData> = alertDataStore.data
     val timetableData: Flow<LocalTimetable> = timetableDataStore.data
+    val scholarshipData: Flow<LocalScholarship> = scholarshipDataStore.data
+    val tuitionData: Flow<LocalTuition> = tuitionDataStore.data
+    val graduateData: Flow<LocalGraduate> = graduateDataStore.data
 
     suspend fun getTimetableData(): LocalTimetable = timetableDataStore.data.first()
+    suspend fun getScholarshipData(): LocalScholarship = scholarshipDataStore.data.first()
+    suspend fun getTuitionData(): LocalTuition = tuitionDataStore.data.first()
+    suspend fun getGraduateData(): LocalGraduate = graduateDataStore.data.first()
 
     suspend fun updateTimetableData(timetable: LocalTimetable): LocalTimetable {
         return timetableDataStore.updateData { timetable }
+    }
+
+    suspend fun updateScholarshipData(scholarship: LocalScholarship): LocalScholarship {
+        return scholarshipDataStore.updateData { scholarship }
+    }
+
+    suspend fun updateTuitionData(tuition: LocalTuition): LocalTuition {
+        return tuitionDataStore.updateData { tuition }
+    }
+
+    suspend fun updateGraduateData(graduate: LocalGraduate): LocalGraduate {
+        return graduateDataStore.updateData { graduate }
     }
 
     suspend fun updateTodoData(todoData: TodoData): TodoData {

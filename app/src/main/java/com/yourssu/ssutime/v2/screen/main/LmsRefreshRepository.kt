@@ -540,6 +540,24 @@ class LmsRefreshRepository(
         loginIfNeeded(RefreshSource.APP_START, loginData, forceLogin = false)
         LmsApi.getTimetable()
     }
+
+    suspend fun fetchScholarshipTable(): io.github.chlwhdtn03.data.Lms.ScholarshipHistoryTable = withContext(Dispatchers.IO) {
+        val loginData = loginRepository.getLoginData()
+        loginIfNeeded(RefreshSource.APP_START, loginData, forceLogin = false)
+        LmsApi.getScholarshipHistoryTable()
+    }
+
+    suspend fun fetchTuitionTable(): io.github.chlwhdtn03.data.Lms.TuitionTable = withContext(Dispatchers.IO) {
+        val loginData = loginRepository.getLoginData()
+        loginIfNeeded(RefreshSource.APP_START, loginData, forceLogin = false)
+        LmsApi.getTuitionTable()
+    }
+
+    suspend fun fetchGraduateTable(): io.github.chlwhdtn03.data.Lms.GraduateTable = withContext(Dispatchers.IO) {
+        val loginData = loginRepository.getLoginData()
+        loginIfNeeded(RefreshSource.APP_START, loginData, forceLogin = false)
+        LmsApi.getGraduateTable()
+    }
 }
 
 enum class RefreshSource {
