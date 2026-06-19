@@ -157,13 +157,13 @@
     <string name="day_sun">일</string>
     <string name="timetable_no_class_msg">%1$s요일은 수업이 없습니다.</string>
     <string name="timetable_empty_message">불러온 시간표 정보가 없어요.</string>
-    <string name="scholarship_title">장학 내역</string>
+    <string name="scholarship_title">장학금 수혜 내역</string>
     <string name="scholarship_empty_message">장학 내역 정보가 없어요.</string>
     <string name="scholarship_header_year_sem">년도/학기</string>
     <string name="scholarship_header_name">장학금명</string>
     <string name="scholarship_header_status">진행상태</string>
     <string name="scholarship_header_amount">지급액</string>
-    <string name="tuition_title">등록금 내역</string>
+    <string name="tuition_title">등록금 납부 내역</string>
     <string name="tuition_empty_message">등록금 내역 정보가 없어요.</string>
     <string name="tuition_header_year_sem">년도/학기</string>
     <string name="tuition_header_grade">학년</string>
@@ -171,7 +171,7 @@
     <string name="tuition_header_date">등록일자</string>
     <string name="tuition_header_amount">고지금액</string>
     <string name="tuition_header_payment">실납부액</string>
-    <string name="graduate_title">졸업 사정</string>
+    <string name="graduate_title">졸업 사정표</string>
     <string name="graduate_empty_message">졸업 사정 정보가 없어요.</string>
     <string name="graduate_header_class">구분</string>
     <string name="graduate_header_req">필수</string>

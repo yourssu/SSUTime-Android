@@ -13,13 +13,20 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.KeyboardArrowDown
+import androidx.compose.material.icons.outlined.KeyboardArrowUp
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -28,6 +35,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.yourssu.ssutime.v2.R
 import com.yourssu.ssutime.v2.ui.theme.G400
+import com.yourssu.ssutime.v2.ui.theme.G500
 import com.yourssu.ssutime.v2.ui.theme.N100
 import com.yourssu.ssutime.v2.ui.theme.N200
 import com.yourssu.ssutime.v2.ui.theme.N300
@@ -156,7 +164,8 @@ private fun ScholarshipCellCard(cell: ScholarshipHistoryCell) {
             if (cell.processStatus.isNotBlank()) {
                 Text(
                     text = cell.processStatus,
-                    style = SSUType.Body2Medium,
+                    style = SSUType.Label1Medium,
+                    color = G500
                 )
             }
         }
@@ -197,7 +206,7 @@ private fun ScholarshipCellCard(cell: ScholarshipHistoryCell) {
                     Spacer(Modifier.height(2.dp))
                     Text(
                         text = cell.paymentMethod,
-                        style = SSUType.Body2Medium,
+                        style = SSUType.Label2SemiBold,
                     )
                 }
             }
@@ -212,7 +221,7 @@ private fun ScholarshipCellCard(cell: ScholarshipHistoryCell) {
                     Spacer(Modifier.height(2.dp))
                     Text(
                         text = cell.processDate,
-                        style = SSUType.Body2Medium,
+                        style = SSUType.Label2SemiBold,
                     )
                 }
             }
@@ -461,92 +470,229 @@ fun GraduateRequirementsView(
 
 @Composable
 private fun GraduateContent(table: GraduateTable) {
+    val groups = remember(table) { table.items.groupBy { it.classification } }
+    val expandedStates = remember { mutableStateMapOf<String, Boolean>() }
+
     LazyColumn(
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        items(table.items) { cell ->
-            GraduateCellCard(cell = cell)
+        groups.forEach { (classification, cells) ->
+            item(key = classification) {
+                val isExpanded = expandedStates[classification] ?: false
+                val headerCell = cells.first()
+                val subCells = cells.drop(1)
+                val hasSubItems = subCells.isNotEmpty()
+
+                GraduateGroupCard(
+                    classification = classification,
+                    headerCell = headerCell,
+                    subCells = subCells,
+                    isExpanded = isExpanded,
+                    hasSubItems = hasSubItems,
+                    onToggleExpand = {
+                        if (hasSubItems) {
+                            expandedStates[classification] = !isExpanded
+                        }
+                    }
+                )
+            }
         }
     }
 }
 
 @Composable
-private fun GraduateCellCard(cell: GraduateTableCell) {
-    Row(
+private fun GraduateGroupCard(
+    classification: String,
+    headerCell: GraduateTableCell,
+    subCells: List<GraduateTableCell>,
+    isExpanded: Boolean,
+    hasSubItems: Boolean,
+    onToggleExpand: () -> Unit,
+) {
+    Column(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
             .background(N100)
             .border(1.dp, N200, RoundedCornerShape(16.dp))
-            .padding(16.dp),
-        verticalAlignment = Alignment.CenterVertically
     ) {
-        Column(modifier = Modifier.weight(1.3f)) {
-            Text(
-                text = cell.classification,
-                style = SSUType.H4SemiBold,
-            )
-            if (cell.requirement.isNotBlank()) {
-                Spacer(Modifier.height(2.dp))
-                Text(
-                    text = cell.requirement,
-                    style = SSUType.Caption1Medium,
-                    color = N500,
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .then(
+                    if (hasSubItems) {
+                        Modifier.clickable { onToggleExpand() }
+                    } else {
+                        Modifier
+                    }
                 )
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = headerCell.classification,
+                    style = SSUType.H4SemiBold,
+                )
+                if (headerCell.requirement.isNotBlank()) {
+                    Spacer(Modifier.height(2.dp))
+                    Text(
+                        text = headerCell.requirement,
+                        style = SSUType.Caption1Medium,
+                        color = N500,
+                    )
+                }
+            }
+
+            Spacer(Modifier.width(16.dp))
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(horizontalAlignment = Alignment.End) {
+                    if (headerCell.calculatedValue.isNotBlank()) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = stringResource(R.string.graduate_header_earned) + " ",
+                                style = SSUType.Caption1Medium,
+                                color = N500
+                            )
+                            Text(
+                                text = headerCell.calculatedValue,
+                                style = SSUType.Label2SemiBold,
+                            )
+                            if (headerCell.standardValue.isNotBlank()) {
+                                Text(
+                                    text = " / " + headerCell.standardValue,
+                                    style = SSUType.Caption1SemiBold,
+                                    color = N500
+                                )
+                            }
+                        }
+                    }
+                    if (headerCell.difference.isNotBlank() && headerCell.difference != "0") {
+                        Spacer(Modifier.height(2.dp))
+                        Text(
+                            text = stringResource(R.string.graduate_header_diff) + ": " + headerCell.difference,
+                            style = SSUType.Caption1Medium,
+                            color = if (headerCell.difference.startsWith("-")) R500 else G400
+                        )
+                    }
+                }
+
+                if (headerCell.result.isNotBlank()) {
+                    Spacer(Modifier.width(16.dp))
+                    val isPass = headerCell.result == "충족" || headerCell.result.lowercase() == "pass" || headerCell.result.lowercase() == "y"
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(if (isPass) G400.copy(alpha = 0.15f) else R500.copy(alpha = 0.15f))
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                    ) {
+                        Text(
+                            text = headerCell.result,
+                            style = SSUType.Caption1SemiBold,
+                            color = if (isPass) G400 else R500
+                        )
+                    }
+                }
+
+                if (hasSubItems) {
+                    Spacer(Modifier.width(8.dp))
+                    Icon(
+                        imageVector = if (isExpanded) Icons.Outlined.KeyboardArrowUp else Icons.Outlined.KeyboardArrowDown,
+                        contentDescription = null,
+                        tint = N500,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
             }
         }
 
-        Spacer(Modifier.width(8.dp))
-
-        Row(
-            modifier = Modifier.weight(2f),
-            horizontalArrangement = Arrangement.End,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
+        if (hasSubItems && isExpanded) {
             Column(
-                horizontalAlignment = Alignment.End
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 8.dp)
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = stringResource(R.string.graduate_header_earned) + " ",
-                        style = SSUType.Caption1Medium,
-                        color = N500
+                subCells.forEach { subCell ->
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(1.dp)
+                            .background(N200)
                     )
-                    Text(
-                        text = cell.calculatedValue,
-                        style = SSUType.Label2SemiBold,
-                    )
-                    Text(
-                        text = " / " + cell.standardValue,
-                        style = SSUType.Caption1SemiBold,
-                        color = N500
-                    )
-                }
-                if (cell.difference.isNotBlank() && cell.difference != "0") {
-                    Spacer(Modifier.height(2.dp))
-                    Text(
-                        text = stringResource(R.string.graduate_header_diff) + ": " + cell.difference,
-                        style = SSUType.Caption1Medium,
-                        color = if (cell.difference.startsWith("-")) R500 else G400
-                    )
-                }
-            }
 
-            if (cell.result.isNotBlank()) {
-                Spacer(Modifier.width(16.dp))
-                val isPass = cell.result == "충족" || cell.result.lowercase() == "pass" || cell.result.lowercase() == "y"
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(if (isPass) G400.copy(alpha = 0.15f) else R500.copy(alpha = 0.15f))
-                        .padding(horizontal = 8.dp, vertical = 4.dp)
-                ) {
-                    Text(
-                        text = cell.result,
-                        style = SSUType.Caption1SemiBold,
-                        color = if (isPass) G400 else R500
-                    )
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = subCell.requirement.ifBlank { subCell.classification },
+                                style = SSUType.Body2Medium,
+                            )
+                        }
+
+                        Spacer(Modifier.width(16.dp))
+
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(horizontalAlignment = Alignment.End) {
+                                if (subCell.calculatedValue.isNotBlank()) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Text(
+                                            text = stringResource(R.string.graduate_header_earned) + " ",
+                                            style = SSUType.Caption1Medium,
+                                            color = N500
+                                        )
+                                        Text(
+                                            text = subCell.calculatedValue,
+                                            style = SSUType.Label2SemiBold,
+                                        )
+                                        if (subCell.standardValue.isNotBlank()) {
+                                            Text(
+                                                text = " / " + subCell.standardValue,
+                                                style = SSUType.Caption1SemiBold,
+                                                color = N500
+                                            )
+                                        }
+                                    }
+                                }
+                                if (subCell.difference.isNotBlank() && subCell.difference != "0") {
+                                    Spacer(Modifier.height(2.dp))
+                                    Text(
+                                        text = stringResource(R.string.graduate_header_diff) + ": " + subCell.difference,
+                                        style = SSUType.Caption1Medium,
+                                        color = if (subCell.difference.startsWith("-")) R500 else G400
+                                    )
+                                }
+                            }
+
+                            if (subCell.result.isNotBlank()) {
+                                Spacer(Modifier.width(16.dp))
+                                val isPass = subCell.result == "충족" || subCell.result.lowercase() == "pass" || subCell.result.lowercase() == "y"
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .background(if (isPass) G400.copy(alpha = 0.15f) else R500.copy(alpha = 0.15f))
+                                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                                ) {
+                                    Text(
+                                        text = subCell.result,
+                                        style = SSUType.Caption1SemiBold,
+                                        color = if (isPass) G400 else R500
+                                    )
+                                }
+                            }
+
+                            Spacer(Modifier.width(32.dp))
+                        }
+                    }
                 }
             }
         }

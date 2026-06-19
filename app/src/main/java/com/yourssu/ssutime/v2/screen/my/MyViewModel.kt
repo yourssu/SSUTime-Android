@@ -65,7 +65,7 @@ class MyViewModel(
 
     fun logout() {
         viewModelScope.launch {
-            mainRepository.clearTodoData()
+            mainRepository.clearAllUserData()
             loginRepository.logout()
             accessToken = ""
             Analytics.resetUser()

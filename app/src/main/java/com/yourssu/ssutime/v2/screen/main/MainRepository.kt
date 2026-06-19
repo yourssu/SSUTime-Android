@@ -98,6 +98,14 @@ class MainRepository(
         updateTodoData(TodoData())
     }
 
+    suspend fun clearAllUserData() {
+        updateTodoData(TodoData())
+        updateTimetableData(LocalTimetable())
+        updateScholarshipData(LocalScholarship())
+        updateTuitionData(LocalTuition())
+        updateGraduateData(LocalGraduate())
+    }
+
     suspend fun clearAlertData() {
         Log.i("AlertData", "Clear AlertData")
         updateAlertData(AlertData(valid = false, false, false, 60L))

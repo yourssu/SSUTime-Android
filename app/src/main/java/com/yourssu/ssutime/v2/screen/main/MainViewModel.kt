@@ -48,6 +48,20 @@ class MainViewModel(
     var requiredShowAlertBottomSheet = mutableStateOf(false)
     private var handledHomeEntryVersion: Int? = null
 
+    var timetableState = mutableStateOf<TimetableUiState>(TimetableUiState.Loading)
+        private set
+    var scholarshipState = mutableStateOf<ScholarshipUiState>(ScholarshipUiState.Loading)
+        private set
+    var tuitionState = mutableStateOf<TuitionUiState>(TuitionUiState.Loading)
+        private set
+    var graduateState = mutableStateOf<GraduateUiState>(GraduateUiState.Loading)
+        private set
+
+    private var isTimetableLoading = false
+    private var isScholarshipLoading = false
+    private var isTuitionLoading = false
+    private var isGraduateLoading = false
+
     init {
         viewModelScope.launch {
             val alertData = mainRepository.getAlertData()
@@ -380,10 +394,6 @@ class MainViewModel(
                msg.contains("Unauthorized")
     }
 
-    var timetableState = mutableStateOf<TimetableUiState>(TimetableUiState.Loading)
-        private set
-
-    private var isTimetableLoading = false
 
     fun loadTimetable(forceRefresh: Boolean = false) {
         if (isTimetableLoading) return
@@ -421,16 +431,6 @@ class MainViewModel(
         }
     }
 
-    var scholarshipState = mutableStateOf<ScholarshipUiState>(ScholarshipUiState.Loading)
-        private set
-    var tuitionState = mutableStateOf<TuitionUiState>(TuitionUiState.Loading)
-        private set
-    var graduateState = mutableStateOf<GraduateUiState>(GraduateUiState.Loading)
-        private set
-
-    private var isScholarshipLoading = false
-    private var isTuitionLoading = false
-    private var isGraduateLoading = false
 
     fun loadScholarship(forceRefresh: Boolean = false) {
         if (isScholarshipLoading) return
