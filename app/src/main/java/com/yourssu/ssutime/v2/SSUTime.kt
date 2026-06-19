@@ -9,6 +9,7 @@ import androidx.datastore.core.Serializer
 import androidx.datastore.core.handlers.ReplaceFileCorruptionHandler
 import androidx.datastore.dataStore
 import com.yourssu.data.AlertData
+import com.yourssu.data.LocalTimetable
 import com.yourssu.data.LoginData
 import com.yourssu.data.TodoData
 import com.yourssu.ssutime.v2.network.ApiRepository
@@ -18,6 +19,7 @@ import com.yourssu.ssutime.v2.screen.main.LmsRefreshRepository
 import com.yourssu.ssutime.v2.screen.main.MainRepository
 import com.yourssu.ssutime.v2.screen.main.MainViewModel
 import com.yourssu.ssutime.v2.screen.main.notificationStore
+import com.yourssu.ssutime.v2.screen.main.timetableDataStore
 import com.yourssu.ssutime.v2.screen.main.todoDataStore
 import com.yourssu.ssutime.v2.screen.my.MyViewModel
 import com.yourssu.ssutime.v2.screen.onboarding.OnBoardingData
@@ -52,12 +54,14 @@ val appModule = module {
     single<DataStore<TodoData>>(named("todoDataStore")) { androidContext().todoDataStore }
     single<DataStore<OnBoardingData>>(named("onBoardingDataStore")) { androidContext().onBoardingDataStore }
     single<DataStore<AlertData>>(named("alertDataStore")) { androidContext().notificationStore }
+    single<DataStore<LocalTimetable>>(named("timetableDataStore")) { androidContext().timetableDataStore }
 
     single { LoginRepository(get()) }
     single {
         MainRepository(
             get(named("todoDataStore")),
             get(named("alertDataStore")),
+            get(named("timetableDataStore")),
             get(),
             androidContext()
         )
@@ -98,6 +102,7 @@ val previewModule = module {
     single<DataStore<TodoData>>(named("todoDataStore")) { androidContext().todoDataStore }
     single<DataStore<OnBoardingData>>(named("onBoardingDataStore")) { androidContext().onBoardingDataStore }
     single<DataStore<AlertData>>(named("alertDataStore")) { androidContext().notificationStore }
+    single<DataStore<LocalTimetable>>(named("timetableDataStore")) { androidContext().timetableDataStore }
 
     single { LoginRepository(get()) }
     single {
@@ -107,6 +112,7 @@ val previewModule = module {
         MainRepository(
             get(named("todoDataStore")),
             get(named("alertDataStore")),
+            get(named("timetableDataStore")),
             get(),
             androidContext()
         )

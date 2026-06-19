@@ -534,6 +534,12 @@ class LmsRefreshRepository(
             )
         }
     }
+
+    suspend fun fetchTimetable(): io.github.chlwhdtn03.data.Lms.Timetable = withContext(Dispatchers.IO) {
+        val loginData = loginRepository.getLoginData()
+        loginIfNeeded(RefreshSource.APP_START, loginData, forceLogin = false)
+        LmsApi.getTimetable()
+    }
 }
 
 enum class RefreshSource {

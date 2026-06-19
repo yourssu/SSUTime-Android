@@ -145,4 +145,17 @@
     <string name="widget_late_submission">Late submission</string>
     <string name="widget_late_short">Late</string>
     <string name="widget_more_todos">%1$d more tasks</string>
+    <string name="timetable_empty_period">%1$d-minute break</string>
+    <string name="timetable_empty_period_hours">%1$d-hour break</string>
+    <string name="timetable_empty_period_hours_minutes">%1$d-hour %2$d-minute break</string>
+    <string name="timetable_title">Timetable</string>
+    <string name="day_mon">Mon</string>
+    <string name="day_tue">Tue</string>
+    <string name="day_wed">Wed</string>
+    <string name="day_thu">Thu</string>
+    <string name="day_fri">Fri</string>
+    <string name="day_sat">Sat</string>
+    <string name="day_sun">Sun</string>
+    <string name="timetable_no_class_msg">No classes on %1$s.</string>
+    <string name="timetable_empty_message">No timetable information found.</string>
 </resources>

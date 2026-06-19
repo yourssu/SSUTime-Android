@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -119,6 +120,7 @@ import java.time.temporal.ChronoUnit
 fun MainScreen(
     viewModel: MainViewModel = koinViewModel(),
     coroutine: CoroutineScope = rememberCoroutineScope(),
+    isLargeScreen: Boolean = false,
     skipInitialLmsRefresh: Boolean = false,
     forceInitialLmsRefresh: Boolean = false,
     homeEntrySource: String = MainActivity.ENTRY_SOURCE_APP,
@@ -155,6 +157,9 @@ fun MainScreen(
                 showBlockingLoading = !skipInitialLmsRefresh,
                 source = RefreshSource.APP_START,
             )
+            if (isLargeScreen) {
+                viewModel.loadTimetable()
+            }
             if (!viewModel.showNetworkError.value && todoData != null) {
                 Analytics.viewHome(
                     taskCount = todoData.todos.size,
@@ -189,6 +194,9 @@ fun MainScreen(
                     showBlockingLoading = showBlockingLoading,
                     source = source,
                 )
+                if (isLargeScreen) {
+                    viewModel.loadTimetable(forceRefresh = true)
+                }
             } else {
                 viewModel.showNetworkErrorScreen()
             }
@@ -227,42 +235,96 @@ fun MainScreen(
                 errorCause = viewModel.showNetworkCause.value
             )
         } else {
-            MainFragment(
-                innerPadding = innerPadding,
-                todos = viewModel.todos,
-                submitted = viewModel.submitted,
-                loadedAt = viewModel.loadedAt.value,
-                showWidgetBadge = viewModel.showWidgetBadge.value,
-                aiSummaryStates = viewModel.aiSummaryStates,
-                isRefreshing = viewModel.isLoading.value,
-                refreshProgress = viewModel.loadingProgress.value,
-                onRefresh = {
-                    refreshTodos(
-                        showBlockingLoading = false,
-                        source = RefreshSource.PULL_TO_REFRESH,
-                        captureRefreshEvent = Analytics::pullToRefresh,
+            if(!isLargeScreen) {
+                MainFragment(
+                    innerPadding = innerPadding,
+                    todos = viewModel.todos,
+                    submitted = viewModel.submitted,
+                    loadedAt = viewModel.loadedAt.value,
+                    showWidgetBadge = viewModel.showWidgetBadge.value,
+                    aiSummaryStates = viewModel.aiSummaryStates,
+                    isRefreshing = viewModel.isLoading.value,
+                    refreshProgress = viewModel.loadingProgress.value,
+                    onRefresh = {
+                        refreshTodos(
+                            showBlockingLoading = false,
+                            source = RefreshSource.PULL_TO_REFRESH,
+                            captureRefreshEvent = Analytics::pullToRefresh,
+                        )
+                    },
+                    onClickRefresh = {
+                        refreshTodos(
+                            showBlockingLoading = true,
+                            source = RefreshSource.REFRESH_BUTTON,
+                            captureRefreshEvent = Analytics::refreshClick,
+                        )
+                    },
+                    onClickSubmitted = {
+                        showSubmittedBottomSheet = true
+                    },
+                    onClickWidgetBadge = {
+                        Analytics.widgetBannerClick()
+                        showWidgetHelperDialog = true
+                    },
+                    onDismissWidgetBadge = {
+                        Analytics.widgetBannerDismiss()
+                        viewModel.dismissWidgetHelperBadge()
+                    },
+                    onExpandTodo = viewModel::loadAiSummary,
+                )
+            } else {
+                Row(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(innerPadding)
+                ) {
+                    MainFragment(
+                        modifier = Modifier
+                            .weight(1.3f)
+                            .fillMaxHeight(),
+                        innerPadding = PaddingValues(0.dp),
+                        todos = viewModel.todos,
+                        submitted = viewModel.submitted,
+                        loadedAt = viewModel.loadedAt.value,
+                        showWidgetBadge = viewModel.showWidgetBadge.value,
+                        aiSummaryStates = viewModel.aiSummaryStates,
+                        isRefreshing = viewModel.isLoading.value,
+                        refreshProgress = viewModel.loadingProgress.value,
+                        onRefresh = {
+                            refreshTodos(
+                                showBlockingLoading = false,
+                                source = RefreshSource.PULL_TO_REFRESH,
+                                captureRefreshEvent = Analytics::pullToRefresh,
+                            )
+                        },
+                        onClickRefresh = {
+                            refreshTodos(
+                                showBlockingLoading = true,
+                                source = RefreshSource.REFRESH_BUTTON,
+                                captureRefreshEvent = Analytics::refreshClick,
+                            )
+                        },
+                        onClickSubmitted = {
+                            showSubmittedBottomSheet = true
+                        },
+                        onClickWidgetBadge = {
+                            Analytics.widgetBannerClick()
+                            showWidgetHelperDialog = true
+                        },
+                        onDismissWidgetBadge = {
+                            Analytics.widgetBannerDismiss()
+                            viewModel.dismissWidgetHelperBadge()
+                        },
+                        onExpandTodo = viewModel::loadAiSummary,
                     )
-                },
-                onClickRefresh = {
-                    refreshTodos(
-                        showBlockingLoading = true,
-                        source = RefreshSource.REFRESH_BUTTON,
-                        captureRefreshEvent = Analytics::refreshClick,
+                    TimeTableFragment(
+                        viewModel = viewModel,
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxHeight()
                     )
-                },
-                onClickSubmitted = {
-                    showSubmittedBottomSheet = true
-                },
-                onClickWidgetBadge = {
-                    Analytics.widgetBannerClick()
-                    showWidgetHelperDialog = true
-                },
-                onDismissWidgetBadge = {
-                    Analytics.widgetBannerDismiss()
-                    viewModel.dismissWidgetHelperBadge()
-                },
-                onExpandTodo = viewModel::loadAiSummary,
-            )
+                }
+            }
         }
 
         if (showWidgetHelperDialog) {
@@ -483,6 +545,7 @@ private fun Context.isNetworkConnected(): Boolean {
 @Composable
 @Preview
 fun MainFragment(
+    modifier: Modifier = Modifier,
     innerPadding: PaddingValues = PaddingValues(0.dp),
     todos: List<TodoInfo> = emptyList(),
     submitted: List<TodoInfo> = emptyList(),
@@ -516,8 +579,7 @@ fun MainFragment(
                 modifier = Modifier.align(Alignment.TopCenter),
             )
         },
-        modifier = Modifier
-            .fillMaxSize()
+        modifier = modifier
             .padding(innerPadding)
     ) {
         BoxWithConstraints(

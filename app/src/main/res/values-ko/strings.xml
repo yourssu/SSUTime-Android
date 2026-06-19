@@ -144,4 +144,17 @@
     <string name="widget_late_submission">지각 제출</string>
     <string name="widget_late_short">지각</string>
     <string name="widget_more_todos">그 외 %1$d건의 할 일이 있어요</string>
+    <string name="timetable_empty_period">%1$d분 공강</string>
+    <string name="timetable_empty_period_hours">%1$d시간 공강</string>
+    <string name="timetable_empty_period_hours_minutes">%1$d시간 %2$d분 공강</string>
+    <string name="timetable_title">시간표</string>
+    <string name="day_mon">월</string>
+    <string name="day_tue">화</string>
+    <string name="day_wed">수</string>
+    <string name="day_thu">목</string>
+    <string name="day_fri">금</string>
+    <string name="day_sat">토</string>
+    <string name="day_sun">일</string>
+    <string name="timetable_no_class_msg">%1$s요일은 수업이 없습니다.</string>
+    <string name="timetable_empty_message">불러온 시간표 정보가 없어요.</string>
 </resources>

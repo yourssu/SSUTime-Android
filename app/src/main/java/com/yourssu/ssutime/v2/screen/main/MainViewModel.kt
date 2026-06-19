@@ -62,6 +62,18 @@ class MainViewModel(
         }
 
         viewModelScope.launch {
+            mainRepository.timetableData.collect { localTimetable ->
+                if (localTimetable.items.isNotEmpty()) {
+                    timetableState.value = TimetableUiState.Success(localTimetable.toDomain())
+                } else {
+                    if (timetableState.value !is TimetableUiState.Loading) {
+                        timetableState.value = TimetableUiState.Empty
+                    }
+                }
+            }
+        }
+
+        viewModelScope.launch {
             lmsRefreshRepository.onboardingInitialRefreshInProgress.collect { isRefreshing ->
                 onboardingInitialRefreshInProgress.value = isRefreshing
             }
@@ -318,6 +330,50 @@ class MainViewModel(
             .toLocalDate()
     }.getOrNull()
 
+    var timetableState = mutableStateOf<TimetableUiState>(TimetableUiState.Loading)
+        private set
+
+    private var isTimetableLoading = false
+
+    fun loadTimetable(forceRefresh: Boolean = false) {
+        if (isTimetableLoading) return
+        viewModelScope.launch {
+            isTimetableLoading = true
+            val currentState = timetableState.value
+            if (currentState !is TimetableUiState.Success) {
+                timetableState.value = TimetableUiState.Loading
+            }
+            try {
+                val timetable = lmsRefreshRepository.fetchTimetable()
+                if (timetable.items.isEmpty()) {
+                    if (currentState is TimetableUiState.Success) {
+                        Log.w(javaClass.name, "새로 불러온 시간표가 비어있어 기존 데이터를 유지합니다.")
+                    } else {
+                        mainRepository.updateTimetableData(timetable.toLocal())
+                        timetableState.value = TimetableUiState.Empty
+                    }
+                } else {
+                    mainRepository.updateTimetableData(timetable.toLocal())
+                }
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                Log.e(javaClass.name, "시간표 정보를 갱신하지 못했습니다.", e)
+                if (currentState !is TimetableUiState.Success) {
+                    timetableState.value = TimetableUiState.Error(e.localizedMessage ?: "시간표를 불러오지 못했어요.")
+                }
+            } finally {
+                isTimetableLoading = false
+            }
+        }
+    }
+
+}
+
+sealed interface TimetableUiState {
+    data object Loading : TimetableUiState
+    data class Success(val timetable: io.github.chlwhdtn03.data.Lms.Timetable) : TimetableUiState
+    data class Error(val message: String) : TimetableUiState
+    data object Empty : TimetableUiState
 }
 
 sealed interface AiSummaryUiState {
