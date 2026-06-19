@@ -270,9 +270,9 @@ fun MyPageScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .verticalScroll(scrollState)
-            .padding(vertical = 32.dp, horizontal = 16.dp)
+            .padding(horizontal = 16.dp)
             .safeDrawingPadding()
+            .verticalScroll(scrollState)
     ) {
         Row {
             IconButton(onClick = onPressBack) {
