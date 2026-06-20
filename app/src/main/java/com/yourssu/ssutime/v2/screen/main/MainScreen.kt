@@ -160,9 +160,7 @@ fun MainScreen(
                 showBlockingLoading = !skipInitialLmsRefresh,
                 source = RefreshSource.APP_START,
             )
-            if (isLargeScreen) {
-                viewModel.loadLargeScreenData()
-            }
+            viewModel.loadLargeScreenData()
             if (!viewModel.showNetworkError.value && todoData != null) {
                 Analytics.viewHome(
                     taskCount = todoData.todos.size,
@@ -197,9 +195,7 @@ fun MainScreen(
                     showBlockingLoading = showBlockingLoading,
                     source = source,
                 )
-                if (isLargeScreen) {
-                    viewModel.loadLargeScreenData(forceRefresh = true)
-                }
+                viewModel.loadLargeScreenData(forceRefresh = true)
             } else {
                 viewModel.showNetworkErrorScreen()
             }
@@ -239,42 +235,79 @@ fun MainScreen(
             )
         } else {
             if(!isLargeScreen) {
-                MainFragment(
-                    innerPadding = innerPadding,
-                    todos = viewModel.todos,
-                    submitted = viewModel.submitted,
-                    loadedAt = viewModel.loadedAt.value,
-                    showWidgetBadge = viewModel.showWidgetBadge.value,
-                    aiSummaryStates = viewModel.aiSummaryStates,
-                    isRefreshing = viewModel.isLoading.value,
-                    refreshProgress = viewModel.loadingProgress.value,
-                    onRefresh = {
-                        refreshTodos(
-                            showBlockingLoading = false,
-                            source = RefreshSource.PULL_TO_REFRESH,
-                            captureRefreshEvent = Analytics::pullToRefresh,
-                        )
-                    },
-                    onClickRefresh = {
-                        refreshTodos(
-                            showBlockingLoading = true,
-                            source = RefreshSource.REFRESH_BUTTON,
-                            captureRefreshEvent = Analytics::refreshClick,
-                        )
-                    },
-                    onClickSubmitted = {
-                        showSubmittedBottomSheet = true
-                    },
-                    onClickWidgetBadge = {
-                        Analytics.widgetBannerClick()
-                        showWidgetHelperDialog = true
-                    },
-                    onDismissWidgetBadge = {
-                        Analytics.widgetBannerDismiss()
-                        viewModel.dismissWidgetHelperBadge()
-                    },
-                    onExpandTodo = viewModel::loadAiSummary,
-                )
+                val pagerState = rememberPagerState(pageCount = { 5 })
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(innerPadding)
+                ) {
+                    HorizontalPager(
+                        state = pagerState,
+                        modifier = Modifier.weight(1f)
+                    ) { page ->
+                        when (page) {
+                            0 -> MainFragment(
+                                modifier = Modifier.fillMaxSize(),
+                                innerPadding = PaddingValues(0.dp),
+                                todos = viewModel.todos,
+                                submitted = viewModel.submitted,
+                                loadedAt = viewModel.loadedAt.value,
+                                showWidgetBadge = viewModel.showWidgetBadge.value,
+                                aiSummaryStates = viewModel.aiSummaryStates,
+                                isRefreshing = viewModel.isLoading.value,
+                                refreshProgress = viewModel.loadingProgress.value,
+                                onRefresh = {
+                                    refreshTodos(
+                                        showBlockingLoading = false,
+                                        source = RefreshSource.PULL_TO_REFRESH,
+                                        captureRefreshEvent = Analytics::pullToRefresh,
+                                    )
+                                },
+                                onClickRefresh = {
+                                    refreshTodos(
+                                        showBlockingLoading = true,
+                                        source = RefreshSource.REFRESH_BUTTON,
+                                        captureRefreshEvent = Analytics::refreshClick,
+                                    )
+                                },
+                                onClickSubmitted = {
+                                    showSubmittedBottomSheet = true
+                                },
+                                onClickWidgetBadge = {
+                                    Analytics.widgetBannerClick()
+                                    showWidgetHelperDialog = true
+                                },
+                                onDismissWidgetBadge = {
+                                    Analytics.widgetBannerDismiss()
+                                    viewModel.dismissWidgetHelperBadge()
+                                },
+                                onExpandTodo = viewModel::loadAiSummary,
+                            )
+                            1 -> TimeTableFragment(viewModel = viewModel, modifier = Modifier.fillMaxSize())
+                            2 -> ScholarshipHistoryView(state = viewModel.scholarshipState.value, onRefresh = { viewModel.loadScholarship(forceRefresh = true) }, modifier = Modifier.fillMaxSize())
+                            3 -> TuitionHistoryView(state = viewModel.tuitionState.value, onRefresh = { viewModel.loadTuition(forceRefresh = true) }, modifier = Modifier.fillMaxSize())
+                            4 -> GraduateRequirementsView(state = viewModel.graduateState.value, onRefresh = { viewModel.loadGraduate(forceRefresh = true) }, modifier = Modifier.fillMaxSize())
+                        }
+                    }
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 12.dp),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        repeat(5) { index ->
+                            val isSelected = pagerState.currentPage == index
+                            Box(
+                                modifier = Modifier
+                                    .padding(horizontal = 4.dp)
+                                    .size(if (isSelected) 8.dp else 6.dp)
+                                    .clip(CircleShape)
+                                    .background(if (isSelected) R500 else N300)
+                            )
+                        }
+                    }
+                }
             } else {
                 Row(
                     modifier = Modifier
