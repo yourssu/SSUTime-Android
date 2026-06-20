@@ -43,7 +43,6 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -399,12 +398,25 @@ fun MainScreen(
                         ) {
                             repeat(4) { index ->
                                 val isSelected = pagerState.currentPage == index
-                                Box(
+                                val icon = when (index) {
+                                    0 -> Icons.Default.DateRange
+                                    1 -> Icons.Default.Star
+                                    2 -> Icons.Default.Payments
+                                    3 -> Icons.Default.School
+                                    else -> Icons.Default.DateRange
+                                }
+                                Icon(
+                                    imageVector = icon,
+                                    contentDescription = null,
                                     modifier = Modifier
-                                        .padding(horizontal = 4.dp)
-                                        .size(if (isSelected) 8.dp else 6.dp)
-                                        .clip(CircleShape)
-                                        .background(if (isSelected) R500 else N300)
+                                        .padding(horizontal = 6.dp)
+                                        .size(if (isSelected) 24.dp else 20.dp)
+                                        .clickable {
+                                            coroutine.launch {
+                                                pagerState.animateScrollToPage(index)
+                                            }
+                                        },
+                                    tint = if (isSelected) R500 else N300
                                 )
                             }
                         }
