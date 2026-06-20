@@ -46,6 +46,12 @@ import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Payments
+import androidx.compose.material.icons.filled.School
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -298,12 +304,26 @@ fun MainScreen(
                     ) {
                         repeat(5) { index ->
                             val isSelected = pagerState.currentPage == index
-                            Box(
+                            val icon = when (index) {
+                                0 -> Icons.Default.Home
+                                1 -> Icons.Default.DateRange
+                                2 -> Icons.Default.Star
+                                3 -> Icons.Default.Payments
+                                4 -> Icons.Default.School
+                                else -> Icons.Default.Home
+                            }
+                            Icon(
+                                imageVector = icon,
+                                contentDescription = null,
                                 modifier = Modifier
-                                    .padding(horizontal = 4.dp)
-                                    .size(if (isSelected) 8.dp else 6.dp)
-                                    .clip(CircleShape)
-                                    .background(if (isSelected) R500 else N300)
+                                    .padding(horizontal = 6.dp)
+                                    .size(if (isSelected) 24.dp else 20.dp)
+                                    .clickable {
+                                        coroutine.launch {
+                                            pagerState.animateScrollToPage(index)
+                                        }
+                                    },
+                                tint = if (isSelected) R500 else N300
                             )
                         }
                     }
