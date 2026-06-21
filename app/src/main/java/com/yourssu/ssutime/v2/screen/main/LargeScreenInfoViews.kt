@@ -41,6 +41,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.core.text.isDigitsOnly
 import com.yourssu.ssutime.v2.R
 import com.yourssu.ssutime.v2.ui.theme.G400
 import com.yourssu.ssutime.v2.ui.theme.G500
@@ -1608,7 +1609,7 @@ private fun GradeCellCard(cell: io.github.chlwhdtn03.data.Lms.GradeCell) {
                 color = if (cell.gradePoint.startsWith("A") || cell.gradePoint.startsWith("B") || cell.gradePoint.startsWith("P")) G500 else R500
             )
             // 수치 점수/평점 (grade)을 작게 표시
-            if (cell.grade.isNotBlank()) {
+            if (cell.grade.isNotBlank() && cell.grade.isDigitsOnly()) {
                 val pointText = if (cell.grade.endsWith("점") || cell.grade.contains(".")) cell.grade else "${cell.grade}점"
                 Text(
                     text = pointText,
