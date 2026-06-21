@@ -191,10 +191,14 @@ private fun ScholarshipCellCard(cell: ScholarshipHistoryCell) {
                 color = R500,
             )
             if (cell.processStatus.isNotBlank()) {
+                val statusColor = when (cell.processStatus.trim()) {
+                    "지급완료", "지급 완료" -> G500
+                    else -> R500
+                }
                 Text(
                     text = cell.processStatus,
                     style = SSUType.Label1Medium,
-                    color = G500
+                    color = statusColor
                 )
             }
         }
