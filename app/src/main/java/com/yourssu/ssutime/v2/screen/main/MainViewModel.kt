@@ -5,6 +5,7 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.snapshotFlow
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.yourssu.data.AiSummaryCache
@@ -16,6 +17,7 @@ import com.yourssu.data.network.ReportedTodoResponse
 import com.yourssu.data.network.matches
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import java.time.Duration
 import java.time.Instant
@@ -56,6 +58,19 @@ class MainViewModel(
         private set
     var graduateState = mutableStateOf<GraduateUiState>(GraduateUiState.Loading)
         private set
+
+    var gradeSummaryState = mutableStateOf<GradeSummaryUiState>(GradeSummaryUiState.Loading)
+        private set
+    var gradeDetailState = mutableStateOf<GradeDetailUiState>(GradeDetailUiState.Loading)
+        private set
+
+    var gradeSelectedSemesterKey = mutableStateOf("current")
+    var gradeCurrentSemesterName = mutableStateOf("이번 학기")
+    var gradeThisSemesterYear = mutableStateOf<String?>(null)
+    var gradeThisSemesterType = mutableStateOf<io.github.chlwhdtn03.data.Lms.Semester?>(null)
+
+    @Volatile
+    private var isGradeLoading = false
 
     private var isTimetableLoading = false
     private var isScholarshipLoading = false
@@ -118,6 +133,56 @@ class MainViewModel(
                 } else {
                     if (graduateState.value !is GraduateUiState.Loading) {
                         graduateState.value = GraduateUiState.Empty
+                    }
+                }
+            }
+        }
+
+        viewModelScope.launch {
+            combine(
+                mainRepository.gradeData,
+                snapshotFlow { gradeSelectedSemesterKey.value }
+            ) { localGrade, selectedKey ->
+                Pair(localGrade, selectedKey)
+            }.collect { (localGrade, selectedKey) ->
+                // 0. 이번 학기 메타 정보가 캐시되어 있으면 최신 상태 복원
+                val cachedYear = localGrade.thisSemesterYear
+                val cachedTypeStr = localGrade.thisSemesterType
+                if (cachedYear != null && cachedTypeStr != null) {
+                    val cachedType = runCatching { io.github.chlwhdtn03.data.Lms.Semester.valueOf(cachedTypeStr) }.getOrNull()
+                    if (cachedType != null) {
+                        if (gradeThisSemesterYear.value == null || gradeThisSemesterType.value == null) {
+                            gradeThisSemesterYear.value = cachedYear
+                            gradeThisSemesterType.value = cachedType
+                            gradeCurrentSemesterName.value = "$cachedYear ${cachedType.nameKor}"
+                        }
+                    }
+                }
+
+                if (localGrade.summaryItems.isNotEmpty()) {
+                    gradeSummaryState.value = GradeSummaryUiState.Success(localGrade.toDomainSummary())
+                } else {
+                    if (gradeSummaryState.value !is GradeSummaryUiState.Loading && !isGradeLoading) {
+                        gradeSummaryState.value = GradeSummaryUiState.Empty
+                    }
+                }
+
+                val targetKey = if (selectedKey == "current") {
+                    val curYear = gradeThisSemesterYear.value ?: cachedYear
+                    val curType = gradeThisSemesterType.value?.name ?: cachedTypeStr
+                    if (curYear != null && curType != null) "$curYear-$curType" else null
+                } else {
+                    selectedKey
+                }
+
+                val cachedTable = if (targetKey != null) localGrade.details[targetKey] else null
+                if (cachedTable != null && cachedTable.items.isNotEmpty()) {
+                    gradeDetailState.value = GradeDetailUiState.Success(cachedTable.toDomain())
+                } else {
+                    if (gradeDetailState.value !is GradeDetailUiState.Loading && !isGradeLoading) {
+                        gradeDetailState.value = GradeDetailUiState.Empty
+                    } else if (gradeDetailState.value is GradeDetailUiState.Success) {
+                        gradeDetailState.value = GradeDetailUiState.Loading
                     }
                 }
             }
@@ -404,7 +469,7 @@ class MainViewModel(
                 timetableState.value = TimetableUiState.Loading
             }
             try {
-                val timetable = lmsRefreshRepository.fetchTimetable()
+                val timetable = lmsRefreshRepository.fetchTimetable(forceLogin = forceRefresh)
                 if (timetable.items.isEmpty()) {
                     if (currentState is TimetableUiState.Success) {
                         Log.w(javaClass.name, "새로 불러온 시간표가 비어있어 기존 데이터를 유지합니다.")
@@ -441,7 +506,7 @@ class MainViewModel(
                 scholarshipState.value = ScholarshipUiState.Loading
             }
             try {
-                val table = lmsRefreshRepository.fetchScholarshipTable()
+                val table = lmsRefreshRepository.fetchScholarshipTable(forceLogin = forceRefresh)
                 if (table.items.isEmpty()) {
                     if (currentState is ScholarshipUiState.Success) {
                         Log.w(javaClass.name, "새로 불러온 장학 내역이 비어있어 기존 데이터를 유지합니다.")
@@ -477,7 +542,7 @@ class MainViewModel(
                 tuitionState.value = TuitionUiState.Loading
             }
             try {
-                val table = lmsRefreshRepository.fetchTuitionTable()
+                val table = lmsRefreshRepository.fetchTuitionTable(forceLogin = forceRefresh)
                 if (table.items.isEmpty()) {
                     if (currentState is TuitionUiState.Success) {
                         Log.w(javaClass.name, "새로 불러온 등록금 내역이 비어있어 기존 데이터를 유지합니다.")
@@ -513,7 +578,7 @@ class MainViewModel(
                 graduateState.value = GraduateUiState.Loading
             }
             try {
-                val table = lmsRefreshRepository.fetchGraduateTable()
+                val table = lmsRefreshRepository.fetchGraduateTable(forceLogin = forceRefresh)
                 if (table.items.isEmpty()) {
                     if (currentState is GraduateUiState.Success) {
                         Log.w(javaClass.name, "새로 불러온 졸업 사정 내역이 비어있어 기존 데이터를 유지합니다.")
@@ -540,11 +605,135 @@ class MainViewModel(
         }
     }
 
+       fun loadAllGrades(forceRefresh: Boolean = false) {
+        if (isGradeLoading) return
+        isGradeLoading = true
+
+        val currentSummaryState = gradeSummaryState.value
+        val currentDetailState = gradeDetailState.value
+
+        if (currentSummaryState !is GradeSummaryUiState.Success) {
+            gradeSummaryState.value = GradeSummaryUiState.Loading
+        }
+        if (currentDetailState !is GradeDetailUiState.Success) {
+            gradeDetailState.value = GradeDetailUiState.Loading
+        }
+
+        viewModelScope.launch {
+            val jobs = mutableListOf<kotlinx.coroutines.Job>()
+            try {
+                // 1. 이번 학기 성적을 먼저 조회하여 최신 학기가 무엇인지 확인
+                val currentTable = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    lmsRefreshRepository.fetchGradeTable(forceLogin = forceRefresh)
+                }
+
+                // 2. 요약 테이블 조회
+                val summaryTable = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    lmsRefreshRepository.fetchSemesterGradeSummaryTable(forceLogin = forceRefresh)
+                }
+
+                // 3. 요약 및 이번 학기 상세 성적 1차로 데이터스토어 저장 (빠른 화면 노출)
+                mainRepository.updateGradeData { latestCache ->
+                    val updatedDetails = latestCache.details.toMutableMap().apply {
+                        put("${currentTable.year}-${currentTable.semester.name}", currentTable.toLocal())
+                    }
+                    latestCache.copy(
+                        summaryItems = summaryTable.items.map { it.toLocal() },
+                        details = updatedDetails,
+                        thisSemesterYear = currentTable.year,
+                        thisSemesterType = currentTable.semester.name
+                    )
+                }
+
+                // 이번 학기 상태 값 갱신
+                gradeThisSemesterYear.value = currentTable.year
+                gradeThisSemesterType.value = currentTable.semester
+                val semName = runCatching { currentTable.semester.nameKor }.getOrDefault("")
+                if (currentTable.year.isNotBlank() && semName.isNotBlank()) {
+                    gradeCurrentSemesterName.value = "${currentTable.year} $semName"
+                }
+
+                // 4. 나머지 과거 학기에 대해 병렬 비동기 조회 및 점진적 개별 업데이트
+                summaryTable.items.forEach { cell ->
+                    val yearKey = cell.year
+                    val sem = cell.semester
+                    if (yearKey != null && sem != null && (yearKey != currentTable.year || sem != currentTable.semester)) {
+                        val job = launch {
+                            runCatching {
+                                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                                    lmsRefreshRepository.fetchGradeTable(yearKey, sem, forceLogin = forceRefresh)
+                                }
+                            }.onSuccess { table ->
+                                mainRepository.updateGradeData { latestCache ->
+                                    val updatedDetails = latestCache.details.toMutableMap().apply {
+                                        put("${table.year}-${table.semester.name}", table.toLocal())
+                                    }
+                                    latestCache.copy(details = updatedDetails)
+                                }
+                            }.onFailure { e ->
+                                Log.e(javaClass.name, "${yearKey}학년도 ${sem.nameKor} 상세 성적을 백그라운드 로드하지 못했습니다.", e)
+                            }
+                        }
+                        jobs.add(job)
+                    }
+                }
+
+                // 모든 과거 학기 비동기 조회가 완전히 끝날 때까지 대기
+                jobs.forEach { it.join() }
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                Log.e(javaClass.name, "최신 성적 데이터를 불러오지 못했습니다.", e)
+                if (currentSummaryState !is GradeSummaryUiState.Success) {
+                    gradeSummaryState.value = if (e.isNetworkOrAuthError()) {
+                        GradeSummaryUiState.Error(e.localizedMessage ?: "성적 조회를 불러오지 못했어요.")
+                    } else {
+                        GradeSummaryUiState.Empty
+                    }
+                }
+                if (currentDetailState !is GradeDetailUiState.Success) {
+                    gradeDetailState.value = if (e.isNetworkOrAuthError()) {
+                        GradeDetailUiState.Error(e.localizedMessage ?: "성적 세부 정보를 불러오지 못했어요.")
+                    } else {
+                        GradeDetailUiState.Empty
+                    }
+                }
+            } finally {
+                isGradeLoading = false
+            }
+        }
+    }
+
+    fun loadGradeSummary(forceRefresh: Boolean = false) {
+        loadAllGrades(forceRefresh)
+    }
+
+    fun loadGradeDetail(year: String?, semester: io.github.chlwhdtn03.data.Lms.Semester?, forceRefresh: Boolean = false) {
+        val targetKey = if (year == null || semester == null) {
+            val curYear = gradeThisSemesterYear.value
+            val curSem = gradeThisSemesterType.value
+            if (curYear != null && curSem != null) "$curYear-${curSem.name}" else null
+        } else {
+            "$year-${semester.name}"
+        }
+
+        viewModelScope.launch {
+            val currentCache = mainRepository.getGradeData()
+            val cachedTable = if (targetKey != null) currentCache.details[targetKey] else null
+
+            if (cachedTable != null && cachedTable.items.isNotEmpty() && !forceRefresh) {
+                gradeDetailState.value = GradeDetailUiState.Success(cachedTable.toDomain())
+            } else {
+                loadAllGrades(forceRefresh)
+            }
+        }
+    }
+
     fun loadLargeScreenData(forceRefresh: Boolean = false) {
         loadTimetable(forceRefresh)
         loadScholarship(forceRefresh)
         loadTuition(forceRefresh)
         loadGraduate(forceRefresh)
+        loadGradeSummary(forceRefresh)
     }
 
 }
@@ -575,6 +764,20 @@ sealed interface GraduateUiState {
     data class Success(val table: io.github.chlwhdtn03.data.Lms.GraduateTable) : GraduateUiState
     data class Error(val message: String) : GraduateUiState
     data object Empty : GraduateUiState
+}
+
+sealed interface GradeSummaryUiState {
+    data object Loading : GradeSummaryUiState
+    data class Success(val table: io.github.chlwhdtn03.data.Lms.SemesterGradeSummaryTable) : GradeSummaryUiState
+    data class Error(val message: String) : GradeSummaryUiState
+    data object Empty : GradeSummaryUiState
+}
+
+sealed interface GradeDetailUiState {
+    data object Loading : GradeDetailUiState
+    data class Success(val table: io.github.chlwhdtn03.data.Lms.GradeTable) : GradeDetailUiState
+    data class Error(val message: String) : GradeDetailUiState
+    data object Empty : GradeDetailUiState
 }
 
 sealed interface AiSummaryUiState {

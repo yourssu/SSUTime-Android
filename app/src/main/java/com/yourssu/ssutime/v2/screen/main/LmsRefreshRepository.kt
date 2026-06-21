@@ -535,28 +535,46 @@ class LmsRefreshRepository(
         }
     }
 
-    suspend fun fetchTimetable(): io.github.chlwhdtn03.data.Lms.Timetable = withContext(Dispatchers.IO) {
+    suspend fun fetchTimetable(forceLogin: Boolean = false): io.github.chlwhdtn03.data.Lms.Timetable = withContext(Dispatchers.IO) {
         val loginData = loginRepository.getLoginData()
-        loginIfNeeded(RefreshSource.APP_START, loginData, forceLogin = false)
+        loginIfNeeded(RefreshSource.APP_START, loginData, forceLogin = forceLogin)
         LmsApi.getTimetable()
     }
 
-    suspend fun fetchScholarshipTable(): io.github.chlwhdtn03.data.Lms.ScholarshipHistoryTable = withContext(Dispatchers.IO) {
+    suspend fun fetchScholarshipTable(forceLogin: Boolean = false): io.github.chlwhdtn03.data.Lms.ScholarshipHistoryTable = withContext(Dispatchers.IO) {
         val loginData = loginRepository.getLoginData()
-        loginIfNeeded(RefreshSource.APP_START, loginData, forceLogin = false)
+        loginIfNeeded(RefreshSource.APP_START, loginData, forceLogin = forceLogin)
         LmsApi.getScholarshipHistoryTable()
     }
 
-    suspend fun fetchTuitionTable(): io.github.chlwhdtn03.data.Lms.TuitionTable = withContext(Dispatchers.IO) {
+    suspend fun fetchTuitionTable(forceLogin: Boolean = false): io.github.chlwhdtn03.data.Lms.TuitionTable = withContext(Dispatchers.IO) {
         val loginData = loginRepository.getLoginData()
-        loginIfNeeded(RefreshSource.APP_START, loginData, forceLogin = false)
+        loginIfNeeded(RefreshSource.APP_START, loginData, forceLogin = forceLogin)
         LmsApi.getTuitionTable()
     }
 
-    suspend fun fetchGraduateTable(): io.github.chlwhdtn03.data.Lms.GraduateTable = withContext(Dispatchers.IO) {
+    suspend fun fetchGraduateTable(forceLogin: Boolean = false): io.github.chlwhdtn03.data.Lms.GraduateTable = withContext(Dispatchers.IO) {
         val loginData = loginRepository.getLoginData()
-        loginIfNeeded(RefreshSource.APP_START, loginData, forceLogin = false)
+        loginIfNeeded(RefreshSource.APP_START, loginData, forceLogin = forceLogin)
         LmsApi.getGraduateTable()
+    }
+
+    suspend fun fetchSemesterGradeSummaryTable(forceLogin: Boolean = false): io.github.chlwhdtn03.data.Lms.SemesterGradeSummaryTable = withContext(Dispatchers.IO) {
+        val loginData = loginRepository.getLoginData()
+        loginIfNeeded(RefreshSource.APP_START, loginData, forceLogin = forceLogin)
+        LmsApi.getSemesterGradeSummaryTable()
+    }
+
+    suspend fun fetchGradeTable(year: String, semester: io.github.chlwhdtn03.data.Lms.Semester, forceLogin: Boolean = false): io.github.chlwhdtn03.data.Lms.GradeTable = withContext(Dispatchers.IO) {
+        val loginData = loginRepository.getLoginData()
+        loginIfNeeded(RefreshSource.APP_START, loginData, forceLogin = forceLogin)
+        LmsApi.getGradeTable(year, semester)
+    }
+
+    suspend fun fetchGradeTable(forceLogin: Boolean = false): io.github.chlwhdtn03.data.Lms.GradeTable = withContext(Dispatchers.IO) {
+        val loginData = loginRepository.getLoginData()
+        loginIfNeeded(RefreshSource.APP_START, loginData, forceLogin = forceLogin)
+        LmsApi.getGradeTable()
     }
 }
 

@@ -25,6 +25,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -730,6 +731,311 @@ private fun LargeScreenEmptyState(
                 text = stringResource(R.string.common_retry),
                 style = SSUType.Label2Medium,
             )
+        }
+    }
+}
+
+@Composable
+fun GradeHistoryView(
+    summaryState: GradeSummaryUiState,
+    detailState: GradeDetailUiState,
+    selectedSemesterKey: String,
+    onSelectedSemesterKeyChange: (String) -> Unit,
+    currentSemesterName: String,
+    onCurrentSemesterNameChange: (String) -> Unit,
+    thisSemesterYear: String?,
+    onThisSemesterYearChange: (String?) -> Unit,
+    thisSemesterType: io.github.chlwhdtn03.data.Lms.Semester?,
+    onThisSemesterTypeChange: (io.github.chlwhdtn03.data.Lms.Semester?) -> Unit,
+    onLoadDetail: (String?, io.github.chlwhdtn03.data.Lms.Semester?, Boolean) -> Unit,
+    onRefreshSummary: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    LaunchedEffect(Unit) {
+        onRefreshSummary()
+        onLoadDetail(null, null, false)
+    }
+
+    LaunchedEffect(detailState) {
+        if (selectedSemesterKey == "current" && detailState is GradeDetailUiState.Success) {
+            val table = detailState.table
+            val semName = runCatching { table.semester.nameKor }.getOrDefault("")
+            if (table.year.isNotBlank() && semName.isNotBlank()) {
+                onCurrentSemesterNameChange("${table.year} $semName")
+                if (thisSemesterYear == null || thisSemesterType == null) {
+                    onThisSemesterYearChange(table.year)
+                    onThisSemesterTypeChange(table.semester)
+                }
+            }
+        }
+    }
+
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .background(WHITE)
+            .padding(16.dp),
+    ) {
+        Text(
+            text = "성적 조회",
+            style = SSUType.H1SemiBold,
+        )
+
+        Spacer(Modifier.height(16.dp))
+
+        // 1. 학기 선택 칩 목록 (LazyRow)
+        androidx.compose.foundation.lazy.LazyRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            item {
+                val isSelected = selectedSemesterKey == "current"
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(if (isSelected) R500 else N100)
+                        .border(1.dp, if (isSelected) R500 else N200, RoundedCornerShape(20.dp))
+                        .clickable {
+                            onSelectedSemesterKeyChange("current")
+                            onLoadDetail(null, null, false)
+                        }
+                        .padding(horizontal = 14.dp, vertical = 8.dp)
+                ) {
+                    Text(
+                        text = currentSemesterName,
+                        style = SSUType.Caption1SemiBold,
+                        color = if (isSelected) WHITE else N500
+                    )
+                }
+            }
+
+            if (summaryState is GradeSummaryUiState.Success) {
+                // 이번 학기 정보(thisSemesterYear/Type)가 요약 목록에 존재하는 경우에만 요약 목록에서 해당 항목 제거 (중복 제거)
+                val displayCells = summaryState.table.items.filter { cell ->
+                    !(thisSemesterYear != null && thisSemesterType != null &&
+                      cell.year == thisSemesterYear && cell.semester == thisSemesterType)
+                }
+
+                items(displayCells.size) { index ->
+                    val cell = displayCells[index]
+                    val key = "${cell.year}-${cell.semester?.name ?: ""}"
+                    val isSelected = selectedSemesterKey == key
+                    val semesterName = cell.semester?.nameKor ?: ""
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(20.dp))
+                            .background(if (isSelected) R500 else N100)
+                            .border(1.dp, if (isSelected) R500 else N200, RoundedCornerShape(20.dp))
+                            .clickable {
+                                onSelectedSemesterKeyChange(key)
+                                cell.semester?.let { sem ->
+                                    onLoadDetail(cell.year, sem, false)
+                                }
+                            }
+                            .padding(horizontal = 14.dp, vertical = 8.dp)
+                    ) {
+                        Text(
+                            text = "${cell.year} $semesterName",
+                            style = SSUType.Caption1SemiBold,
+                            color = if (isSelected) WHITE else N500
+                        )
+                    }
+                }
+            }
+        }
+
+        Spacer(Modifier.height(16.dp))
+
+        // 2. 선택된 학기 요약 (요약 데이터가 존재할 때만)
+        if (summaryState is GradeSummaryUiState.Success) {
+            val summaryCells = summaryState.table.items
+            val currentSummaryCell = if (selectedSemesterKey == "current") {
+                val detailTable = (detailState as? GradeDetailUiState.Success)?.table
+                if (detailTable != null) {
+                    summaryCells.firstOrNull { it.year == detailTable.year && it.semester == detailTable.semester }
+                } else {
+                    null
+                }
+            } else {
+                summaryCells.firstOrNull { "${it.year}-${it.semester?.name ?: ""}" == selectedSemesterKey }
+            }
+
+            currentSummaryCell?.let { cell ->
+                GradeSummaryCard(cell = cell)
+                Spacer(Modifier.height(16.dp))
+            }
+        }
+
+        // 3. 세부 성적 리스트
+        Text(
+            text = "세부 성적",
+            style = SSUType.H3SemiBold,
+        )
+
+        Spacer(Modifier.height(8.dp))
+
+        Crossfade(
+            targetState = detailState,
+            label = "GradeDetailStateCrossfade",
+            modifier = Modifier.weight(1f)
+        ) { detailUiState ->
+            when (detailUiState) {
+                is GradeDetailUiState.Loading -> {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator(color = R500, trackColor = R100)
+                    }
+                }
+                is GradeDetailUiState.Success -> {
+                    val detailItems = detailUiState.table.items
+                    LazyColumn(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        items(detailItems.size) { index ->
+                            val gradeCell = detailItems[index]
+                            GradeCellCard(cell = gradeCell)
+                        }
+                    }
+                }
+                is GradeDetailUiState.Empty -> {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text(text = "상세 성적 내역이 없습니다.", style = SSUType.Body2Regular, color = N500)
+                    }
+                }
+                is GradeDetailUiState.Error -> {
+                    val summaryCells = (summaryState as? GradeSummaryUiState.Success)?.table?.items ?: emptyList()
+                    LargeScreenEmptyState(
+                        message = detailUiState.message,
+                        onRetry = {
+                            if (selectedSemesterKey == "current") {
+                                onLoadDetail(null, null, true)
+                            } else {
+                                val cell = summaryCells.firstOrNull { "${it.year}-${it.semester?.name ?: ""}" == selectedSemesterKey }
+                                cell?.let { c ->
+                                    c.semester?.let { sem ->
+                                        onLoadDetail(c.year, sem, true)
+                                    }
+                                }
+                            }
+                        }
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun GradeSummaryCard(cell: io.github.chlwhdtn03.data.Lms.SemesterGradeSummaryCell) {
+    val semesterName = cell.semester?.nameKor ?: ""
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(N100)
+            .border(1.dp, N200, RoundedCornerShape(16.dp))
+            .padding(16.dp)
+    ) {
+        Text(
+            text = "${cell.year}학년도 $semesterName 요약",
+            style = SSUType.H4SemiBold,
+            color = R500
+        )
+
+        Spacer(Modifier.height(12.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.weight(1f)) {
+                Text(text = "평점평균 (GPA)", style = SSUType.Caption1Medium, color = N500)
+                Spacer(Modifier.height(4.dp))
+                Text(text = cell.gpa.ifBlank { "-" }, style = SSUType.H3SemiBold)
+            }
+            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.weight(1f)) {
+                Text(text = "취득학점", style = SSUType.Caption1Medium, color = N500)
+                Spacer(Modifier.height(4.dp))
+                Text(text = cell.earnedCredits.ifBlank { "-" }, style = SSUType.H3SemiBold)
+            }
+            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.weight(1f)) {
+                Text(text = "학기석차", style = SSUType.Caption1Medium, color = N500)
+                Spacer(Modifier.height(4.dp))
+                Text(text = cell.semesterRank.ifBlank { "-" }, style = SSUType.H3SemiBold)
+            }
+        }
+
+        if (cell.academicWarning.isNotBlank() && cell.academicWarning != "N" && cell.academicWarning != "0") {
+            Spacer(Modifier.height(8.dp))
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(R500.copy(alpha = 0.1f))
+                    .padding(8.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "⚠️ 학사경고 대상자입니다. (${cell.academicWarning})",
+                    style = SSUType.Caption1SemiBold,
+                    color = R500
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun GradeCellCard(cell: io.github.chlwhdtn03.data.Lms.GradeCell) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(WHITE)
+            .border(1.dp, N200, RoundedCornerShape(12.dp))
+            .padding(14.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = "${cell.credits}학점",
+                style = SSUType.Caption2Medium,
+                color = N500
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = cell.subjectName,
+                style = SSUType.Label2SemiBold,
+            )
+            if (cell.professor.isNotBlank()) {
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    text = cell.professor,
+                    style = SSUType.Caption1Medium,
+                    color = N500
+                )
+            }
+        }
+
+        Spacer(Modifier.width(12.dp))
+
+        Column(horizontalAlignment = Alignment.End) {
+            // ABCD 성적 (gradePoint)을 크게 표시
+            Text(
+                text = cell.gradePoint,
+                style = SSUType.H3SemiBold,
+                color = if (cell.gradePoint.startsWith("A") || cell.gradePoint.startsWith("B")) G500 else R500
+            )
+            // 수치 점수/평점 (grade)을 작게 표시
+            if (cell.grade.isNotBlank()) {
+                val pointText = if (cell.grade.endsWith("점") || cell.grade.contains(".")) cell.grade else "${cell.grade}점"
+                Text(
+                    text = pointText,
+                    style = SSUType.Caption2Medium,
+                    color = N500
+                )
+            }
         }
     }
 }

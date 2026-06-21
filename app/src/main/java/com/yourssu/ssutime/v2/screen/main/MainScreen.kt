@@ -46,6 +46,7 @@ import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Payments
@@ -240,7 +241,7 @@ fun MainScreen(
             )
         } else {
             if(!isLargeScreen) {
-                val pagerState = rememberPagerState(pageCount = { 5 })
+                val pagerState = rememberPagerState(pageCount = { 6 })
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
@@ -292,6 +293,21 @@ fun MainScreen(
                             2 -> ScholarshipHistoryView(state = viewModel.scholarshipState.value, onRefresh = { viewModel.loadScholarship(forceRefresh = true) }, modifier = Modifier.fillMaxSize())
                             3 -> TuitionHistoryView(state = viewModel.tuitionState.value, onRefresh = { viewModel.loadTuition(forceRefresh = true) }, modifier = Modifier.fillMaxSize())
                             4 -> GraduateRequirementsView(state = viewModel.graduateState.value, onRefresh = { viewModel.loadGraduate(forceRefresh = true) }, modifier = Modifier.fillMaxSize())
+                            5 -> GradeHistoryView(
+                                summaryState = viewModel.gradeSummaryState.value,
+                                detailState = viewModel.gradeDetailState.value,
+                                selectedSemesterKey = viewModel.gradeSelectedSemesterKey.value,
+                                onSelectedSemesterKeyChange = { viewModel.gradeSelectedSemesterKey.value = it },
+                                currentSemesterName = viewModel.gradeCurrentSemesterName.value,
+                                onCurrentSemesterNameChange = { viewModel.gradeCurrentSemesterName.value = it },
+                                thisSemesterYear = viewModel.gradeThisSemesterYear.value,
+                                onThisSemesterYearChange = { viewModel.gradeThisSemesterYear.value = it },
+                                thisSemesterType = viewModel.gradeThisSemesterType.value,
+                                onThisSemesterTypeChange = { viewModel.gradeThisSemesterType.value = it },
+                                onLoadDetail = { year, sem, force -> viewModel.loadGradeDetail(year, sem, force) },
+                                onRefreshSummary = { viewModel.loadGradeSummary(forceRefresh = true) },
+                                modifier = Modifier.fillMaxSize()
+                            )
                         }
                     }
                     Row(
@@ -301,7 +317,7 @@ fun MainScreen(
                         horizontalArrangement = Arrangement.Center,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        repeat(5) { index ->
+                        repeat(6) { index ->
                             val isSelected = pagerState.currentPage == index
                             val icon = when (index) {
                                 0 -> Icons.Default.Home
@@ -309,6 +325,7 @@ fun MainScreen(
                                 2 -> Icons.Default.Star
                                 3 -> Icons.Default.Payments
                                 4 -> Icons.Default.School
+                                5 -> Icons.AutoMirrored.Filled.MenuBook
                                 else -> Icons.Default.Home
                             }
                             Icon(
@@ -372,7 +389,7 @@ fun MainScreen(
                         },
                         onExpandTodo = viewModel::loadAiSummary,
                     )
-                    val pagerState = rememberPagerState(pageCount = { 4 })
+                    val pagerState = rememberPagerState(pageCount = { 5 })
                     Column(
                         modifier = Modifier
                             .weight(1f)
@@ -387,6 +404,21 @@ fun MainScreen(
                                 1 -> ScholarshipHistoryView(state = viewModel.scholarshipState.value, onRefresh = { viewModel.loadScholarship(forceRefresh = true) }, modifier = Modifier.fillMaxSize())
                                 2 -> TuitionHistoryView(state = viewModel.tuitionState.value, onRefresh = { viewModel.loadTuition(forceRefresh = true) }, modifier = Modifier.fillMaxSize())
                                 3 -> GraduateRequirementsView(state = viewModel.graduateState.value, onRefresh = { viewModel.loadGraduate(forceRefresh = true) }, modifier = Modifier.fillMaxSize())
+                                4 -> GradeHistoryView(
+                                    summaryState = viewModel.gradeSummaryState.value,
+                                    detailState = viewModel.gradeDetailState.value,
+                                    selectedSemesterKey = viewModel.gradeSelectedSemesterKey.value,
+                                    onSelectedSemesterKeyChange = { viewModel.gradeSelectedSemesterKey.value = it },
+                                    currentSemesterName = viewModel.gradeCurrentSemesterName.value,
+                                    onCurrentSemesterNameChange = { viewModel.gradeCurrentSemesterName.value = it },
+                                    thisSemesterYear = viewModel.gradeThisSemesterYear.value,
+                                    onThisSemesterYearChange = { viewModel.gradeThisSemesterYear.value = it },
+                                    thisSemesterType = viewModel.gradeThisSemesterType.value,
+                                    onThisSemesterTypeChange = { viewModel.gradeThisSemesterType.value = it },
+                                    onLoadDetail = { year, sem, force -> viewModel.loadGradeDetail(year, sem, force) },
+                                    onRefreshSummary = { viewModel.loadGradeSummary(forceRefresh = true) },
+                                    modifier = Modifier.fillMaxSize()
+                                )
                             }
                         }
                         Row(
@@ -396,13 +428,14 @@ fun MainScreen(
                             horizontalArrangement = Arrangement.Center,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            repeat(4) { index ->
+                            repeat(5) { index ->
                                 val isSelected = pagerState.currentPage == index
                                 val icon = when (index) {
                                     0 -> Icons.Default.DateRange
                                     1 -> Icons.Default.Star
                                     2 -> Icons.Default.Payments
                                     3 -> Icons.Default.School
+                                    4 -> Icons.AutoMirrored.Filled.MenuBook
                                     else -> Icons.Default.DateRange
                                 }
                                 Icon(

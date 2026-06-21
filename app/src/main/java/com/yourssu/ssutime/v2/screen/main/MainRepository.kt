@@ -5,6 +5,7 @@ import android.util.Log
 import androidx.datastore.core.DataStore
 import com.yourssu.data.AiSummaryCache
 import com.yourssu.data.AlertData
+import com.yourssu.data.LocalGrade
 import com.yourssu.data.LocalGraduate
 import com.yourssu.data.LocalScholarship
 import com.yourssu.data.LocalTimetable
@@ -30,6 +31,7 @@ class MainRepository(
     private val scholarshipDataStore: DataStore<LocalScholarship>,
     private val tuitionDataStore: DataStore<LocalTuition>,
     private val graduateDataStore: DataStore<LocalGraduate>,
+    private val gradeDataStore: DataStore<LocalGrade>,
     private val apiRepository: ApiRepository,
     private val context: Context,
 ) {
@@ -39,11 +41,13 @@ class MainRepository(
     val scholarshipData: Flow<LocalScholarship> = scholarshipDataStore.data
     val tuitionData: Flow<LocalTuition> = tuitionDataStore.data
     val graduateData: Flow<LocalGraduate> = graduateDataStore.data
+    val gradeData: Flow<LocalGrade> = gradeDataStore.data
 
     suspend fun getTimetableData(): LocalTimetable = timetableDataStore.data.first()
     suspend fun getScholarshipData(): LocalScholarship = scholarshipDataStore.data.first()
     suspend fun getTuitionData(): LocalTuition = tuitionDataStore.data.first()
     suspend fun getGraduateData(): LocalGraduate = graduateDataStore.data.first()
+    suspend fun getGradeData(): LocalGrade = gradeDataStore.data.first()
 
     suspend fun updateTimetableData(timetable: LocalTimetable): LocalTimetable {
         return timetableDataStore.updateData { timetable }
@@ -59,6 +63,14 @@ class MainRepository(
 
     suspend fun updateGraduateData(graduate: LocalGraduate): LocalGraduate {
         return graduateDataStore.updateData { graduate }
+    }
+
+    suspend fun updateGradeData(grade: LocalGrade): LocalGrade {
+        return gradeDataStore.updateData { grade }
+    }
+
+    suspend fun updateGradeData(transform: (LocalGrade) -> LocalGrade): LocalGrade {
+        return gradeDataStore.updateData(transform)
     }
 
     suspend fun updateTodoData(todoData: TodoData): TodoData {
@@ -104,6 +116,7 @@ class MainRepository(
         updateScholarshipData(LocalScholarship())
         updateTuitionData(LocalTuition())
         updateGraduateData(LocalGraduate())
+        updateGradeData(LocalGrade())
     }
 
     suspend fun clearAlertData() {
