@@ -211,6 +211,28 @@ private fun TimetableContent(
                 modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
+                val firstStartStr = filteredCells.firstOrNull()?.let { cell ->
+                    val timeRange = getCleanTimeRange(cell)
+                    val parts = timeRange.split(Regex("[-~]"))
+                    parts.firstOrNull()?.trim()
+                }
+                if (!firstStartStr.isNullOrBlank()) {
+                    item {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "${firstStartStr} 수업 시작!",
+                                style = SSUType.H3SemiBold,
+                                color = N500
+                            )
+                        }
+                    }
+                }
+
                 items(uiItems) { item ->
                     when (item) {
                         is TimetableItemUiModel.Course -> {
@@ -218,6 +240,28 @@ private fun TimetableContent(
                         }
                         is TimetableItemUiModel.EmptyTime -> {
                             EmptyTimeCard(minutes = item.minutes)
+                        }
+                    }
+                }
+
+                val lastEndStr = filteredCells.lastOrNull()?.let { cell ->
+                    val timeRange = getCleanTimeRange(cell)
+                    val parts = timeRange.split(Regex("[-~]"))
+                    if (parts.size >= 2) parts[1].trim() else null
+                }
+                if (!lastEndStr.isNullOrBlank()) {
+                    item {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "${lastEndStr} 수업 끝!",
+                                style = SSUType.H3SemiBold,
+                                color = N500
+                            )
                         }
                     }
                 }

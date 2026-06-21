@@ -1605,7 +1605,7 @@ private fun GradeCellCard(cell: io.github.chlwhdtn03.data.Lms.GradeCell) {
             Text(
                 text = cell.gradePoint,
                 style = SSUType.H3SemiBold,
-                color = if (cell.gradePoint.startsWith("A") || cell.gradePoint.startsWith("B")) G500 else R500
+                color = if (cell.gradePoint.startsWith("A") || cell.gradePoint.startsWith("B") || cell.gradePoint.startsWith("P")) G500 else R500
             )
             // 수치 점수/평점 (grade)을 작게 표시
             if (cell.grade.isNotBlank()) {
