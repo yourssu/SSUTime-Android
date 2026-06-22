@@ -5,6 +5,7 @@ import android.util.Log
 import androidx.datastore.core.DataStore
 import com.yourssu.data.AiSummaryCache
 import com.yourssu.data.AlertData
+import com.yourssu.data.LocalChapel
 import com.yourssu.data.LocalGrade
 import com.yourssu.data.LocalGraduate
 import com.yourssu.data.LocalScholarship
@@ -32,6 +33,7 @@ class MainRepository(
     private val tuitionDataStore: DataStore<LocalTuition>,
     private val graduateDataStore: DataStore<LocalGraduate>,
     private val gradeDataStore: DataStore<LocalGrade>,
+    private val chapelDataStore: DataStore<LocalChapel>,
     private val apiRepository: ApiRepository,
     private val context: Context,
 ) {
@@ -42,12 +44,14 @@ class MainRepository(
     val tuitionData: Flow<LocalTuition> = tuitionDataStore.data
     val graduateData: Flow<LocalGraduate> = graduateDataStore.data
     val gradeData: Flow<LocalGrade> = gradeDataStore.data
+    val chapelData: Flow<LocalChapel> = chapelDataStore.data
 
     suspend fun getTimetableData(): LocalTimetable = timetableDataStore.data.first()
     suspend fun getScholarshipData(): LocalScholarship = scholarshipDataStore.data.first()
     suspend fun getTuitionData(): LocalTuition = tuitionDataStore.data.first()
     suspend fun getGraduateData(): LocalGraduate = graduateDataStore.data.first()
     suspend fun getGradeData(): LocalGrade = gradeDataStore.data.first()
+    suspend fun getChapelData(): LocalChapel = chapelDataStore.data.first()
 
     suspend fun updateTimetableData(timetable: LocalTimetable): LocalTimetable {
         return timetableDataStore.updateData { timetable }
@@ -71,6 +75,14 @@ class MainRepository(
 
     suspend fun updateGradeData(transform: (LocalGrade) -> LocalGrade): LocalGrade {
         return gradeDataStore.updateData(transform)
+    }
+
+    suspend fun updateChapelData(chapel: LocalChapel): LocalChapel {
+        return chapelDataStore.updateData { chapel }
+    }
+
+    suspend fun updateChapelData(transform: (LocalChapel) -> LocalChapel): LocalChapel {
+        return chapelDataStore.updateData(transform)
     }
 
     suspend fun updateTodoData(todoData: TodoData): TodoData {
@@ -117,6 +129,7 @@ class MainRepository(
         updateTuitionData(LocalTuition())
         updateGraduateData(LocalGraduate())
         updateGradeData(LocalGrade())
+        updateChapelData(LocalChapel())
     }
 
     suspend fun clearAlertData() {

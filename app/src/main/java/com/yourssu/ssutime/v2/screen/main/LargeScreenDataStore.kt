@@ -4,6 +4,11 @@ import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.core.Serializer
 import androidx.datastore.dataStore
+import com.yourssu.data.LocalChapel
+import com.yourssu.data.LocalChapelAbsenceCell
+import com.yourssu.data.LocalChapelAttendanceCell
+import com.yourssu.data.LocalChapelSeatStatusCell
+import com.yourssu.data.LocalChapelTable
 import com.yourssu.data.LocalGrade
 import com.yourssu.data.LocalGradeCell
 import com.yourssu.data.LocalGradeSummaryCell
@@ -14,6 +19,13 @@ import com.yourssu.data.LocalScholarship
 import com.yourssu.data.LocalScholarshipCell
 import com.yourssu.data.LocalTuition
 import com.yourssu.data.LocalTuitionCell
+import io.github.chlwhdtn03.data.Lms.ChapelAbsenceCell
+import io.github.chlwhdtn03.data.Lms.ChapelAbsenceTable
+import io.github.chlwhdtn03.data.Lms.ChapelAttendanceCell
+import io.github.chlwhdtn03.data.Lms.ChapelAttendanceTable
+import io.github.chlwhdtn03.data.Lms.ChapelInformation
+import io.github.chlwhdtn03.data.Lms.ChapelSeatStatusCell
+import io.github.chlwhdtn03.data.Lms.ChapelSeatStatusTable
 import io.github.chlwhdtn03.data.Lms.GradeCell
 import io.github.chlwhdtn03.data.Lms.GradeTable
 import io.github.chlwhdtn03.data.Lms.GraduateTable
@@ -48,6 +60,11 @@ val Context.graduateDataStore: DataStore<LocalGraduate> by dataStore(
 val Context.gradeDataStore: DataStore<LocalGrade> by dataStore(
     fileName = "grade.json",
     serializer = GradeDataSerializer,
+)
+
+val Context.chapelDataStore: DataStore<LocalChapel> by dataStore(
+    fileName = "chapel.json",
+    serializer = ChapelDataSerializer,
 )
 
 // Serializers
@@ -126,6 +143,25 @@ object GradeDataSerializer : Serializer<LocalGrade> {
     override suspend fun writeTo(t: LocalGrade, output: OutputStream) {
         output.write(
             json.encodeToString(LocalGrade.serializer(), t)
+                .encodeToByteArray()
+        )
+    }
+}
+
+object ChapelDataSerializer : Serializer<LocalChapel> {
+    override val defaultValue: LocalChapel = LocalChapel()
+    override suspend fun readFrom(input: InputStream): LocalChapel =
+        try {
+            json.decodeFromString<LocalChapel>(
+                input.readBytes().decodeToString()
+            )
+        } catch (serialization: SerializationException) {
+            defaultValue
+        }
+
+    override suspend fun writeTo(t: LocalChapel, output: OutputStream) {
+        output.write(
+            json.encodeToString(LocalChapel.serializer(), t)
                 .encodeToByteArray()
         )
     }
@@ -353,5 +389,102 @@ fun LocalGradeCell.toDomain(): GradeCell {
         grade = this.grade,
         subjectCode = this.subjectCode,
         classification = this.classification
+    )
+}
+
+// Chapel Mappings
+fun ChapelInformation.toLocal(
+    details: Map<String, LocalChapelTable>,
+    thisSemesterYear: String?,
+    thisSemesterType: String?
+): LocalChapel {
+    return LocalChapel(
+        details = details,
+        thisSemesterYear = thisSemesterYear,
+        thisSemesterType = thisSemesterType
+    )
+}
+
+fun ChapelInformation.toLocalTable(): LocalChapelTable {
+    return LocalChapelTable(
+        year = this.year,
+        semesterName = this.semester.name,
+        semesterNameKor = this.semester.nameKor,
+        seatStatus = this.seatStatusTable.items.map { it.toLocal() },
+        attendance = this.attendanceTable.items.map { it.toLocal() },
+        absence = this.absenceTable.items.map { it.toLocal() }
+    )
+}
+
+fun ChapelSeatStatusCell.toLocal(): LocalChapelSeatStatusCell {
+    return LocalChapelSeatStatusCell(
+        classGroup = this.classGroup,
+        timetable = this.timetable,
+        classroom = this.classroom,
+        seatNo = this.seatNo,
+        absenceCount = this.absenceCount,
+        gradeResult = this.gradeResult,
+        rawValues = this.rawValues
+    )
+}
+
+fun ChapelAttendanceCell.toLocal(): LocalChapelAttendanceCell {
+    return LocalChapelAttendanceCell(
+        classGroup = this.classGroup,
+        date = this.date,
+        lectureType = this.lectureType,
+        status = this.status,
+        rawValues = this.rawValues
+    )
+}
+
+fun ChapelAbsenceCell.toLocal(): LocalChapelAbsenceCell {
+    return LocalChapelAbsenceCell(
+        year = this.year,
+        semester = this.semester,
+        detail = this.detail,
+        rawValues = this.rawValues
+    )
+}
+
+fun LocalChapelTable.toDomain(): ChapelInformation {
+    val sem = runCatching { io.github.chlwhdtn03.data.Lms.Semester.valueOf(this.semesterName) }.getOrDefault(io.github.chlwhdtn03.data.Lms.Semester.FIRST)
+    return ChapelInformation(
+        year = this.year,
+        semester = sem,
+        seatStatusTable = ChapelSeatStatusTable(this.seatStatus.map { it.toDomain() }),
+        attendanceTable = ChapelAttendanceTable(this.attendance.map { it.toDomain() }),
+        absenceTable = ChapelAbsenceTable(this.absence.map { it.toDomain() })
+    )
+}
+
+fun LocalChapelSeatStatusCell.toDomain(): ChapelSeatStatusCell {
+    return ChapelSeatStatusCell(
+        classGroup = this.classGroup,
+        timetable = this.timetable,
+        classroom = this.classroom,
+        seatNo = this.seatNo,
+        absenceCount = this.absenceCount,
+        gradeResult = this.gradeResult,
+        rawValues = this.rawValues
+    )
+}
+
+fun LocalChapelAttendanceCell.toDomain(): ChapelAttendanceCell {
+    return ChapelAttendanceCell(
+        classGroup = this.classGroup,
+        date = this.date,
+        lectureType = this.lectureType,
+        status = this.status,
+        rawValues = this.rawValues
+    )
+}
+
+fun LocalChapelAbsenceCell.toDomain(): ChapelAbsenceCell {
+    return ChapelAbsenceCell(
+        year = this.year,
+        semester = this.semester,
+        detail = this.detail,
+        rawValues = this.rawValues
     )
 }

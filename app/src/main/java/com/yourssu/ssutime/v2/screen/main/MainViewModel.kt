@@ -72,6 +72,17 @@ class MainViewModel(
     @Volatile
     private var isGradeLoading = false
 
+    var chapelState = mutableStateOf<ChapelUiState>(ChapelUiState.Loading)
+        private set
+
+    var chapelSelectedSemesterKey = mutableStateOf("current")
+    var chapelCurrentSemesterName = mutableStateOf("이번 학기")
+    var chapelThisSemesterYear = mutableStateOf<String?>(null)
+    var chapelThisSemesterType = mutableStateOf<io.github.chlwhdtn03.data.Lms.Semester?>(null)
+
+    @Volatile
+    private var isChapelLoading = false
+
     private var isTimetableLoading = false
     private var isScholarshipLoading = false
     private var isTuitionLoading = false
@@ -183,6 +194,47 @@ class MainViewModel(
                         gradeDetailState.value = GradeDetailUiState.Empty
                     } else if (gradeDetailState.value is GradeDetailUiState.Success) {
                         gradeDetailState.value = GradeDetailUiState.Loading
+                    }
+                }
+            }
+        }
+
+        viewModelScope.launch {
+            combine(
+                mainRepository.chapelData,
+                snapshotFlow { chapelSelectedSemesterKey.value }
+            ) { localChapel, selectedKey ->
+                Pair(localChapel, selectedKey)
+            }.collect { (localChapel, selectedKey) ->
+                val cachedYear = localChapel.thisSemesterYear
+                val cachedTypeStr = localChapel.thisSemesterType
+                if (cachedYear != null && cachedTypeStr != null) {
+                    val cachedType = runCatching { io.github.chlwhdtn03.data.Lms.Semester.valueOf(cachedTypeStr) }.getOrNull()
+                    if (cachedType != null) {
+                        if (chapelThisSemesterYear.value == null || chapelThisSemesterType.value == null) {
+                            chapelThisSemesterYear.value = cachedYear
+                            chapelThisSemesterType.value = cachedType
+                            chapelCurrentSemesterName.value = "$cachedYear ${cachedType.nameKor}"
+                        }
+                    }
+                }
+
+                val targetKey = if (selectedKey == "current") {
+                    val curYear = chapelThisSemesterYear.value ?: cachedYear
+                    val curType = chapelThisSemesterType.value?.name ?: cachedTypeStr
+                    if (curYear != null && curType != null) "$curYear-$curType" else null
+                } else {
+                    selectedKey
+                }
+
+                val cachedTable = if (targetKey != null) localChapel.details[targetKey] else null
+                if (cachedTable != null) {
+                    chapelState.value = ChapelUiState.Success(cachedTable.toDomain())
+                } else {
+                    if (chapelState.value !is ChapelUiState.Loading && !isChapelLoading) {
+                        chapelState.value = ChapelUiState.Empty
+                    } else if (chapelState.value is ChapelUiState.Success) {
+                        chapelState.value = ChapelUiState.Loading
                     }
                 }
             }
@@ -683,19 +735,11 @@ class MainViewModel(
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
                 Log.e(javaClass.name, "최신 성적 데이터를 불러오지 못했습니다.", e)
-                if (currentSummaryState !is GradeSummaryUiState.Success) {
-                    gradeSummaryState.value = if (e.isNetworkOrAuthError()) {
-                        GradeSummaryUiState.Error(e.localizedMessage ?: "성적 조회를 불러오지 못했어요.")
-                    } else {
-                        GradeSummaryUiState.Empty
-                    }
+                if (gradeSummaryState.value !is GradeSummaryUiState.Success) {
+                    gradeSummaryState.value = GradeSummaryUiState.Error(e.localizedMessage ?: "성적 조회를 불러오지 못했어요.")
                 }
-                if (currentDetailState !is GradeDetailUiState.Success) {
-                    gradeDetailState.value = if (e.isNetworkOrAuthError()) {
-                        GradeDetailUiState.Error(e.localizedMessage ?: "성적 세부 정보를 불러오지 못했어요.")
-                    } else {
-                        GradeDetailUiState.Empty
-                    }
+                if (gradeDetailState.value !is GradeDetailUiState.Success) {
+                    gradeDetailState.value = GradeDetailUiState.Error(e.localizedMessage ?: "성적 세부 정보를 불러오지 못했어요.")
                 }
             } finally {
                 isGradeLoading = false
@@ -708,22 +752,21 @@ class MainViewModel(
     }
 
     fun loadGradeDetail(year: String?, semester: io.github.chlwhdtn03.data.Lms.Semester?, forceRefresh: Boolean = false) {
-        val targetKey = if (year == null || semester == null) {
-            val curYear = gradeThisSemesterYear.value
-            val curSem = gradeThisSemesterType.value
-            if (curYear != null && curSem != null) "$curYear-${curSem.name}" else null
-        } else {
-            "$year-${semester.name}"
-        }
-
         viewModelScope.launch {
             val currentCache = mainRepository.getGradeData()
+            val targetYear = year ?: currentCache.thisSemesterYear ?: gradeThisSemesterYear.value
+            val targetSem = semester?.name ?: currentCache.thisSemesterType ?: gradeThisSemesterType.value?.name
+            val targetKey = if (targetYear != null && targetSem != null) "$targetYear-$targetSem" else null
             val cachedTable = if (targetKey != null) currentCache.details[targetKey] else null
 
-            if (cachedTable != null && cachedTable.items.isNotEmpty() && !forceRefresh) {
+            if (cachedTable != null && cachedTable.items.isNotEmpty()) {
                 gradeDetailState.value = GradeDetailUiState.Success(cachedTable.toDomain())
+                // 캐시가 존재하더라도, 백그라운드 업데이트를 실행하여 최신 성적 정보를 업데이트합니다.
+                loadAllGrades(forceRefresh = forceRefresh)
             } else {
-                loadAllGrades(forceRefresh)
+                // 캐시가 전혀 없을 때는 화면에 로딩 인디케이터가 명확히 돌도록 세팅하고 패치합니다.
+                gradeDetailState.value = GradeDetailUiState.Loading
+                loadAllGrades(forceRefresh = forceRefresh)
             }
         }
     }
@@ -734,6 +777,103 @@ class MainViewModel(
         loadTuition(forceRefresh)
         loadGraduate(forceRefresh)
         loadGradeSummary(forceRefresh)
+        loadAllChapel(forceRefresh)
+    }
+
+    fun loadChapelDetail(year: String?, semester: io.github.chlwhdtn03.data.Lms.Semester?, forceRefresh: Boolean = false) {
+        viewModelScope.launch {
+            val currentCache = mainRepository.getChapelData()
+            val targetYear = year ?: currentCache.thisSemesterYear ?: chapelThisSemesterYear.value
+            val targetSem = semester?.name ?: currentCache.thisSemesterType ?: chapelThisSemesterType.value?.name
+            val targetKey = if (targetYear != null && targetSem != null) "$targetYear-$targetSem" else null
+            val cachedTable = if (targetKey != null) currentCache.details[targetKey] else null
+
+            if (cachedTable != null) {
+                chapelState.value = ChapelUiState.Success(cachedTable.toDomain())
+                // 캐시가 존재하더라도, 백그라운드 업데이트를 실행하여 최신 채플 정보를 동기화합니다.
+                loadAllChapel(forceRefresh = forceRefresh)
+            } else {
+                // 캐시가 전혀 없을 때는 화면에 로딩 인디케이터가 명확히 돌도록 세팅하고 패치합니다.
+                chapelState.value = ChapelUiState.Loading
+                loadAllChapel(forceRefresh = forceRefresh)
+            }
+        }
+    }
+
+    fun loadAllChapel(forceRefresh: Boolean = false) {
+        if (isChapelLoading) return
+        isChapelLoading = true
+
+        val currentChapelState = chapelState.value
+
+        if (currentChapelState !is ChapelUiState.Success) {
+            chapelState.value = ChapelUiState.Loading
+        }
+
+        viewModelScope.launch {
+            val jobs = mutableListOf<kotlinx.coroutines.Job>()
+            try {
+                val currentTable = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    lmsRefreshRepository.fetchChapelTable(forceLogin = forceRefresh)
+                }
+
+                val summaryTable = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    lmsRefreshRepository.fetchSemesterGradeSummaryTable(forceLogin = forceRefresh)
+                }
+
+                mainRepository.updateChapelData { latestCache ->
+                    val updatedDetails = latestCache.details.toMutableMap().apply {
+                        put("${currentTable.year}-${currentTable.semester.name}", currentTable.toLocalTable())
+                    }
+                    latestCache.copy(
+                        details = updatedDetails,
+                        thisSemesterYear = currentTable.year,
+                        thisSemesterType = currentTable.semester.name
+                    )
+                }
+
+                chapelThisSemesterYear.value = currentTable.year
+                chapelThisSemesterType.value = currentTable.semester
+                val semName = runCatching { currentTable.semester.nameKor }.getOrDefault("")
+                if (currentTable.year.isNotBlank() && semName.isNotBlank()) {
+                    chapelCurrentSemesterName.value = "${currentTable.year} $semName"
+                }
+
+                summaryTable.items.forEach { cell ->
+                    val yearKey = cell.year
+                    val sem = cell.semester
+                    if (yearKey != null && sem != null && (yearKey != currentTable.year || sem != currentTable.semester)) {
+                        val job = launch {
+                            runCatching {
+                                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                                    lmsRefreshRepository.fetchChapelTable(yearKey, sem, forceLogin = forceRefresh)
+                                }
+                            }.onSuccess { table ->
+                                mainRepository.updateChapelData { latestCache ->
+                                    val updatedDetails = latestCache.details.toMutableMap().apply {
+                                        put("${table.year}-${table.semester.name}", table.toLocalTable())
+                                    }
+                                    latestCache.copy(details = updatedDetails)
+                                }
+                            }.onFailure { e ->
+                                Log.e(javaClass.name, "${yearKey}학년도 ${sem.nameKor} 상세 채플을 백그라운드 로드하지 못했습니다.", e)
+                            }
+                        }
+                        jobs.add(job)
+                    }
+                }
+
+                jobs.forEach { it.join() }
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                Log.e(javaClass.name, "최신 채플 데이터를 불러오지 못했습니다.", e)
+                if (chapelState.value !is ChapelUiState.Success) {
+                    chapelState.value = ChapelUiState.Error(e.localizedMessage ?: "채플 조회를 불러오지 못했어요.")
+                }
+            } finally {
+                isChapelLoading = false
+            }
+        }
     }
 
 }
@@ -837,3 +977,10 @@ private fun List<TodoInfo>.filterRecentlySubmitted(
 private fun String.toInstantOrNull(): Instant? = runCatching {
     Instant.parse(this)
 }.getOrNull()
+
+sealed interface ChapelUiState {
+    data object Loading : ChapelUiState
+    data class Success(val table: io.github.chlwhdtn03.data.Lms.ChapelInformation) : ChapelUiState
+    data class Error(val message: String) : ChapelUiState
+    data object Empty : ChapelUiState
+}

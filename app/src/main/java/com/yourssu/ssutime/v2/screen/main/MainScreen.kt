@@ -47,6 +47,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.MenuBook
+import androidx.compose.material.icons.filled.Church
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Payments
@@ -241,7 +242,7 @@ fun MainScreen(
             )
         } else {
             if(!isLargeScreen) {
-                val pagerState = rememberPagerState(pageCount = { 6 })
+                val pagerState = rememberPagerState(pageCount = { 7 })
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
@@ -323,6 +324,21 @@ fun MainScreen(
                                 onRefreshSummary = { viewModel.loadGradeSummary(forceRefresh = true) },
                                 modifier = Modifier.fillMaxSize()
                             )
+                            6 -> ChapelHistoryView(
+                                summaryState = viewModel.gradeSummaryState.value,
+                                chapelState = viewModel.chapelState.value,
+                                selectedSemesterKey = viewModel.chapelSelectedSemesterKey.value,
+                                onSelectedSemesterKeyChange = { viewModel.chapelSelectedSemesterKey.value = it },
+                                currentSemesterName = viewModel.chapelCurrentSemesterName.value,
+                                onCurrentSemesterNameChange = { viewModel.chapelCurrentSemesterName.value = it },
+                                thisSemesterYear = viewModel.chapelThisSemesterYear.value,
+                                onThisSemesterYearChange = { viewModel.chapelThisSemesterYear.value = it },
+                                thisSemesterType = viewModel.chapelThisSemesterType.value,
+                                onThisSemesterTypeChange = { viewModel.chapelThisSemesterType.value = it },
+                                onLoadDetail = { year, sem, force -> viewModel.loadChapelDetail(year, sem, force) },
+                                onRefreshSummary = { viewModel.loadGradeSummary(forceRefresh = true) },
+                                modifier = Modifier.fillMaxSize()
+                            )
                         }
                     }
                     Row(
@@ -332,7 +348,7 @@ fun MainScreen(
                         horizontalArrangement = Arrangement.Center,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        repeat(6) { index ->
+                        repeat(7) { index ->
                             val isSelected = pagerState.currentPage == index
                             val icon = when (index) {
                                 0 -> Icons.Default.Home
@@ -341,6 +357,7 @@ fun MainScreen(
                                 3 -> Icons.Default.Payments
                                 4 -> Icons.Default.School
                                 5 -> Icons.AutoMirrored.Filled.MenuBook
+                                6 -> Icons.Default.Church
                                 else -> Icons.Default.Home
                             }
                             Icon(
@@ -360,7 +377,7 @@ fun MainScreen(
                     }
                 }
             } else {
-                val pagerState = rememberPagerState(pageCount = { 6 })
+                val pagerState = rememberPagerState(pageCount = { 7 })
                 Row(
                     modifier = Modifier
                         .fillMaxSize()
@@ -376,7 +393,7 @@ fun MainScreen(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(24.dp)
                     ) {
-                        repeat(6) { index ->
+                        repeat(7) { index ->
                             val isSelected = pagerState.currentPage == index
                             val icon = when (index) {
                                 0 -> Icons.Default.Home
@@ -385,6 +402,7 @@ fun MainScreen(
                                 3 -> Icons.Default.Payments
                                 4 -> Icons.Default.School
                                 5 -> Icons.AutoMirrored.Filled.MenuBook
+                                6 -> Icons.Default.Church
                                 else -> Icons.Default.Home
                             }
                             Column(
@@ -412,6 +430,7 @@ fun MainScreen(
                                     3 -> "등록금"
                                     4 -> "졸업"
                                     5 -> "성적"
+                                    6 -> "채플"
                                     else -> ""
                                 }
                                 Text(
@@ -499,6 +518,22 @@ fun MainScreen(
                                 thisSemesterType = viewModel.gradeThisSemesterType.value,
                                 onThisSemesterTypeChange = { viewModel.gradeThisSemesterType.value = it },
                                 onLoadDetail = { year, sem, force -> viewModel.loadGradeDetail(year, sem, force) },
+                                onRefreshSummary = { viewModel.loadGradeSummary(forceRefresh = true) },
+                                modifier = Modifier.fillMaxSize(),
+                                isLargeScreen = true
+                            )
+                            6 -> ChapelHistoryView(
+                                summaryState = viewModel.gradeSummaryState.value,
+                                chapelState = viewModel.chapelState.value,
+                                selectedSemesterKey = viewModel.chapelSelectedSemesterKey.value,
+                                onSelectedSemesterKeyChange = { viewModel.chapelSelectedSemesterKey.value = it },
+                                currentSemesterName = viewModel.chapelCurrentSemesterName.value,
+                                onCurrentSemesterNameChange = { viewModel.chapelCurrentSemesterName.value = it },
+                                thisSemesterYear = viewModel.chapelThisSemesterYear.value,
+                                onThisSemesterYearChange = { viewModel.chapelThisSemesterYear.value = it },
+                                thisSemesterType = viewModel.chapelThisSemesterType.value,
+                                onThisSemesterTypeChange = { viewModel.chapelThisSemesterType.value = it },
+                                onLoadDetail = { year, sem, force -> viewModel.loadChapelDetail(year, sem, force) },
                                 onRefreshSummary = { viewModel.loadGradeSummary(forceRefresh = true) },
                                 modifier = Modifier.fillMaxSize(),
                                 isLargeScreen = true

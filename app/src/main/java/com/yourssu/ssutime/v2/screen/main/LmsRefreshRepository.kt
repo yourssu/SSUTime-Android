@@ -576,6 +576,18 @@ class LmsRefreshRepository(
         loginIfNeeded(RefreshSource.APP_START, loginData, forceLogin = forceLogin)
         LmsApi.getGradeTable()
     }
+
+    suspend fun fetchChapelTable(year: String, semester: io.github.chlwhdtn03.data.Lms.Semester, forceLogin: Boolean = false): io.github.chlwhdtn03.data.Lms.ChapelInformation = withContext(Dispatchers.IO) {
+        val loginData = loginRepository.getLoginData()
+        loginIfNeeded(RefreshSource.APP_START, loginData, forceLogin = forceLogin)
+        LmsApi.getChapelTable(year, semester)
+    }
+
+    suspend fun fetchChapelTable(forceLogin: Boolean = false): io.github.chlwhdtn03.data.Lms.ChapelInformation = withContext(Dispatchers.IO) {
+        val loginData = loginRepository.getLoginData()
+        loginIfNeeded(RefreshSource.APP_START, loginData, forceLogin = forceLogin)
+        LmsApi.getChapelTable()
+    }
 }
 
 enum class RefreshSource {

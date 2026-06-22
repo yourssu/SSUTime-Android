@@ -1080,7 +1080,7 @@ private fun GraduateDetailPane(
 }
 
 @Composable
-private fun LargeScreenEmptyState(
+internal fun LargeScreenEmptyState(
     message: String,
     onRetry: () -> Unit,
 ) {
