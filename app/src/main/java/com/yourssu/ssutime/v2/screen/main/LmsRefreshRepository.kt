@@ -578,15 +578,48 @@ class LmsRefreshRepository(
     }
 
     suspend fun fetchChapelTable(year: String, semester: io.github.chlwhdtn03.data.Lms.Semester, forceLogin: Boolean = false): io.github.chlwhdtn03.data.Lms.ChapelInformation = withContext(Dispatchers.IO) {
+        if (semester != io.github.chlwhdtn03.data.Lms.Semester.FIRST && semester != io.github.chlwhdtn03.data.Lms.Semester.SECOND) {
+            return@withContext io.github.chlwhdtn03.data.Lms.ChapelInformation(
+                year = year,
+                semester = semester,
+                seatStatusTable = io.github.chlwhdtn03.data.Lms.ChapelSeatStatusTable(emptyList()),
+                attendanceTable = io.github.chlwhdtn03.data.Lms.ChapelAttendanceTable(emptyList()),
+                absenceTable = io.github.chlwhdtn03.data.Lms.ChapelAbsenceTable(emptyList())
+            )
+        }
         val loginData = loginRepository.getLoginData()
         loginIfNeeded(RefreshSource.APP_START, loginData, forceLogin = forceLogin)
-        LmsApi.getChapelTable(year, semester)
+        try {
+            LmsApi.getChapelTable(year, semester)
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            if (e.isNetworkOrAuthError()) throw e
+            io.github.chlwhdtn03.data.Lms.ChapelInformation(
+                year = year,
+                semester = semester,
+                seatStatusTable = io.github.chlwhdtn03.data.Lms.ChapelSeatStatusTable(emptyList()),
+                attendanceTable = io.github.chlwhdtn03.data.Lms.ChapelAttendanceTable(emptyList()),
+                absenceTable = io.github.chlwhdtn03.data.Lms.ChapelAbsenceTable(emptyList())
+            )
+        }
     }
 
     suspend fun fetchChapelTable(forceLogin: Boolean = false): io.github.chlwhdtn03.data.Lms.ChapelInformation = withContext(Dispatchers.IO) {
         val loginData = loginRepository.getLoginData()
         loginIfNeeded(RefreshSource.APP_START, loginData, forceLogin = forceLogin)
-        LmsApi.getChapelTable()
+        try {
+            LmsApi.getChapelTable()
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            if (e.isNetworkOrAuthError()) throw e
+            io.github.chlwhdtn03.data.Lms.ChapelInformation(
+                year = "",
+                semester = io.github.chlwhdtn03.data.Lms.Semester.FIRST,
+                seatStatusTable = io.github.chlwhdtn03.data.Lms.ChapelSeatStatusTable(emptyList()),
+                attendanceTable = io.github.chlwhdtn03.data.Lms.ChapelAttendanceTable(emptyList()),
+                absenceTable = io.github.chlwhdtn03.data.Lms.ChapelAbsenceTable(emptyList())
+            )
+        }
     }
 }
 
@@ -654,3 +687,17 @@ private const val TAG = "LmsRefreshRepository"
 private fun String.toInstantOrNull(): Instant? = runCatching {
     Instant.parse(this)
 }.getOrNull()
+
+private fun Throwable.isNetworkOrAuthError(): Boolean {
+    val name = this.javaClass.name
+    val msg = this.message.orEmpty()
+    return this is java.io.IOException ||
+           name.contains("Connect") ||
+           name.contains("Timeout") ||
+           name.contains("Host") ||
+           name.contains("Http") ||
+           msg.contains("로그인") ||
+           msg.contains("세션") ||
+           msg.contains("인증") ||
+           msg.contains("Unauthorized")
+}

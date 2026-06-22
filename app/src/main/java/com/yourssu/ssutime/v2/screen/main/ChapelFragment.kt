@@ -106,7 +106,11 @@ fun ChapelHistoryView(
                                 .fillMaxWidth()
                                 .clip(RoundedCornerShape(12.dp))
                                 .background(if (isSelected) R500 else N100)
-                                .border(1.dp, if (isSelected) R500 else N200, RoundedCornerShape(12.dp))
+                                .border(
+                                    1.dp,
+                                    if (isSelected) R500 else N200,
+                                    RoundedCornerShape(12.dp)
+                                )
                                 .clickable {
                                     onSelectedSemesterKeyChange("current")
                                     onLoadDetail(null, null, false)
@@ -137,7 +141,11 @@ fun ChapelHistoryView(
                                     .fillMaxWidth()
                                     .clip(RoundedCornerShape(12.dp))
                                     .background(if (isSelected) R500 else N100)
-                                    .border(1.dp, if (isSelected) R500 else N200, RoundedCornerShape(12.dp))
+                                    .border(
+                                        1.dp,
+                                        if (isSelected) R500 else N200,
+                                        RoundedCornerShape(12.dp)
+                                    )
                                     .clickable {
                                         onSelectedSemesterKeyChange(key)
                                         cell.semester?.let { sem ->
@@ -265,7 +273,11 @@ fun ChapelHistoryView(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(20.dp))
                                 .background(if (isSelected) R500 else N100)
-                                .border(1.dp, if (isSelected) R500 else N200, RoundedCornerShape(20.dp))
+                                .border(
+                                    1.dp,
+                                    if (isSelected) R500 else N200,
+                                    RoundedCornerShape(20.dp)
+                                )
                                 .clickable {
                                     onSelectedSemesterKeyChange(key)
                                     cell.semester?.let { sem ->
@@ -484,15 +496,24 @@ private fun ChapelAbsenceCard(cell: ChapelAbsenceCell) {
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Column {
+        Row(
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column {
+                Text(
+                    text = "${cell.year} ${cell.semester}",
+                    style = SSUType.Caption2Medium,
+                    color = N500
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = cell.rawValues["결석사유(국문)"] ?: "",
+                    style = SSUType.Label2SemiBold,
+                )
+            }
+            Spacer(Modifier.weight(1f))
             Text(
-                text = "${cell.year} ${cell.semester}",
-                style = SSUType.Caption2Medium,
-                color = N500
-            )
-            Spacer(Modifier.height(4.dp))
-            Text(
-                text = cell.rawValues["결석사유(국문)"] ?: "",
+                text = "${cell.rawValues["결석시작일자"] ?: ""} ~ ${cell.rawValues["결석종료일자"] ?: ""}",
                 style = SSUType.Label2SemiBold,
             )
         }
