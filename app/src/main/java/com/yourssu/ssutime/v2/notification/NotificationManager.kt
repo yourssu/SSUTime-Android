@@ -78,7 +78,7 @@ private fun showCallStyleAlert(context: Context, todo: TodoInfo, notificationId:
     val fullScreenIntent = context.callAlertActivityPendingIntent(notificationId, todo, ACTION_SHOW_CALL_ALERT)
 
     val notification = Notification.Builder(context, CALL_CHANNEL_ID)
-        .setSmallIcon(R.drawable.avatar_container)
+        .setSmallIcon(R.drawable.outlined_checkbox)
         .setContentTitle(todo.title)
         .setContentText(context.toCallAlertText(todo))
         .setContentIntent(contentIntent)
@@ -100,7 +100,7 @@ private fun showCallStyleAlert(context: Context, todo: TodoInfo, notificationId:
 private fun showFallbackNotification(context: Context, todo: TodoInfo, notificationId: Int) {
     val fullScreenIntent = context.callAlertActivityPendingIntent(notificationId, todo, ACTION_SHOW_CALL_ALERT)
     val notification = Notification.Builder(context, CALL_CHANNEL_ID)
-        .setSmallIcon(R.drawable.ssutime_launcher_foreground)
+        .setSmallIcon(R.drawable.outlined_checkbox)
         .setContentTitle(context.getString(R.string.call_alert_notification_title))
         .setContentText(context.toCallAlertText(todo))
         .setStyle(Notification.BigTextStyle().bigText(context.toCallAlertText(todo)))

@@ -7,7 +7,9 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Color
 import android.os.Build
+import androidx.annotation.RequiresPermission
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.work.WorkManager
@@ -66,6 +68,7 @@ fun scheduleDeadlineNotifications(context: Context) {
     )
 }
 
+@RequiresPermission(Manifest.permission.POST_NOTIFICATIONS)
 fun sendDeadlineNotificationsIfNeeded(
     context: Context,
     todoData: TodoData,
@@ -241,6 +244,24 @@ private fun Context.buildDeadlineNotificationTitle(daysBefore: Int): String =
         getString(R.string.deadline_title_upcoming)
     }
 
+@RequiresPermission(Manifest.permission.POST_NOTIFICATIONS)
+fun Context.showDebugNotification() {
+    val notificationId = 1033
+    val notification = NotificationCompat.Builder(this, CHANNEL_ID)
+        .setSmallIcon(R.drawable.outlined_checkbox)
+        .setColor(Color.RED)
+        .setContentTitle("디버그 입니다")
+        .setContentText("제가 보이시나요")
+        .setStyle(NotificationCompat.BigTextStyle().bigText("제가 보이시나요"))
+        .setSubText(":)")
+        .setAutoCancel(true)
+        .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+        .build()
+
+    NotificationManagerCompat.from(this).notify(notificationId, notification)
+}
+
+@RequiresPermission(Manifest.permission.POST_NOTIFICATIONS)
 private fun Context.showDeadlineNotification(
     key: String,
     title: String,
@@ -251,7 +272,7 @@ private fun Context.showDeadlineNotification(
 ) {
     val notificationId = key.toStableNotificationId()
     val notification = NotificationCompat.Builder(this, CHANNEL_ID)
-        .setSmallIcon(R.drawable.ssutime_launcher_foreground)
+        .setSmallIcon(R.drawable.outlined_checkbox)
         .setContentTitle(title)
         .setContentText(message)
         .setStyle(NotificationCompat.BigTextStyle().bigText(message))
@@ -428,6 +449,7 @@ private data class DeadlineReminderCandidate(
 )
 
 class DeadlineReminderReceiver : BroadcastReceiver() {
+    @RequiresPermission(Manifest.permission.POST_NOTIFICATIONS)
     override fun onReceive(context: Context, intent: Intent) {
         val pendingResult = goAsync()
         CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
@@ -456,6 +478,7 @@ class DeadlineReminderRescheduleReceiver : BroadcastReceiver() {
     }
 }
 
+@RequiresPermission(Manifest.permission.POST_NOTIFICATIONS)
 private suspend fun sendScheduledDeadlineReminders(
     context: Context,
     now: Instant,
