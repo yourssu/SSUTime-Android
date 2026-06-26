@@ -69,7 +69,6 @@ import com.yourssu.data.AlertData
 import com.yourssu.data.UiState
 import com.yourssu.ssutime.v2.R
 import com.yourssu.ssutime.v2.analytics.Analytics
-import com.yourssu.ssutime.v2.notification.showDebugNotification
 import com.yourssu.ssutime.v2.ui.theme.BLACK
 import com.yourssu.ssutime.v2.ui.theme.N100
 import com.yourssu.ssutime.v2.ui.theme.N200
@@ -433,11 +432,11 @@ fun MyPageScreen(
 //            viewModel.sendDebugCallAlertAfterDelay(context)
 //        }
 
-        OptionButton(
-            text = "디버그: 푸시알림"
-        ) {
-            context.showDebugNotification()
-        }
+//        OptionButton(
+//            text = "디버그: 푸시알림"
+//        ) {
+//            context.showDebugNotification()
+//        }
     }
 }
 
