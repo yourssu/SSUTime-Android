@@ -534,6 +534,93 @@ class LmsRefreshRepository(
             )
         }
     }
+
+    suspend fun fetchTimetable(forceLogin: Boolean = false): io.github.chlwhdtn03.data.Lms.Timetable = withContext(Dispatchers.IO) {
+        val loginData = loginRepository.getLoginData()
+        loginIfNeeded(RefreshSource.APP_START, loginData, forceLogin = forceLogin)
+        LmsApi.getTimetable()
+    }
+
+    suspend fun fetchScholarshipTable(forceLogin: Boolean = false): io.github.chlwhdtn03.data.Lms.ScholarshipHistoryTable = withContext(Dispatchers.IO) {
+        val loginData = loginRepository.getLoginData()
+        loginIfNeeded(RefreshSource.APP_START, loginData, forceLogin = forceLogin)
+        LmsApi.getScholarshipHistoryTable()
+    }
+
+    suspend fun fetchTuitionTable(forceLogin: Boolean = false): io.github.chlwhdtn03.data.Lms.TuitionTable = withContext(Dispatchers.IO) {
+        val loginData = loginRepository.getLoginData()
+        loginIfNeeded(RefreshSource.APP_START, loginData, forceLogin = forceLogin)
+        LmsApi.getTuitionTable()
+    }
+
+    suspend fun fetchGraduateTable(forceLogin: Boolean = false): io.github.chlwhdtn03.data.Lms.GraduateTable = withContext(Dispatchers.IO) {
+        val loginData = loginRepository.getLoginData()
+        loginIfNeeded(RefreshSource.APP_START, loginData, forceLogin = forceLogin)
+        LmsApi.getGraduateTable()
+    }
+
+    suspend fun fetchSemesterGradeSummaryTable(forceLogin: Boolean = false): io.github.chlwhdtn03.data.Lms.SemesterGradeSummaryTable = withContext(Dispatchers.IO) {
+        val loginData = loginRepository.getLoginData()
+        loginIfNeeded(RefreshSource.APP_START, loginData, forceLogin = forceLogin)
+        LmsApi.getSemesterGradeSummaryTable()
+    }
+
+    suspend fun fetchGradeTable(year: String, semester: io.github.chlwhdtn03.data.Lms.Semester, forceLogin: Boolean = false): io.github.chlwhdtn03.data.Lms.GradeTable = withContext(Dispatchers.IO) {
+        val loginData = loginRepository.getLoginData()
+        loginIfNeeded(RefreshSource.APP_START, loginData, forceLogin = forceLogin)
+        LmsApi.getGradeTable(year, semester)
+    }
+
+    suspend fun fetchGradeTable(forceLogin: Boolean = false): io.github.chlwhdtn03.data.Lms.GradeTable = withContext(Dispatchers.IO) {
+        val loginData = loginRepository.getLoginData()
+        loginIfNeeded(RefreshSource.APP_START, loginData, forceLogin = forceLogin)
+        LmsApi.getGradeTable()
+    }
+
+    suspend fun fetchChapelTable(year: String, semester: io.github.chlwhdtn03.data.Lms.Semester, forceLogin: Boolean = false): io.github.chlwhdtn03.data.Lms.ChapelInformation = withContext(Dispatchers.IO) {
+        if (semester != io.github.chlwhdtn03.data.Lms.Semester.FIRST && semester != io.github.chlwhdtn03.data.Lms.Semester.SECOND) {
+            return@withContext io.github.chlwhdtn03.data.Lms.ChapelInformation(
+                year = year,
+                semester = semester,
+                seatStatusTable = io.github.chlwhdtn03.data.Lms.ChapelSeatStatusTable(emptyList()),
+                attendanceTable = io.github.chlwhdtn03.data.Lms.ChapelAttendanceTable(emptyList()),
+                absenceTable = io.github.chlwhdtn03.data.Lms.ChapelAbsenceTable(emptyList())
+            )
+        }
+        val loginData = loginRepository.getLoginData()
+        loginIfNeeded(RefreshSource.APP_START, loginData, forceLogin = forceLogin)
+        try {
+            LmsApi.getChapelTable(year, semester)
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            if (e.isNetworkOrAuthError()) throw e
+            io.github.chlwhdtn03.data.Lms.ChapelInformation(
+                year = year,
+                semester = semester,
+                seatStatusTable = io.github.chlwhdtn03.data.Lms.ChapelSeatStatusTable(emptyList()),
+                attendanceTable = io.github.chlwhdtn03.data.Lms.ChapelAttendanceTable(emptyList()),
+                absenceTable = io.github.chlwhdtn03.data.Lms.ChapelAbsenceTable(emptyList())
+            )
+        }
+    }
+
+    suspend fun fetchChapelTable(forceLogin: Boolean = false): io.github.chlwhdtn03.data.Lms.ChapelInformation = withContext(Dispatchers.IO) {
+        val loginData = loginRepository.getLoginData()
+        loginIfNeeded(RefreshSource.APP_START, loginData, forceLogin = forceLogin)
+        try {
+            LmsApi.getChapelTable()
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            if (e.isNetworkOrAuthError()) throw e
+            io.github.chlwhdtn03.data.Lms.ChapelInformation(
+                year = "",
+                semester = io.github.chlwhdtn03.data.Lms.Semester.FIRST,
+                seatStatusTable = io.github.chlwhdtn03.data.Lms.ChapelSeatStatusTable(emptyList()),
+                attendanceTable = io.github.chlwhdtn03.data.Lms.ChapelAttendanceTable(emptyList()),
+                absenceTable = io.github.chlwhdtn03.data.Lms.ChapelAbsenceTable(emptyList())
+            )
+        }
+    }
 }
 
 enum class RefreshSource {
@@ -600,3 +687,17 @@ private const val TAG = "LmsRefreshRepository"
 private fun String.toInstantOrNull(): Instant? = runCatching {
     Instant.parse(this)
 }.getOrNull()
+
+private fun Throwable.isNetworkOrAuthError(): Boolean {
+    val name = this.javaClass.name
+    val msg = this.message.orEmpty()
+    return this is java.io.IOException ||
+           name.contains("Connect") ||
+           name.contains("Timeout") ||
+           name.contains("Host") ||
+           name.contains("Http") ||
+           msg.contains("로그인") ||
+           msg.contains("세션") ||
+           msg.contains("인증") ||
+           msg.contains("Unauthorized")
+}

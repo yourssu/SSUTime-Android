@@ -98,6 +98,7 @@ android {
 }
 
 dependencies {
+    implementation(libs.androidx.compose.adaptive)
     val glanceVersion = "1.1.1"
 
     implementation(platform(libs.androidx.compose.bom))

@@ -10,6 +10,7 @@ import androidx.activity.result.ActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
@@ -17,6 +18,7 @@ import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.window.core.layout.WindowSizeClass
 import com.google.android.play.core.appupdate.AppUpdateInfo
 import com.google.android.play.core.appupdate.AppUpdateManagerFactory
 import com.google.android.play.core.appupdate.AppUpdateOptions
@@ -138,7 +140,15 @@ class MainActivity : ComponentActivity() {
                             backStackEntry.savedStateHandle.remove<Boolean>(
                                 SKIP_MAIN_LOAD_FROM_MY_PAGE_BACK_KEY
                             ) == true
+
+                        val windowSizeClass = currentWindowAdaptiveInfo().windowSizeClass
+                        val isLargeScreen = windowSizeClass.isAtLeastBreakpoint(
+                            WindowSizeClass.WIDTH_DP_MEDIUM_LOWER_BOUND,
+                            WindowSizeClass.HEIGHT_DP_MEDIUM_LOWER_BOUND
+                        )
+
                         MainScreen(
+                            isLargeScreen = isLargeScreen,
                             skipInitialLmsRefresh = skipInitialLmsRefresh.value,
                             forceInitialLmsRefresh = forceInitialLmsRefresh.value,
                             homeEntrySource = homeEntrySource.value,

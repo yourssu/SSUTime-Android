@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -37,11 +38,21 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.MenuBook
+import androidx.compose.material.icons.filled.Church
+import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Payments
+import androidx.compose.material.icons.filled.School
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -119,6 +130,7 @@ import java.time.temporal.ChronoUnit
 fun MainScreen(
     viewModel: MainViewModel = koinViewModel(),
     coroutine: CoroutineScope = rememberCoroutineScope(),
+    isLargeScreen: Boolean = false,
     skipInitialLmsRefresh: Boolean = false,
     forceInitialLmsRefresh: Boolean = false,
     homeEntrySource: String = MainActivity.ENTRY_SOURCE_APP,
@@ -155,6 +167,7 @@ fun MainScreen(
                 showBlockingLoading = !skipInitialLmsRefresh,
                 source = RefreshSource.APP_START,
             )
+            viewModel.loadLargeScreenData()
             if (!viewModel.showNetworkError.value && todoData != null) {
                 Analytics.viewHome(
                     taskCount = todoData.todos.size,
@@ -189,6 +202,7 @@ fun MainScreen(
                     showBlockingLoading = showBlockingLoading,
                     source = source,
                 )
+                viewModel.loadLargeScreenData(forceRefresh = true)
             } else {
                 viewModel.showNetworkErrorScreen()
             }
@@ -227,42 +241,307 @@ fun MainScreen(
                 errorCause = viewModel.showNetworkCause.value
             )
         } else {
-            MainFragment(
-                innerPadding = innerPadding,
-                todos = viewModel.todos,
-                submitted = viewModel.submitted,
-                loadedAt = viewModel.loadedAt.value,
-                showWidgetBadge = viewModel.showWidgetBadge.value,
-                aiSummaryStates = viewModel.aiSummaryStates,
-                isRefreshing = viewModel.isLoading.value,
-                refreshProgress = viewModel.loadingProgress.value,
-                onRefresh = {
-                    refreshTodos(
-                        showBlockingLoading = false,
-                        source = RefreshSource.PULL_TO_REFRESH,
-                        captureRefreshEvent = Analytics::pullToRefresh,
-                    )
-                },
-                onClickRefresh = {
-                    refreshTodos(
-                        showBlockingLoading = true,
-                        source = RefreshSource.REFRESH_BUTTON,
-                        captureRefreshEvent = Analytics::refreshClick,
-                    )
-                },
-                onClickSubmitted = {
-                    showSubmittedBottomSheet = true
-                },
-                onClickWidgetBadge = {
-                    Analytics.widgetBannerClick()
-                    showWidgetHelperDialog = true
-                },
-                onDismissWidgetBadge = {
-                    Analytics.widgetBannerDismiss()
-                    viewModel.dismissWidgetHelperBadge()
-                },
-                onExpandTodo = viewModel::loadAiSummary,
-            )
+            if(!isLargeScreen) {
+                val pagerState = rememberPagerState(pageCount = { 7 })
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(innerPadding)
+                ) {
+                    HorizontalPager(
+                        state = pagerState,
+                        modifier = Modifier.weight(1f)
+                    ) { page ->
+                        when (page) {
+                            0 -> MainFragment(
+                                modifier = Modifier.fillMaxSize(),
+                                innerPadding = PaddingValues(0.dp),
+                                todos = viewModel.todos,
+                                submitted = viewModel.submitted,
+                                loadedAt = viewModel.loadedAt.value,
+                                showWidgetBadge = viewModel.showWidgetBadge.value,
+                                aiSummaryStates = viewModel.aiSummaryStates,
+                                isRefreshing = viewModel.isLoading.value,
+                                refreshProgress = viewModel.loadingProgress.value,
+                                onRefresh = {
+                                    refreshTodos(
+                                        showBlockingLoading = false,
+                                        source = RefreshSource.PULL_TO_REFRESH,
+                                        captureRefreshEvent = Analytics::pullToRefresh,
+                                    )
+                                },
+                                onClickRefresh = {
+                                    refreshTodos(
+                                        showBlockingLoading = true,
+                                        source = RefreshSource.REFRESH_BUTTON,
+                                        captureRefreshEvent = Analytics::refreshClick,
+                                    )
+                                },
+                                onClickSubmitted = {
+                                    showSubmittedBottomSheet = true
+                                },
+                                onClickWidgetBadge = {
+                                    Analytics.widgetBannerClick()
+                                    showWidgetHelperDialog = true
+                                },
+                                onDismissWidgetBadge = {
+                                    Analytics.widgetBannerDismiss()
+                                    viewModel.dismissWidgetHelperBadge()
+                                },
+                                onExpandTodo = viewModel::loadAiSummary,
+                            )
+                            1 -> TimeTableFragment(viewModel = viewModel, modifier = Modifier.fillMaxSize())
+                            2 -> ScholarshipHistoryView(
+                                state = viewModel.scholarshipState.value,
+                                onRefresh = { viewModel.loadScholarship(forceRefresh = true) },
+                                modifier = Modifier.fillMaxSize(),
+                                isLargeScreen = false
+                            )
+                            3 -> TuitionHistoryView(
+                                state = viewModel.tuitionState.value,
+                                onRefresh = { viewModel.loadTuition(forceRefresh = true) },
+                                modifier = Modifier.fillMaxSize(),
+                                isLargeScreen = false
+                            )
+                            4 -> GraduateRequirementsView(
+                                state = viewModel.graduateState.value,
+                                onRefresh = { viewModel.loadGraduate(forceRefresh = true) },
+                                modifier = Modifier.fillMaxSize(),
+                                isLargeScreen = false
+                            )
+                            5 -> GradeHistoryView(
+                                summaryState = viewModel.gradeSummaryState.value,
+                                detailState = viewModel.gradeDetailState.value,
+                                selectedSemesterKey = viewModel.gradeSelectedSemesterKey.value,
+                                onSelectedSemesterKeyChange = { viewModel.gradeSelectedSemesterKey.value = it },
+                                currentSemesterName = viewModel.gradeCurrentSemesterName.value,
+                                onCurrentSemesterNameChange = { viewModel.gradeCurrentSemesterName.value = it },
+                                thisSemesterYear = viewModel.gradeThisSemesterYear.value,
+                                onThisSemesterYearChange = { viewModel.gradeThisSemesterYear.value = it },
+                                thisSemesterType = viewModel.gradeThisSemesterType.value,
+                                onThisSemesterTypeChange = { viewModel.gradeThisSemesterType.value = it },
+                                onLoadDetail = { year, sem, force -> viewModel.loadGradeDetail(year, sem, force) },
+                                onRefreshSummary = { viewModel.loadGradeSummary(forceRefresh = true) },
+                                modifier = Modifier.fillMaxSize()
+                            )
+                            6 -> ChapelHistoryView(
+                                summaryState = viewModel.gradeSummaryState.value,
+                                chapelState = viewModel.chapelState.value,
+                                selectedSemesterKey = viewModel.chapelSelectedSemesterKey.value,
+                                onSelectedSemesterKeyChange = { viewModel.chapelSelectedSemesterKey.value = it },
+                                currentSemesterName = viewModel.chapelCurrentSemesterName.value,
+                                onCurrentSemesterNameChange = { viewModel.chapelCurrentSemesterName.value = it },
+                                thisSemesterYear = viewModel.chapelThisSemesterYear.value,
+                                onThisSemesterYearChange = { viewModel.chapelThisSemesterYear.value = it },
+                                thisSemesterType = viewModel.chapelThisSemesterType.value,
+                                onThisSemesterTypeChange = { viewModel.chapelThisSemesterType.value = it },
+                                onLoadDetail = { year, sem, force -> viewModel.loadChapelDetail(year, sem, force) },
+                                onRefreshSummary = { viewModel.loadGradeSummary(forceRefresh = true) },
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
+                    }
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 12.dp),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        repeat(7) { index ->
+                            val isSelected = pagerState.currentPage == index
+                            val icon = when (index) {
+                                0 -> Icons.Default.Home
+                                1 -> Icons.Default.DateRange
+                                2 -> Icons.Default.Star
+                                3 -> Icons.Default.Payments
+                                4 -> Icons.Default.School
+                                5 -> Icons.AutoMirrored.Filled.MenuBook
+                                6 -> Icons.Default.Church
+                                else -> Icons.Default.Home
+                            }
+                            Icon(
+                                imageVector = icon,
+                                contentDescription = null,
+                                modifier = Modifier
+                                    .padding(horizontal = 6.dp)
+                                    .size(if (isSelected) 24.dp else 20.dp)
+                                    .clickable {
+                                        coroutine.launch {
+                                            pagerState.animateScrollToPage(index)
+                                        }
+                                    },
+                                tint = if (isSelected) R500 else N300
+                            )
+                        }
+                    }
+                }
+            } else {
+                val pagerState = rememberPagerState(pageCount = { 7 })
+                Row(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(innerPadding)
+                ) {
+                    // Left Navigation Rail
+                    Column(
+                        modifier = Modifier
+                            .fillMaxHeight()
+                            .width(72.dp)
+                            .background(N100)
+                            .padding(vertical = 16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(24.dp)
+                    ) {
+                        repeat(7) { index ->
+                            val isSelected = pagerState.currentPage == index
+                            val icon = when (index) {
+                                0 -> Icons.Default.Home
+                                1 -> Icons.Default.DateRange
+                                2 -> Icons.Default.Star
+                                3 -> Icons.Default.Payments
+                                4 -> Icons.Default.School
+                                5 -> Icons.AutoMirrored.Filled.MenuBook
+                                6 -> Icons.Default.Church
+                                else -> Icons.Default.Home
+                            }
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .clickable {
+                                        coroutine.launch {
+                                            pagerState.animateScrollToPage(index)
+                                        }
+                                    }
+                                    .padding(8.dp)
+                            ) {
+                                Icon(
+                                    imageVector = icon,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(24.dp),
+                                    tint = if (isSelected) R500 else N300
+                                )
+                                Spacer(Modifier.height(4.dp))
+                                val label = when (index) {
+                                    0 -> "홈"
+                                    1 -> "시간표"
+                                    2 -> "장학"
+                                    3 -> "등록금"
+                                    4 -> "졸업"
+                                    5 -> "성적"
+                                    6 -> "채플"
+                                    else -> ""
+                                }
+                                Text(
+                                    text = label,
+                                    style = SSUType.Caption2Medium,
+                                    color = if (isSelected) R500 else N500
+                                )
+                            }
+                        }
+                    }
+                    Spacer(modifier = Modifier.fillMaxHeight().width(1.dp).background(N200))
+
+                    // Right Content Pager
+                    HorizontalPager(
+                        state = pagerState,
+                        userScrollEnabled = false,
+                        modifier = Modifier.weight(1f).fillMaxHeight()
+                    ) { page ->
+                        when (page) {
+                            0 -> MainFragment(
+                                modifier = Modifier.fillMaxSize(),
+                                innerPadding = PaddingValues(0.dp),
+                                todos = viewModel.todos,
+                                submitted = viewModel.submitted,
+                                loadedAt = viewModel.loadedAt.value,
+                                showWidgetBadge = viewModel.showWidgetBadge.value,
+                                aiSummaryStates = viewModel.aiSummaryStates,
+                                isRefreshing = viewModel.isLoading.value,
+                                refreshProgress = viewModel.loadingProgress.value,
+                                onRefresh = {
+                                    refreshTodos(
+                                        showBlockingLoading = false,
+                                        source = RefreshSource.PULL_TO_REFRESH,
+                                        captureRefreshEvent = Analytics::pullToRefresh,
+                                    )
+                                },
+                                onClickRefresh = {
+                                    refreshTodos(
+                                        showBlockingLoading = true,
+                                        source = RefreshSource.REFRESH_BUTTON,
+                                        captureRefreshEvent = Analytics::refreshClick,
+                                    )
+                                },
+                                onClickSubmitted = {
+                                    showSubmittedBottomSheet = true
+                                },
+                                onClickWidgetBadge = {
+                                    Analytics.widgetBannerClick()
+                                    showWidgetHelperDialog = true
+                                },
+                                onDismissWidgetBadge = {
+                                    Analytics.widgetBannerDismiss()
+                                    viewModel.dismissWidgetHelperBadge()
+                                },
+                                onExpandTodo = viewModel::loadAiSummary,
+                            )
+                            1 -> TimeTableFragment(viewModel = viewModel, modifier = Modifier.fillMaxSize())
+                            2 -> ScholarshipHistoryView(
+                                state = viewModel.scholarshipState.value,
+                                onRefresh = { viewModel.loadScholarship(forceRefresh = true) },
+                                modifier = Modifier.fillMaxSize(),
+                                isLargeScreen = true
+                            )
+                            3 -> TuitionHistoryView(
+                                state = viewModel.tuitionState.value,
+                                onRefresh = { viewModel.loadTuition(forceRefresh = true) },
+                                modifier = Modifier.fillMaxSize(),
+                                isLargeScreen = true
+                            )
+                            4 -> GraduateRequirementsView(
+                                state = viewModel.graduateState.value,
+                                onRefresh = { viewModel.loadGraduate(forceRefresh = true) },
+                                modifier = Modifier.fillMaxSize(),
+                                isLargeScreen = true
+                            )
+                            5 -> GradeHistoryView(
+                                summaryState = viewModel.gradeSummaryState.value,
+                                detailState = viewModel.gradeDetailState.value,
+                                selectedSemesterKey = viewModel.gradeSelectedSemesterKey.value,
+                                onSelectedSemesterKeyChange = { viewModel.gradeSelectedSemesterKey.value = it },
+                                currentSemesterName = viewModel.gradeCurrentSemesterName.value,
+                                onCurrentSemesterNameChange = { viewModel.gradeCurrentSemesterName.value = it },
+                                thisSemesterYear = viewModel.gradeThisSemesterYear.value,
+                                onThisSemesterYearChange = { viewModel.gradeThisSemesterYear.value = it },
+                                thisSemesterType = viewModel.gradeThisSemesterType.value,
+                                onThisSemesterTypeChange = { viewModel.gradeThisSemesterType.value = it },
+                                onLoadDetail = { year, sem, force -> viewModel.loadGradeDetail(year, sem, force) },
+                                onRefreshSummary = { viewModel.loadGradeSummary(forceRefresh = true) },
+                                modifier = Modifier.fillMaxSize(),
+                                isLargeScreen = true
+                            )
+                            6 -> ChapelHistoryView(
+                                summaryState = viewModel.gradeSummaryState.value,
+                                chapelState = viewModel.chapelState.value,
+                                selectedSemesterKey = viewModel.chapelSelectedSemesterKey.value,
+                                onSelectedSemesterKeyChange = { viewModel.chapelSelectedSemesterKey.value = it },
+                                currentSemesterName = viewModel.chapelCurrentSemesterName.value,
+                                onCurrentSemesterNameChange = { viewModel.chapelCurrentSemesterName.value = it },
+                                thisSemesterYear = viewModel.chapelThisSemesterYear.value,
+                                onThisSemesterYearChange = { viewModel.chapelThisSemesterYear.value = it },
+                                thisSemesterType = viewModel.chapelThisSemesterType.value,
+                                onThisSemesterTypeChange = { viewModel.chapelThisSemesterType.value = it },
+                                onLoadDetail = { year, sem, force -> viewModel.loadChapelDetail(year, sem, force) },
+                                onRefreshSummary = { viewModel.loadGradeSummary(forceRefresh = true) },
+                                modifier = Modifier.fillMaxSize(),
+                                isLargeScreen = true
+                            )
+                        }
+                    }
+                }
+            }
         }
 
         if (showWidgetHelperDialog) {
@@ -483,6 +762,7 @@ private fun Context.isNetworkConnected(): Boolean {
 @Composable
 @Preview
 fun MainFragment(
+    modifier: Modifier = Modifier,
     innerPadding: PaddingValues = PaddingValues(0.dp),
     todos: List<TodoInfo> = emptyList(),
     submitted: List<TodoInfo> = emptyList(),
@@ -516,8 +796,7 @@ fun MainFragment(
                 modifier = Modifier.align(Alignment.TopCenter),
             )
         },
-        modifier = Modifier
-            .fillMaxSize()
+        modifier = modifier
             .padding(innerPadding)
     ) {
         BoxWithConstraints(

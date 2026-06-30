@@ -13,11 +13,12 @@ lifecycleRuntimeKtx = "2.6.1"
 activityCompose = "1.8.0"
 kotlin = "2.3.20"
 composeBom = "2026.02.01"
-lms = "1.4.6"
+lms = "1.5.4"
 navigationCompose = "2.9.8"
 jetbrainsKotlinJvm = "2.2.10"
 koin-plugin = "1.0.0-RC2"
 workRuntimeKtx = "2.11.1"
+adaptive = "1.2.0"
 
 [libraries]
 androidx-compose-material-icons-extended = { module = "androidx.compose.material:material-icons-extended" }
@@ -54,6 +55,7 @@ ktor-client-core = { module = "io.ktor:ktor-client-core", version.ref = "ktor" }
 ktor-content-negotiation = { module = "io.ktor:ktor-client-content-negotiation", version.ref = "ktor" }
 ktor-json = { module = "io.ktor:ktor-serialization-kotlinx-json", version.ref = "ktor" }
 lms = { module = "io.github.chlwhdtn03:lms", version.ref = "lms" }
+androidx-compose-adaptive = { group = "androidx.compose.material3.adaptive", name = "adaptive", version.ref = "adaptive" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

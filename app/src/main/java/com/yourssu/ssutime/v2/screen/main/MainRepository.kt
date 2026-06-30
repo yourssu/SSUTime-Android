@@ -5,6 +5,12 @@ import android.util.Log
 import androidx.datastore.core.DataStore
 import com.yourssu.data.AiSummaryCache
 import com.yourssu.data.AlertData
+import com.yourssu.data.LocalChapel
+import com.yourssu.data.LocalGrade
+import com.yourssu.data.LocalGraduate
+import com.yourssu.data.LocalScholarship
+import com.yourssu.data.LocalTimetable
+import com.yourssu.data.LocalTuition
 import com.yourssu.data.TodoData
 import com.yourssu.data.TodoInfo
 import com.yourssu.data.network.LmsSessionRequest
@@ -22,11 +28,62 @@ import kotlinx.coroutines.flow.first
 class MainRepository(
     private val todoDataStore: DataStore<TodoData>,
     private val alertDataStore: DataStore<AlertData>,
+    private val timetableDataStore: DataStore<LocalTimetable>,
+    private val scholarshipDataStore: DataStore<LocalScholarship>,
+    private val tuitionDataStore: DataStore<LocalTuition>,
+    private val graduateDataStore: DataStore<LocalGraduate>,
+    private val gradeDataStore: DataStore<LocalGrade>,
+    private val chapelDataStore: DataStore<LocalChapel>,
     private val apiRepository: ApiRepository,
     private val context: Context,
 ) {
     val todoData: Flow<TodoData> = todoDataStore.data
     val alertData: Flow<AlertData> = alertDataStore.data
+    val timetableData: Flow<LocalTimetable> = timetableDataStore.data
+    val scholarshipData: Flow<LocalScholarship> = scholarshipDataStore.data
+    val tuitionData: Flow<LocalTuition> = tuitionDataStore.data
+    val graduateData: Flow<LocalGraduate> = graduateDataStore.data
+    val gradeData: Flow<LocalGrade> = gradeDataStore.data
+    val chapelData: Flow<LocalChapel> = chapelDataStore.data
+
+    suspend fun getTimetableData(): LocalTimetable = timetableDataStore.data.first()
+    suspend fun getScholarshipData(): LocalScholarship = scholarshipDataStore.data.first()
+    suspend fun getTuitionData(): LocalTuition = tuitionDataStore.data.first()
+    suspend fun getGraduateData(): LocalGraduate = graduateDataStore.data.first()
+    suspend fun getGradeData(): LocalGrade = gradeDataStore.data.first()
+    suspend fun getChapelData(): LocalChapel = chapelDataStore.data.first()
+
+    suspend fun updateTimetableData(timetable: LocalTimetable): LocalTimetable {
+        return timetableDataStore.updateData { timetable }
+    }
+
+    suspend fun updateScholarshipData(scholarship: LocalScholarship): LocalScholarship {
+        return scholarshipDataStore.updateData { scholarship }
+    }
+
+    suspend fun updateTuitionData(tuition: LocalTuition): LocalTuition {
+        return tuitionDataStore.updateData { tuition }
+    }
+
+    suspend fun updateGraduateData(graduate: LocalGraduate): LocalGraduate {
+        return graduateDataStore.updateData { graduate }
+    }
+
+    suspend fun updateGradeData(grade: LocalGrade): LocalGrade {
+        return gradeDataStore.updateData { grade }
+    }
+
+    suspend fun updateGradeData(transform: (LocalGrade) -> LocalGrade): LocalGrade {
+        return gradeDataStore.updateData(transform)
+    }
+
+    suspend fun updateChapelData(chapel: LocalChapel): LocalChapel {
+        return chapelDataStore.updateData { chapel }
+    }
+
+    suspend fun updateChapelData(transform: (LocalChapel) -> LocalChapel): LocalChapel {
+        return chapelDataStore.updateData(transform)
+    }
 
     suspend fun updateTodoData(todoData: TodoData): TodoData {
         val updatedTodoData = todoDataStore.updateData { todoData }
@@ -63,6 +120,16 @@ class MainRepository(
 
     suspend fun clearTodoData() {
         updateTodoData(TodoData())
+    }
+
+    suspend fun clearAllUserData() {
+        updateTodoData(TodoData())
+        updateTimetableData(LocalTimetable())
+        updateScholarshipData(LocalScholarship())
+        updateTuitionData(LocalTuition())
+        updateGraduateData(LocalGraduate())
+        updateGradeData(LocalGrade())
+        updateChapelData(LocalChapel())
     }
 
     suspend fun clearAlertData() {
