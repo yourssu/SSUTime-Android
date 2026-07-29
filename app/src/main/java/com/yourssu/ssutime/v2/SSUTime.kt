@@ -17,6 +17,7 @@ import com.yourssu.ssutime.v2.screen.login.LoginViewModel
 import com.yourssu.ssutime.v2.screen.main.LmsRefreshRepository
 import com.yourssu.ssutime.v2.screen.main.MainRepository
 import com.yourssu.ssutime.v2.screen.main.MainViewModel
+import com.yourssu.ssutime.v2.screen.main.TermSelectionStore
 import com.yourssu.ssutime.v2.screen.main.notificationStore
 import com.yourssu.ssutime.v2.screen.main.todoDataStore
 import com.yourssu.ssutime.v2.screen.my.MyViewModel
@@ -72,6 +73,7 @@ val appModule = module {
             get()
         )
     }
+    single { TermSelectionStore() }
     single {
         OnBoardingRepository(
             get(
@@ -79,7 +81,7 @@ val appModule = module {
             )
         )
     }
-    viewModel { MyViewModel(get(), get()) }
+    viewModel { MyViewModel(get(), get(), get()) }
     viewModel { SplashViewModel(get(), get()) }
     viewModel { LoginViewModel(get(), get()) }
     viewModel {
@@ -89,7 +91,7 @@ val appModule = module {
             get()
         )
     }
-    viewModel { MainViewModel(get(), get()) }
+    viewModel { MainViewModel(get(), get(), get()) }
 }
 
 // Compose Preview를 위한 koinModule
@@ -118,6 +120,7 @@ val previewModule = module {
             get()
         )
     }
+    single { TermSelectionStore() }
     single {
         OnBoardingRepository(
             get(
@@ -125,7 +128,7 @@ val previewModule = module {
             )
         )
     }
-    viewModel { MyViewModel(get(), get()) }
+    viewModel { MyViewModel(get(), get(), get()) }
     viewModel { SplashViewModel(get(), get()) }
     viewModel { LoginViewModel(get(), get()) }
     viewModel {
@@ -135,7 +138,7 @@ val previewModule = module {
             get()
         )
     }
-    viewModel { MainViewModel(get(), get()) }
+    viewModel { MainViewModel(get(), get(), get()) }
 }
 
 val Context.loginDataStore: DataStore<LoginData> by dataStore(

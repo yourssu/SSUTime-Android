@@ -94,6 +94,7 @@
     <string name="my_avatar_content_description">Avatar</string>
     <string name="my_notification_settings">Notification settings</string>
     <string name="my_no_term_info">No term information</string>
+    <string name="my_term_dropdown_content_description">Select term</string>
     <string name="my_notification_info_content_description">About notifications</string>
     <string name="my_system_alert">System notifications</string>
     <string name="my_call_alert">Call alerts</string>

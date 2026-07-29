@@ -14,13 +14,16 @@ import com.yourssu.data.TodoInfo
 import com.yourssu.data.TodoType
 import com.yourssu.data.network.ReportedTodoResponse
 import com.yourssu.data.network.matches
+import io.github.chlwhdtn03.data.Lms.Term
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
+import kotlin.time.ExperimentalTime
 
 private val REFRESH_DATE_ZONE_ID: ZoneId = ZoneId.of("Asia/Seoul")
 private val SUBMITTED_VISIBLE_WINDOW: Duration = Duration.ofHours(24)
@@ -29,9 +32,11 @@ private const val AI_SUMMARY_POLL_INTERVAL_MILLIS = 2_000L
 private const val TODO_STATUS_PROVISIONAL = "PROVISIONAL"
 private const val TODO_STATUS_CONFIRMED = "CONFIRMED"
 
+@OptIn(ExperimentalTime::class)
 class MainViewModel(
     private val mainRepository: MainRepository,
     private val lmsRefreshRepository: LmsRefreshRepository,
+    private val termSelectionStore: TermSelectionStore,
 ) : ViewModel() {
     var todos = mutableStateListOf<TodoInfo>()
     var submitted = mutableStateListOf<TodoInfo>()
@@ -57,7 +62,21 @@ class MainViewModel(
 
         viewModelScope.launch {
             mainRepository.todoData.collect { todoData ->
-                updateTodoState(todoData)
+                if (termSelectionStore.selectedTerm.value == null) {
+                    updateTodoState(todoData)
+                }
+            }
+        }
+
+        viewModelScope.launch {
+            termSelectionStore.selectedTerm.collectLatest { selectedTerm ->
+                if (selectedTerm == null) {
+                    showNetworkError.value = false
+                    aiSummaryStates.clear()
+                    updateTodoState(mainRepository.getTodoData())
+                } else {
+                    loadSelectedTermTodos(selectedTerm)
+                }
             }
         }
 
@@ -167,6 +186,14 @@ class MainViewModel(
         showBlockingLoading: Boolean = true,
         source: RefreshSource = RefreshSource.APP_START,
     ): TodoData? {
+        termSelectionStore.selectedTerm.value?.let { selectedTerm ->
+            return loadSelectedTermTodos(
+                term = selectedTerm,
+                forceLogin = forceLogin,
+                showBlockingLoading = showBlockingLoading,
+            )
+        }
+
         if(isLoading.value) {
             return null
         }
@@ -220,6 +247,48 @@ class MainViewModel(
         } catch(e: Exception) {
             if(e is CancellationException) throw e
             Log.e(javaClass.name, "과제 정보를 갱신하지 못했습니다.", e)
+            showNetworkError.value = true
+            showNetworkCause.value = e.localizedMessage ?: "알 수 없는 에러"
+            null
+        } finally {
+            isLoading.value = false
+            showLoading.value = false
+        }
+    }
+
+    private suspend fun loadSelectedTermTodos(
+        term: Term,
+        forceLogin: Boolean = false,
+        showBlockingLoading: Boolean = true,
+    ): TodoData? {
+        if (isLoading.value) {
+            return null
+        }
+
+        isLoading.value = true
+        loadingProgress.floatValue = 0f
+        showLoading.value = showBlockingLoading
+        showNetworkError.value = false
+
+        return try {
+            val todoData = lmsRefreshRepository.loadTodosForTerm(
+                term = term,
+                forceLogin = forceLogin,
+                loadingState = { progress ->
+                    loadingProgress.floatValue = progress
+                },
+            )
+            if (termSelectionStore.selectedTerm.value?.id != term.id) {
+                return null
+            }
+
+            loadingProgress.floatValue = 1f
+            aiSummaryStates.clear()
+            updateTodoState(todoData)
+            todoData
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            Log.e(javaClass.name, "선택한 학기 정보를 불러오지 못했습니다.", e)
             showNetworkError.value = true
             showNetworkCause.value = e.localizedMessage ?: "알 수 없는 에러"
             null
@@ -293,11 +362,13 @@ class MainViewModel(
         key: String,
         success: AiSummaryUiState.Success,
     ) {
-        mainRepository.cacheAiSummary(
-            key = key,
-            summary = success.summary,
-            estimatedDurationMinutes = success.estimatedDurationMinutes,
-        )
+        if (termSelectionStore.selectedTerm.value == null) {
+            mainRepository.cacheAiSummary(
+                key = key,
+                summary = success.summary,
+                estimatedDurationMinutes = success.estimatedDurationMinutes,
+            )
+        }
         aiSummaryStates[key] = success
     }
 

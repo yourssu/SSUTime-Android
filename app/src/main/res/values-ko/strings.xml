@@ -93,6 +93,7 @@
     <string name="my_avatar_content_description">프로필 이미지</string>
     <string name="my_notification_settings">알림 설정</string>
     <string name="my_no_term_info">학기 정보 없음</string>
+    <string name="my_term_dropdown_content_description">학기 선택</string>
     <string name="my_notification_info_content_description">알림 안내</string>
     <string name="my_system_alert">시스템 알림</string>
     <string name="my_call_alert">전화 알림</string>

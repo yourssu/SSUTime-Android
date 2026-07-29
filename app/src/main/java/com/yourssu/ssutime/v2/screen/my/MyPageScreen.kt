@@ -1,3 +1,5 @@
+@file:OptIn(kotlin.time.ExperimentalTime::class)
+
 package com.yourssu.ssutime.v2.screen.my
 
 import android.Manifest
@@ -78,6 +80,7 @@ import com.yourssu.ssutime.v2.ui.theme.N500
 import com.yourssu.ssutime.v2.ui.theme.R400
 import com.yourssu.ssutime.v2.ui.theme.SSUType
 import com.yourssu.ssutime.v2.ui.theme.WHITE
+import io.github.chlwhdtn03.data.Lms.Term
 import kotlinx.coroutines.launch
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -90,7 +93,9 @@ fun MyPageScreen(
 ) {
     val context = LocalContext.current
     val loginInfo = viewModel.loginInfo.value
-    val termInfo = viewModel.termInfo.value
+    val terms = viewModel.terms.value
+    val currentTerm = viewModel.currentTerm.value
+    val selectedTerm by viewModel.selectedTerm.collectAsStateWithLifecycle()
     val isLogout by remember { viewModel.isLogout }
     var showLogoutPopup by remember { mutableStateOf(false) }
     val tooltipState = rememberTooltipState(
@@ -303,9 +308,10 @@ fun MyPageScreen(
                 text = loginInfo?.dept_name ?: "",
                 style = SSUType.H4SemiBold,
             )
-            Text(
-                text = termInfo.ifBlank { stringResource(R.string.my_no_term_info) },
-                style = SSUType.Caption1SemiBold,
+            TermDropdown(
+                terms = terms,
+                selectedTerm = selectedTerm ?: currentTerm,
+                onTermSelected = viewModel::selectTerm,
             )
         }
 
@@ -437,6 +443,68 @@ fun MyPageScreen(
 //        ) {
 //            context.showDebugNotification()
 //        }
+    }
+}
+
+@Composable
+private fun TermDropdown(
+    terms: List<Term>,
+    selectedTerm: Term?,
+    onTermSelected: (Term) -> Unit,
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    Box {
+        Row(
+            modifier = Modifier
+                .clip(RoundedCornerShape(8.dp))
+                .border(
+                    width = 0.5.dp,
+                    shape = RoundedCornerShape(8.dp),
+                    color = N300,
+                )
+                .background(WHITE)
+                .clickable(enabled = terms.isNotEmpty()) {
+                    expanded = true
+                }
+                .padding(start = 12.dp, top = 6.dp, bottom = 6.dp, end = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = selectedTerm?.name.orEmpty().ifBlank {
+                    stringResource(R.string.my_no_term_info)
+                },
+                style = SSUType.Caption1SemiBold,
+            )
+            Spacer(Modifier.width(4.dp))
+            Icon(
+                imageVector = Icons.Outlined.KeyboardArrowDown,
+                contentDescription = stringResource(R.string.my_term_dropdown_content_description),
+                tint = N400,
+            )
+        }
+
+        DropdownMenu(
+            containerColor = WHITE,
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+        ) {
+            terms.forEach { term ->
+                DropdownMenuItem(
+                    text = {
+                        Text(
+                            text = term.name.orEmpty(),
+                            style = SSUType.Label3Medium,
+                            color = BLACK,
+                        )
+                    },
+                    onClick = {
+                        onTermSelected(term)
+                        expanded = false
+                    },
+                )
+            }
+        }
     }
 }
 

@@ -28,18 +28,21 @@ import com.yourssu.data.TodoType
 import com.yourssu.ssutime.v2.analytics.Analytics
 import com.yourssu.ssutime.v2.screen.login.LoginScreen
 import com.yourssu.ssutime.v2.screen.main.MainScreen
+import com.yourssu.ssutime.v2.screen.main.TermSelectionStore
 import com.yourssu.ssutime.v2.screen.my.MyPageScreen
 import com.yourssu.ssutime.v2.screen.onboarding.OnBoardingScreen
 import com.yourssu.ssutime.v2.screen.splash.Screens
 import com.yourssu.ssutime.v2.screen.splash.SplashScreen
 import com.yourssu.ssutime.v2.ui.theme.SSUTimeTheme
 import com.yourssu.ssutime.v2.ui.theme.WHITE
+import org.koin.android.ext.android.inject
 
 class MainActivity : ComponentActivity() {
     private val skipInitialLmsRefresh = mutableStateOf(false)
     private val forceInitialLmsRefresh = mutableStateOf(false)
     private val homeEntrySource = mutableStateOf(ENTRY_SOURCE_APP)
     private val homeEntryVersion = mutableIntStateOf(0)
+    private val termSelectionStore: TermSelectionStore by inject()
 
     private val appUpdateManager by lazy { AppUpdateManagerFactory.create(this) }
 
@@ -74,6 +77,7 @@ class MainActivity : ComponentActivity() {
         forceInitialLmsRefresh.value = intent.shouldForceInitialLmsRefresh()
 
         if (savedInstanceState == null) {
+            termSelectionStore.clear()
             intent.captureEntryAnalytics()
         }
         enableEdgeToEdge()

@@ -143,6 +143,31 @@ class LmsRefreshRepository(
         }
     }
 
+    /**
+     * Loads one term for temporary on-screen display without updating DataStore
+     * or reporting the result to the backend.
+     */
+    @OptIn(ExperimentalTime::class)
+    suspend fun loadTodosForTerm(
+        term: Term,
+        forceLogin: Boolean = false,
+        loadingState: (Float) -> Unit = {},
+    ): TodoData = withContext(Dispatchers.IO) {
+        val loginData = loginRepository.getLoginData()
+        loginIfNeeded(
+            source = RefreshSource.FOREGROUND,
+            loginData = loginData,
+            forceLogin = forceLogin,
+        )
+        val subjects = fetchSubjects(term, loginData, loadingState)
+        buildTodoData(
+            subjects = subjects,
+            subjectInfos = buildSubjectInfos(subjects),
+            previousData = TodoData(),
+            loadedAt = Instant.now().toString(),
+        )
+    }
+
     fun startOnboardingInitialRefresh() {
         if (onboardingInitialRefreshJob?.isActive == true) {
             return
