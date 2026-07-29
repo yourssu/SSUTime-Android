@@ -467,6 +467,7 @@ class LmsRefreshRepository(
                     TodoType.valueOf(todo.component_type.uppercase()),
                     subjectInfoById[subject.id],
                     description = todo.description.orEmpty(),
+                    url = todo.url.orEmpty(),
                 )
             }
         }.sortedByDeadlineThenName()
@@ -488,6 +489,7 @@ class LmsRefreshRepository(
                         if (todo.late == true) TodoType.SUBMITTED_LATE else TodoType.SUBMITTED,
                         subjectInfoById[subject.id],
                         submittedAt = todo.submitted_at.orEmpty(),
+                        url = todo.url.orEmpty(),
                     )
                 }
         }
