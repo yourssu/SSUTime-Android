@@ -56,6 +56,9 @@ compose.desktop {
                 "jdk.crypto.ec",
                 "jdk.unsupported",
             )
+            windows {
+                iconFile.set(project.file("src/main/resources/icons/checkbox.ico"))
+            }
         }
     }
 }

@@ -40,6 +40,7 @@ import com.yourssu.ssutime.desktop.screen.my.DesktopMyPageScreen
 import com.yourssu.ssutime.desktop.screen.onboarding.DesktopOnBoardingScreen
 import com.yourssu.ssutime.desktop.screen.splash.DesktopSplashScreen
 import com.yourssu.ssutime.desktop.ui.resources.Res
+import com.yourssu.ssutime.desktop.ui.resources.checkbox
 import com.yourssu.ssutime.desktop.ui.resources.desktop_open_link_error
 import com.yourssu.ssutime.desktop.ui.resources.login_unknown_error
 import com.yourssu.ssutime.desktop.ui.theme.R500
@@ -47,9 +48,11 @@ import com.yourssu.ssutime.desktop.ui.theme.ssuTypography
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import java.awt.Desktop
 import java.awt.Dimension
+import java.awt.Frame
 import java.net.URI
 import java.time.Instant
 import java.time.LocalDate
@@ -65,20 +68,27 @@ private enum class DesktopRoute {
 
 fun main() = application {
     var isWindowVisible by remember { mutableStateOf(true) }
-    var keepRunningInTray by remember {
-        val state = DesktopSessionStore().load()
-        mutableStateOf(
-            state.autoLogin &&
-                state.systemNotificationsEnabled &&
-                DesktopDeadlineNotifier.isSupported(),
+    var isTrayReady by remember { mutableStateOf(false) }
+    val deadlineNotifier = remember {
+        DesktopDeadlineNotifier(
+            onOpen = { isWindowVisible = true },
+            onExit = ::exitApplication,
         )
     }
+
+    LaunchedEffect(deadlineNotifier) {
+        isTrayReady = deadlineNotifier.start()
+    }
+    DisposableEffect(deadlineNotifier) {
+        onDispose {
+            deadlineNotifier.close()
+        }
+    }
+
     Window(
         onCloseRequest = {
-            if (keepRunningInTray) {
+            if (isTrayReady) {
                 isWindowVisible = false
-            } else {
-                exitApplication()
             }
         },
         visible = isWindowVisible,
@@ -87,19 +97,19 @@ fun main() = application {
             height = 760.dp,
         ),
         title = "SSUTime",
+        icon = painterResource(Res.drawable.checkbox),
     ) {
-        LaunchedEffect(Unit) {
+        LaunchedEffect(window, isWindowVisible) {
             window.minimumSize = Dimension(360, 640)
+            if (isWindowVisible) {
+                window.extendedState = Frame.NORMAL
+                window.toFront()
+                window.requestFocus()
+            }
         }
         MaterialTheme(typography = ssuTypography()) {
             DesktopApp(
-                onNotificationSettingChanged = { enabled ->
-                    keepRunningInTray = enabled && DesktopDeadlineNotifier.isSupported()
-                },
-                onShowWindow = {
-                    isWindowVisible = true
-                },
-                onExitRequest = ::exitApplication,
+                deadlineNotifier = deadlineNotifier,
             )
         }
     }
@@ -107,9 +117,7 @@ fun main() = application {
 
 @Composable
 private fun DesktopApp(
-    onNotificationSettingChanged: (Boolean) -> Unit,
-    onShowWindow: () -> Unit,
-    onExitRequest: () -> Unit,
+    deadlineNotifier: DesktopDeadlineNotifier,
 ) {
     val idState = rememberTextFieldState()
     val passwordState = rememberTextFieldState()
@@ -127,12 +135,6 @@ private fun DesktopApp(
         LmsAppService(SsuTimeApi(httpClient))
     }
     val store = remember { DesktopSessionStore() }
-    val deadlineNotifier = remember {
-        DesktopDeadlineNotifier(
-            onOpen = onShowWindow,
-            onExit = onExitRequest,
-        )
-    }
     var storedState by remember { mutableStateOf(store.load()) }
     var route by remember { mutableStateOf(DesktopRoute.SPLASH) }
     var session by remember { mutableStateOf<LoginSession?>(null) }
@@ -235,10 +237,6 @@ private fun DesktopApp(
         } else {
             DesktopRoute.ONBOARDING
         }
-        onNotificationSettingChanged(
-            storedState.systemNotificationsEnabled &&
-                DesktopDeadlineNotifier.isSupported(),
-        )
         if (!storedState.onboardingCompleted || shouldRefreshOnOpen(todoData)) {
             refreshTodos()
         }
@@ -271,7 +269,6 @@ private fun DesktopApp(
                 route = DesktopRoute.LOGIN
                 if (fromSplash) {
                     idState.edit { replace(0, length, id) }
-                    onNotificationSettingChanged(false)
                 }
             } finally {
                 isLoggingIn = false
@@ -335,7 +332,6 @@ private fun DesktopApp(
             idState.edit { replace(0, length, "") }
             passwordState.edit { replace(0, length, "") }
             route = DesktopRoute.LOGIN
-            onNotificationSettingChanged(false)
         }
     }
 
@@ -365,7 +361,6 @@ private fun DesktopApp(
         todoData.loadedAt,
     ) {
         if (!storedState.systemNotificationsEnabled) {
-            deadlineNotifier.close()
             return@LaunchedEffect
         }
         while (true) {
@@ -385,10 +380,9 @@ private fun DesktopApp(
         }
     }
 
-    DisposableEffect(httpClient, deadlineNotifier) {
+    DisposableEffect(httpClient) {
         onDispose {
             httpClient.close()
-            deadlineNotifier.close()
         }
     }
 
@@ -461,7 +455,6 @@ private fun DesktopApp(
                         storedState = store.update(
                             storedState.copy(systemNotificationsEnabled = enabled),
                         )
-                        onNotificationSettingChanged(enabled)
                     },
                 )
             }

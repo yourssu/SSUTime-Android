@@ -16,12 +16,15 @@ import java.time.ZoneId
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
+import javax.imageio.ImageIO
 
 class DesktopDeadlineNotifier(
     private val onOpen: () -> Unit = {},
     private val onExit: () -> Unit = {},
 ) {
     private var trayIcon: TrayIcon? = null
+
+    fun start(): Boolean = ensureTrayIcon() != null
 
     fun sendIfNeeded(
         todoData: AppTodoData,
@@ -77,14 +80,33 @@ class DesktopDeadlineNotifier(
         if (!isSupported()) {
             return null
         }
-        val image = BufferedImage(32, 32, BufferedImage.TYPE_INT_ARGB)
-        image.createGraphics().use { graphics ->
-            graphics.color = Color(0xFE, 0x2B, 0x27)
-            graphics.fillRoundRect(2, 2, 28, 28, 8, 8)
-            graphics.color = Color.WHITE
-            graphics.fillRect(8, 15, 5, 5)
-            graphics.fillRect(14, 10, 11, 10)
+        return createTrayIcon(loadCheckboxIcon())
+    }
+
+    private fun loadCheckboxIcon(): BufferedImage {
+        javaClass.getResourceAsStream("/icons/checkbox.png")?.use { stream ->
+            ImageIO.read(stream)?.let { return it }
         }
+        return BufferedImage(32, 32, BufferedImage.TYPE_INT_ARGB).also { image ->
+            image.createGraphics().use { graphics ->
+                graphics.color = Color(0xFE, 0x4F, 0x4C)
+                graphics.fillRoundRect(0, 0, 32, 32, 11, 11)
+                graphics.color = Color.WHITE
+                graphics.stroke = java.awt.BasicStroke(
+                    3.155f,
+                    java.awt.BasicStroke.CAP_ROUND,
+                    java.awt.BasicStroke.JOIN_ROUND,
+                )
+                graphics.drawPolyline(
+                    intArrayOf(9, 14, 24),
+                    intArrayOf(16, 21, 11),
+                    3,
+                )
+            }
+        }
+    }
+
+    private fun createTrayIcon(image: BufferedImage): TrayIcon? {
         return runCatching {
             val popupMenu = PopupMenu().apply {
                 add(

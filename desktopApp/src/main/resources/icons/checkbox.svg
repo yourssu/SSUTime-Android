@@ -1,0 +1,19 @@
+<!--
+  Derived from src/main/composeResources/drawable/checkbox.xml.
+  Keep the path data and colors synchronized with that Compose resource.
+-->
+<svg xmlns="http://www.w3.org/2000/svg"
+    width="256"
+    height="256"
+    viewBox="0 0 32 32">
+  <path
+      d="M10.667,0L21.333,0A10.667,10.667 0,0 1,32 10.667L32,21.333A10.667,10.667 0,0 1,21.333 32L10.667,32A10.667,10.667 0,0 1,0 21.333L0,10.667A10.667,10.667 0,0 1,10.667 0z"
+      fill="#FE4F4C" />
+  <path
+      d="M8.889,16L13.917,21.028L23.973,10.972"
+      fill="none"
+      stroke="#FFFFFF"
+      stroke-width="3.155"
+      stroke-linecap="round"
+      stroke-linejoin="round" />
+</svg>

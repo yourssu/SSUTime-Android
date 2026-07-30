@@ -5,6 +5,7 @@ import com.yourssu.data.network.LmsSessionCookieRequest
 import com.yourssu.data.network.LmsSessionRequest
 import com.yourssu.data.network.ReportedTodoResponse
 import com.yourssu.data.network.UserTodoStatusResponse
+import com.yourssu.data.network.matches
 import com.yourssu.data.network.toReportWithAnalysisRequestOrNull
 import com.yourssu.data.network.toTodoReportRequest
 import com.yourssu.ssutime.desktop.core.model.AiSummary
@@ -13,6 +14,7 @@ import com.yourssu.ssutime.desktop.core.model.AppTodo
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.request.bearerAuth
+import io.ktor.client.request.get
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
