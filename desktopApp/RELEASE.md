@@ -2,7 +2,8 @@
 
 ## 배포 요청 문구
 
-- `배포해줘`: 기존과 동일하게 Android 앱을 Google Play에 배포한다.
+- `안드로이드로 배포해줘. 인앱 업데이트 대상`: Android 앱을 우선순위 `5`로 Google Play에 배포한다.
+- `안드로이드로 배포해줘. 인앱 업데이트 비대상`: Android 앱을 우선순위 `0`으로 Google Play에 배포한다.
 - `윈도우 배포해줘`: Desktop 앱을 Microsoft Store용 MSIX로 배포한다.
 - `Desktop <version> 버전을 Microsoft Store로 배포해줘`: 지정한 버전으로 Desktop 릴리즈를 준비한다.
 

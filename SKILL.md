@@ -43,10 +43,14 @@ Follow this workflow when the user asks to deploy SSUTime.
    - Use the bumped `versionName` as the GitHub Release tag with an `android-v` prefix, for example `android-v1.0.7`.
    - Do not rely on CI to derive app versions from the GitHub Release tag; the Play build uses the committed Gradle version.
 4. Set the Play in-app update priority before the final release commit:
-   - Inspect the release changes and commits to decide whether they include an LMS API version change. Treat changes to the `libs.lms` dependency version, LMS API client compatibility code, or other LMS API version migration work as an LMS API version change.
-   - If the release includes an LMS API version change, set `.github/workflows/google-play-production.yml` `inAppUpdatePriority` to `5` so the app's immediate in-app update flow can run for that version.
-   - For all other releases, set `.github/workflows/google-play-production.yml` `inAppUpdatePriority` to a low value such as `0`; do not leave it at `4` or `5`, because that would trigger the app's immediate update prompt.
+   - If the user explicitly says `인앱 업데이트 대상`, set `.github/workflows/google-play-production.yml` `inAppUpdatePriority` to `5`.
+   - If the user explicitly says `인앱 업데이트 비대상`, set `inAppUpdatePriority` to `0`.
+   - An explicit user selection overrides automatic classification. If the request contains both selections or is otherwise contradictory, stop and ask which one applies.
+   - If the user does not specify either selection, inspect the release changes and commits to decide whether they include an LMS API version change. Treat changes to the `libs.lms` dependency version, LMS API client compatibility code, or other LMS API version migration work as an LMS API version change.
+   - When automatically classified, set `inAppUpdatePriority` to `5` for an LMS API version change so the app's immediate in-app update flow can run for that version. Set it to `0` for all other releases.
+   - Do not leave an automatically classified non-target release at `4` or `5`, because that would trigger the app's immediate update prompt.
    - Commit and push the workflow priority value together with the version bump and release changes. The GitHub Release workflow uses the committed workflow file, so this value must be correct before creating the GitHub Release.
+   - Report whether the final release was handled as an in-app update target or non-target and the resulting priority value.
 5. Run checks:
 
 ```bash
