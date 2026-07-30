@@ -1,12 +1,16 @@
 [versions]
 agp = "9.2.1"
+composeMultiplatform = "1.11.1"
+composeMultiplatformMaterial3 = "1.9.0"
 coreKtx = "1.10.1"
 coreSplashscreen = "1.2.0"
 datastore = "1.2.1"
 junit = "4.13.2"
 junitVersion = "1.1.5"
+jna = "5.19.1"
 espressoCore = "3.5.1"
 koinAndroid = "4.2.1"
+kotlinxCoroutines = "1.10.2"
 kotlinxSerializationJson = "1.11.0"
 ktor = "3.5.0"
 lifecycleRuntimeKtx = "2.6.1"
@@ -14,9 +18,11 @@ activityCompose = "1.8.0"
 kotlin = "2.3.20"
 composeBom = "2026.02.01"
 lms = "1.4.6"
+lmsDesktop = "1.6.1"
 navigationCompose = "2.9.8"
-jetbrainsKotlinJvm = "2.2.10"
+jetbrainsKotlinJvm = "2.3.20"
 koin-plugin = "1.0.0-RC2"
+slf4j = "2.0.18"
 workRuntimeKtx = "2.11.1"
 
 [libraries]
@@ -29,6 +35,7 @@ androidx-navigation-compose = { module = "androidx.navigation:navigation-compose
 androidx-work-runtime-ktx = { module = "androidx.work:work-runtime-ktx", version.ref = "workRuntimeKtx" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
+jna-platform = { module = "net.java.dev.jna:jna-platform", version.ref = "jna" }
 androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
 androidx-lifecycle-runtime-ktx = { group = "androidx.lifecycle", name = "lifecycle-runtime-ktx", version.ref = "lifecycleRuntimeKtx" }
 androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activityCompose" }
@@ -40,6 +47,8 @@ androidx-compose-ui-tooling-preview = { group = "androidx.compose.ui", name = "u
 androidx-compose-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-manifest" }
 androidx-compose-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4" }
 androidx-compose-material3 = { group = "androidx.compose.material3", name = "material3" }
+compose-multiplatform-components-resources = { module = "org.jetbrains.compose.components:components-resources", version.ref = "composeMultiplatform" }
+compose-multiplatform-material3 = { module = "org.jetbrains.compose.material3:material3", version.ref = "composeMultiplatformMaterial3" }
 koin-bom = { module = "io.insert-koin:koin-bom", version.ref = "koinAndroid" }
 koin-core = { module = "io.insert-koin:koin-core", version.ref = "koinAndroid" }
 koin-annotations = { module = "io.insert-koin:koin-annotations", version.ref = "koinAndroid" }
@@ -47,6 +56,7 @@ koin-android = { module = "io.insert-koin:koin-android", version.ref = "koinAndr
 koin-compose = { module = "io.insert-koin:koin-compose", version.ref = "koinAndroid" }
 koin-compose-viewmodel = { module = "io.insert-koin:koin-compose-viewmodel", version.ref = "koinAndroid" }
 koin-navigation = { module = "io.insert-koin:koin-compose", version.ref = "koinAndroid" }
+kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinxCoroutines" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinxSerializationJson" }
 ktor-client-android = { module = "io.ktor:ktor-client-android", version.ref = "ktor" }
 ktor-client-cio = { module = "io.ktor:ktor-client-cio", version.ref = "ktor" }
@@ -54,9 +64,12 @@ ktor-client-core = { module = "io.ktor:ktor-client-core", version.ref = "ktor" }
 ktor-content-negotiation = { module = "io.ktor:ktor-client-content-negotiation", version.ref = "ktor" }
 ktor-json = { module = "io.ktor:ktor-serialization-kotlinx-json", version.ref = "ktor" }
 lms = { module = "io.github.chlwhdtn03:lms", version.ref = "lms" }
+lms-desktop = { module = "io.github.chlwhdtn03:lms", version.ref = "lmsDesktop" }
+slf4j-nop = { module = "org.slf4j:slf4j-nop", version.ref = "slf4j" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
+compose-multiplatform = { id = "org.jetbrains.compose", version.ref = "composeMultiplatform" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 jetbrains-kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "jetbrainsKotlinJvm" }
 koin-compiler = { id = "io.insert-koin.compiler.plugin", version.ref = "koin-plugin" }

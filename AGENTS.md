@@ -1,0 +1,3 @@
+- Android 앱을 제품 기능, 상태 전이 및 시각 디자인의 기준 구현으로 삼는다.
+- Android 기능 또는 화면을 변경할 때 대응하는 Desktop 구현에 미치는 영향을 함께 검토한다.
+- Desktop 관련 작업에는 `desktopApp/AGENTS.md`의 지침을 함께 적용한다.
