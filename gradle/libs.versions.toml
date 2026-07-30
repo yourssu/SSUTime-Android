@@ -1,5 +1,5 @@
 [versions]
-agp = "9.2.1"
+agp = "9.3.1"
 composeMultiplatform = "1.11.1"
 composeMultiplatformMaterial3 = "1.9.0"
 coreKtx = "1.10.1"

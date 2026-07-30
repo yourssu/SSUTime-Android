@@ -3,6 +3,10 @@
   <component name="CompilerConfiguration">
     <bytecodeTargetLevel target="11">
       <module name="SSUTime.shared" target="21" />
+      <module name="SSUTime.ui" target="21" />
+      <module name="SSUTime.ui.desktopDev" target="21" />
+      <module name="SSUTime.ui.desktopMain" target="21" />
+      <module name="SSUTime.ui.desktopTest" target="21" />
     </bytecodeTargetLevel>
   </component>
 </project>
