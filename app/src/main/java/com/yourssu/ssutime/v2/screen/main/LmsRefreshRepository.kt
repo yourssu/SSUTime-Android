@@ -143,6 +143,31 @@ class LmsRefreshRepository(
         }
     }
 
+    /**
+     * Loads one term for temporary on-screen display without updating DataStore
+     * or reporting the result to the backend.
+     */
+    @OptIn(ExperimentalTime::class)
+    suspend fun loadTodosForTerm(
+        term: Term,
+        forceLogin: Boolean = false,
+        loadingState: (Float) -> Unit = {},
+    ): TodoData = withContext(Dispatchers.IO) {
+        val loginData = loginRepository.getLoginData()
+        loginIfNeeded(
+            source = RefreshSource.FOREGROUND,
+            loginData = loginData,
+            forceLogin = forceLogin,
+        )
+        val subjects = fetchSubjects(term, loginData, loadingState)
+        buildTodoData(
+            subjects = subjects,
+            subjectInfos = buildSubjectInfos(subjects),
+            previousData = TodoData(),
+            loadedAt = Instant.now().toString(),
+        )
+    }
+
     fun startOnboardingInitialRefresh() {
         if (onboardingInitialRefreshJob?.isActive == true) {
             return
@@ -467,6 +492,7 @@ class LmsRefreshRepository(
                     TodoType.valueOf(todo.component_type.uppercase()),
                     subjectInfoById[subject.id],
                     description = todo.description.orEmpty(),
+                    url = todo.url.orEmpty(),
                 )
             }
         }.sortedByDeadlineThenName()
@@ -488,6 +514,7 @@ class LmsRefreshRepository(
                         if (todo.late == true) TodoType.SUBMITTED_LATE else TodoType.SUBMITTED,
                         subjectInfoById[subject.id],
                         submittedAt = todo.submitted_at.orEmpty(),
+                        url = todo.url.orEmpty(),
                     )
                 }
         }

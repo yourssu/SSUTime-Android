@@ -74,7 +74,12 @@ android {
     }
 
     buildTypes {
+        debug {
+            buildConfigField("Boolean", "DEBUG_MODE", "true")
+        }
         release {
+            buildConfigField("Boolean", "DEBUG_MODE", "true")
+
             isMinifyEnabled = true
             isShrinkResources = true
             if (hasReleaseSigningConfig) {

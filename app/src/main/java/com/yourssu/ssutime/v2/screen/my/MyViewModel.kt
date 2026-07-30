@@ -17,10 +17,12 @@ import com.yourssu.ssutime.v2.lms.getLmsTerms
 import com.yourssu.ssutime.v2.notification.showCallAlert
 import com.yourssu.ssutime.v2.screen.login.LoginRepository
 import com.yourssu.ssutime.v2.screen.main.MainRepository
+import com.yourssu.ssutime.v2.screen.main.TermSelectionStore
 import com.yourssu.ssutime.v2.screen.main.currentTermAt
 import com.yourssu.ssutime.v2.screen.main.sortedForMainDisplay
 import io.github.chlwhdtn03.LmsApi
 import io.github.chlwhdtn03.data.Lms.Info
+import io.github.chlwhdtn03.data.Lms.Term
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -33,10 +35,13 @@ import kotlin.time.ExperimentalTime
 class MyViewModel(
     private val loginRepository: LoginRepository,
     private val mainRepository: MainRepository,
+    private val termSelectionStore: TermSelectionStore,
 ) : ViewModel() {
     var loginInfo = mutableStateOf<Info?>(null)
-    var termInfo = mutableStateOf<String>("")
+    var terms = mutableStateOf<List<Term>>(emptyList())
+    var currentTerm = mutableStateOf<Term?>(null)
     var isLogout = mutableStateOf(false)
+    val selectedTerm = termSelectionStore.selectedTerm
 
     private val _uiState = MutableStateFlow<UiState<AlertData>>(UiState.Loading)
     val uiState: StateFlow<UiState<AlertData>> = _uiState.asStateFlow()
@@ -48,8 +53,27 @@ class MyViewModel(
             )
             if(LmsApi.isLoggined) {
                 loginInfo.value = getLmsLoginInfo()
-                termInfo.value = getLmsTerms().currentTermAt(now = Clock.System.now())?.name.orEmpty()
+                val loadedTerms = getLmsTerms()
+                    .sortedWith(
+                        compareByDescending<Term> { it.start_at }
+                            .thenByDescending { it.id }
+                    )
+                terms.value = loadedTerms
+                currentTerm.value = loadedTerms.currentTermAt(now = Clock.System.now())
+
+                val selectedTermId = selectedTerm.value?.id
+                if (selectedTermId != null && loadedTerms.none { it.id == selectedTermId }) {
+                    termSelectionStore.clear()
+                }
             }
+        }
+    }
+
+    fun selectTerm(term: Term) {
+        if (term.id == currentTerm.value?.id) {
+            termSelectionStore.clear()
+        } else {
+            termSelectionStore.select(term)
         }
     }
 
@@ -65,6 +89,7 @@ class MyViewModel(
 
     fun logout() {
         viewModelScope.launch {
+            termSelectionStore.clear()
             mainRepository.clearTodoData()
             loginRepository.logout()
             accessToken = ""

@@ -71,6 +71,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -846,6 +847,7 @@ fun TodoItem(
     aiSummaryState: AiSummaryUiState? = null,
     onExpandTodo: (TodoInfo) -> Unit = {},
 ) {
+    val uriHandler = LocalUriHandler.current
     var expanded by remember { mutableStateOf(false) }
     var isLate by remember { mutableStateOf(false) }
 
@@ -1031,6 +1033,17 @@ fun TodoItem(
 
                     if (todoInfo.canRequestAiSummary()) {
                         AiSummaryBlock(aiSummaryState = aiSummaryState)
+                    }
+                    Spacer(Modifier.height(5.dp))
+                    if(todoInfo.url.startsWith("http")) {
+                        Text(
+                            text = "브라우저에서 확인하기",
+                            style = SSUType.Body1Regular,
+                            color = Color.Blue,
+                            modifier = Modifier.clickable {
+                                uriHandler.openUri(todoInfo.url)
+                            }
+                        )
                     }
                 }
             }

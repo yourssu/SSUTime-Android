@@ -12,6 +12,7 @@ data class TodoInfo(
     val submittedAt: String = "", // 제출 시각
     val description: String = "", // 과제 설명
     val aiSummary: String = "", // AI 요약
+    val url: String = "", // 상세보기 주소
 ) {
     var subjectId = 0
 }
