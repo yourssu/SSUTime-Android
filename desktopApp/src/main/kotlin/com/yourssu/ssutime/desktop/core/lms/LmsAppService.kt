@@ -216,7 +216,8 @@ private fun List<Subject>.toAppTodoData(loadedAt: String): AppTodoData {
 
     return AppTodoData(
         todos = todos,
-        submitted = submitted.filterRecentlySubmitted(),
+//        submitted = submitted.filterRecentlySubmitted(),
+        submitted = submitted,
         loadedAt = loadedAt,
     )
 }

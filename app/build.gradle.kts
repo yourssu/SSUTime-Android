@@ -72,7 +72,7 @@ android {
             buildConfigField("Boolean", "DEBUG_MODE", "true")
         }
         release {
-            buildConfigField("Boolean", "DEBUG_MODE", "true")
+            buildConfigField("Boolean", "DEBUG_MODE", "false")
 
             isMinifyEnabled = true
             isShrinkResources = true

@@ -311,7 +311,8 @@ class MainViewModel(
 
         submitted.apply {
             clear()
-            addAll(todoData.submitted.filterRecentlySubmitted())
+            addAll(todoData.submitted)
+//            addAll(todoData.submitted.filterRecentlySubmitted())
         }
 
         loadedAt.value = todoData.loadedAt
