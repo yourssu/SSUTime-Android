@@ -69,6 +69,7 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.yourssu.data.AlertData
 import com.yourssu.data.UiState
+import com.yourssu.ssutime.v2.BuildConfig
 import com.yourssu.ssutime.v2.R
 import com.yourssu.ssutime.v2.analytics.Analytics
 import com.yourssu.ssutime.v2.ui.theme.BLACK
@@ -308,11 +309,25 @@ fun MyPageScreen(
                 text = loginInfo?.dept_name ?: "",
                 style = SSUType.H4SemiBold,
             )
-            TermDropdown(
-                terms = terms,
-                selectedTerm = selectedTerm ?: currentTerm,
-                onTermSelected = viewModel::selectTerm,
-            )
+            if(BuildConfig.DEBUG_MODE) {
+                TermDropdown(
+                    terms = terms,
+                    selectedTerm = selectedTerm ?: currentTerm,
+                    onTermSelected = viewModel::selectTerm,
+                )
+            } else {
+                if(currentTerm == null) {
+                    Text(
+                        text = stringResource(R.string.my_no_term_info),
+                        style = SSUType.Caption1SemiBold,
+                    )
+                } else {
+                    Text(
+                        text = currentTerm.name ?: stringResource(R.string.my_no_term_info),
+                        style = SSUType.Caption1SemiBold,
+                    )
+                }
+            }
         }
 
         Spacer(Modifier.height(28.dp))
