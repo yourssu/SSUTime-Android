@@ -1,0 +1,376 @@
+package com.yourssu.ssutime.desktop.screen.my
+
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
+import androidx.compose.material3.Text
+import androidx.compose.material3.TooltipAnchorPosition
+import androidx.compose.material3.TooltipBox
+import androidx.compose.material3.TooltipDefaults
+import androidx.compose.material3.rememberTooltipState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import com.yourssu.ssutime.desktop.core.model.AppProfile
+import com.yourssu.ssutime.desktop.ui.resources.Res
+import com.yourssu.ssutime.desktop.ui.resources.avatar_container
+import com.yourssu.ssutime.desktop.ui.resources.common_cancel
+import com.yourssu.ssutime.desktop.ui.resources.common_confirm
+import com.yourssu.ssutime.desktop.ui.resources.common_loading
+import com.yourssu.ssutime.desktop.ui.resources.ic_alret
+import com.yourssu.ssutime.desktop.ui.resources.ic_arrow_back
+import com.yourssu.ssutime.desktop.ui.resources.my_avatar_content_description
+import com.yourssu.ssutime.desktop.ui.resources.my_back_content_description
+import com.yourssu.ssutime.desktop.ui.resources.my_contact
+import com.yourssu.ssutime.desktop.ui.resources.my_logout
+import com.yourssu.ssutime.desktop.ui.resources.my_logout_message
+import com.yourssu.ssutime.desktop.ui.resources.my_no_term_info
+import com.yourssu.ssutime.desktop.ui.resources.my_notification_info_content_description
+import com.yourssu.ssutime.desktop.ui.resources.my_notification_settings
+import com.yourssu.ssutime.desktop.ui.resources.my_notification_tooltip_desktop_desc
+import com.yourssu.ssutime.desktop.ui.resources.my_notification_tooltip_system_title
+import com.yourssu.ssutime.desktop.ui.resources.my_privacy_policy
+import com.yourssu.ssutime.desktop.ui.resources.my_system_alert
+import com.yourssu.ssutime.desktop.ui.resources.my_terms
+import com.yourssu.ssutime.desktop.ui.theme.N100
+import com.yourssu.ssutime.desktop.ui.theme.N200
+import com.yourssu.ssutime.desktop.ui.theme.N400
+import com.yourssu.ssutime.desktop.ui.theme.N500
+import com.yourssu.ssutime.desktop.ui.theme.R400
+import com.yourssu.ssutime.desktop.ui.theme.SSUType
+import com.yourssu.ssutime.desktop.ui.theme.WHITE
+import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.painterResource
+import org.jetbrains.compose.resources.stringResource
+
+const val CONTACT_URL = "https://open.kakao.com/o/gFKdBhxi"
+const val TERMS_URL = "https://chlwhdtn03.github.io/ssutime/term.html"
+const val PRIVACY_URL = "https://chlwhdtn03.github.io/ssutime/privacy.html"
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun DesktopMyPageScreen(
+    profile: AppProfile?,
+    isLoading: Boolean,
+    errorMessage: String?,
+    onBack: () -> Unit,
+    onOpenUrl: (String) -> Unit,
+    onLogout: () -> Unit,
+    modifier: Modifier = Modifier,
+    showSystemNotificationSetting: Boolean = false,
+    systemNotificationsEnabled: Boolean = false,
+    onSystemNotificationsChanged: (Boolean) -> Unit = {},
+) {
+    var showLogoutDialog by remember { mutableStateOf(false) }
+    val tooltipState = rememberTooltipState(isPersistent = true)
+    val scope = rememberCoroutineScope()
+
+    if (showLogoutDialog) {
+        Dialog(onDismissRequest = { showLogoutDialog = false }) {
+            LogoutPopup(
+                onCancel = { showLogoutDialog = false },
+                onConfirm = {
+                    showLogoutDialog = false
+                    onLogout()
+                },
+            )
+        }
+    }
+
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .background(WHITE)
+            .padding(horizontal = 16.dp)
+            .safeDrawingPadding()
+            .verticalScroll(rememberScrollState()),
+    ) {
+        Row {
+            IconButton(onClick = onBack) {
+                Icon(
+                    painter = painterResource(Res.drawable.ic_arrow_back),
+                    contentDescription = stringResource(
+                        Res.string.my_back_content_description,
+                    ),
+                )
+            }
+        }
+
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 28.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Image(
+                painter = painterResource(Res.drawable.avatar_container),
+                contentDescription = stringResource(
+                    Res.string.my_avatar_content_description,
+                ),
+                modifier = Modifier.size(100.dp),
+            )
+            Text(
+                text = profile?.name
+                    ?: errorMessage?.takeIf(String::isNotBlank)
+                    ?: stringResource(Res.string.common_loading),
+                style = SSUType.H3SemiBold,
+                color = if (profile == null && !errorMessage.isNullOrBlank()) {
+                    R400
+                } else {
+                    Color.Unspecified
+                },
+                textAlign = TextAlign.Center,
+            )
+            Text(
+                text = profile?.department.orEmpty(),
+                style = SSUType.H4SemiBold,
+            )
+            Text(
+                text = profile?.termName
+                    ?.takeIf(String::isNotBlank)
+                    ?: if (isLoading) {
+                        ""
+                    } else {
+                        stringResource(Res.string.my_no_term_info)
+                    },
+                style = SSUType.Caption1SemiBold,
+            )
+        }
+
+        Spacer(Modifier.height(28.dp))
+
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            if (showSystemNotificationSetting) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = stringResource(Res.string.my_notification_settings),
+                        style = SSUType.H5SemiBold,
+                        color = N500,
+                    )
+                    Spacer(Modifier.width(5.dp))
+                    TooltipBox(
+                        positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
+                            TooltipAnchorPosition.Below,
+                        ),
+                        tooltip = {
+                            Card(
+                                elevation = CardDefaults.cardElevation(
+                                    defaultElevation = 6.dp,
+                                ),
+                            ) {
+                                NotificationTooltip()
+                            }
+                        },
+                        state = tooltipState,
+                    ) {
+                        Icon(
+                            painter = painterResource(Res.drawable.ic_alret),
+                            contentDescription = stringResource(
+                                Res.string.my_notification_info_content_description,
+                            ),
+                            tint = N400,
+                            modifier = Modifier
+                                .size(24.dp)
+                                .clickable {
+                                    scope.launch { tooltipState.show() }
+                                }
+                                .padding(4.dp),
+                        )
+                    }
+                }
+                ToggleOption(
+                    text = stringResource(Res.string.my_system_alert),
+                    value = systemNotificationsEnabled,
+                    onValueChanged = onSystemNotificationsChanged,
+                )
+            }
+
+            OptionButton(
+                text = stringResource(Res.string.my_contact),
+                onClick = { onOpenUrl(CONTACT_URL) },
+            )
+            OptionButton(
+                text = stringResource(Res.string.my_terms),
+                onClick = { onOpenUrl(TERMS_URL) },
+            )
+            OptionButton(
+                text = stringResource(Res.string.my_privacy_policy),
+                onClick = { onOpenUrl(PRIVACY_URL) },
+            )
+        }
+
+        Spacer(Modifier.height(28.dp))
+        OptionButton(
+            text = stringResource(Res.string.my_logout),
+            onClick = { showLogoutDialog = true },
+        )
+        Spacer(Modifier.height(12.dp))
+    }
+}
+
+@Composable
+private fun ToggleOption(
+    text: String,
+    value: Boolean,
+    onValueChanged: (Boolean) -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(N100)
+            .padding(20.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = text,
+                style = SSUType.H5SemiBold,
+            )
+            Spacer(Modifier.weight(1f))
+            Switch(
+                checked = value,
+                onCheckedChange = onValueChanged,
+                colors = SwitchDefaults.colors(checkedTrackColor = R400),
+            )
+        }
+    }
+}
+
+@Composable
+private fun OptionButton(
+    text: String,
+    onClick: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .clickable(onClick = onClick)
+            .background(N100)
+            .padding(20.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(text = text, style = SSUType.H5SemiBold)
+    }
+}
+
+@Composable
+private fun NotificationTooltip() {
+    Column(
+        modifier = Modifier
+            .width(300.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .background(WHITE)
+            .padding(16.dp),
+    ) {
+        Text(
+            text = stringResource(Res.string.my_notification_tooltip_system_title),
+            style = SSUType.Caption1SemiBold,
+        )
+        Text(
+            text = stringResource(Res.string.my_notification_tooltip_desktop_desc),
+            style = SSUType.Body2Medium,
+        )
+    }
+}
+
+@Composable
+private fun LogoutPopup(
+    onCancel: () -> Unit,
+    onConfirm: () -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .width(300.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .background(WHITE)
+            .padding(top = 18.dp, start = 12.dp, end = 12.dp, bottom = 12.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        Text(
+            text = stringResource(Res.string.my_logout),
+            style = SSUType.H4SemiBold,
+        )
+        Text(
+            text = stringResource(Res.string.my_logout_message),
+            style = SSUType.Body1Medium,
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            PopupButton(
+                modifier = Modifier.weight(1f),
+                text = stringResource(Res.string.common_cancel),
+                color = N200,
+                onClick = onCancel,
+            )
+            PopupButton(
+                modifier = Modifier.weight(1f),
+                text = stringResource(Res.string.common_confirm),
+                color = R400,
+                textColor = WHITE,
+                onClick = onConfirm,
+            )
+        }
+    }
+}
+
+@Composable
+private fun PopupButton(
+    text: String,
+    color: Color,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    textColor: Color = Color.Unspecified,
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .clickable(onClick = onClick)
+            .background(color)
+            .padding(14.dp),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = text,
+            style = SSUType.H5SemiBold,
+            color = textColor,
+        )
+    }
+}

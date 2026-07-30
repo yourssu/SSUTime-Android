@@ -1,0 +1,152 @@
+<resources>
+    <string name="login_logo_content_description">로고</string>
+    <string name="login_id_placeholder">유세인트 아이디를 입력하세요</string>
+    <string name="login_password_placeholder">유세인트 비밀번호를 입력하세요</string>
+    <string name="login_auto_login">자동 로그인 하기</string>
+    <string name="login_button">로그인</string>
+    <string name="login_unknown_error">로그인하지 못했어요. 다시 시도해주세요.</string>
+    <string name="desktop_loading_tasks">LMS에서 할 일을 불러오고 있어요.</string>
+    <string name="desktop_loading_profile">프로필을 불러오고 있어요.</string>
+    <string name="desktop_open_link_error">링크를 열지 못했어요.</string>
+    <string name="channel_name">과제 마감 알림</string>
+    <string name="channel_description">과제 마감 알림을 전달해드려요.</string>
+    <string name="call_channel_name">마감 전화 알림</string>
+    <string name="call_channel_description">마감 직전 전화 형태의 전체화면 알림</string>
+    <string name="widget_empty_text">모든 할 일을 수행했어요!</string>
+    <string name="todo_medium_widget_name">SSUTime 할 일 M</string>
+    <string name="todo_large_widget_name">SSUTime 할 일 L</string>
+
+    <string name="common_next">다음</string>
+    <string name="common_confirm">확인</string>
+    <string name="common_cancel">취소</string>
+    <string name="common_close">닫기</string>
+    <string name="common_retry">재시도</string>
+    <string name="common_refresh">새로고침</string>
+    <string name="common_loading">불러오는 중</string>
+    <string name="common_unknown_subject">알 수 없는 과목</string>
+    <string name="common_no_info">정보 없음</string>
+
+    <string name="todo_type_lecture">강의</string>
+    <string name="todo_type_assignment">과제</string>
+    <string name="todo_type_quiz">퀴즈</string>
+    <string name="todo_type_submitted">정상 제출</string>
+    <string name="todo_type_submitted_late">지각 제출</string>
+
+    <string name="splash_logo_content_description">로고</string>
+    <string name="splash_tagline">과제 놓쳐서 학점을 말아먹었다고?ㅏ</string>
+
+    <string name="onboarding_notification_title">과제 알림을 받으려면\n알림을 허용해주세요</string>
+    <string name="onboarding_notification_image_content_description">알림 권한 요청 예시</string>
+    <string name="onboarding_tip_title">성적에 반영되는 할 일의\n마감일을 알려줄게요</string>
+    <string name="onboarding_tip_assignment">LearningX [과제]</string>
+    <string name="onboarding_tip_quiz">LearningX [퀴즈]</string>
+    <string name="onboarding_tip_lecture">LearningX [강의]</string>
+    <string name="onboarding_tip_cyber_excluded">숭실 사이버 강의는 포함되지 않아요</string>
+
+    <string name="network_error_title">인터넷 연결이 불안정해요</string>
+    <string name="network_error_description">Wi-Fi나 셀룰러 데이터 연결 상태를\n확인하고 다시 시도해주세요.</string>
+    <string name="network_error_cause">에러 : %1$s</string>
+
+    <string name="main_completed_auto_disappear">완료하면 자동으로 사라져요</string>
+    <string name="main_todo_count">%1$d건의 할 일이 있어요</string>
+    <string name="main_updated_at">업데이트 %1$s 기준</string>
+    <string name="main_updated_at_base">%1$s 기준</string>
+    <string name="main_update_info_none">업데이트 정보 없음</string>
+    <string name="main_submitted_title">제출한 과제</string>
+    <string name="main_submitted_empty">아직 제출한 과제가 없어요</string>
+    <string name="main_submitted_count">제출 완료 %1$d</string>
+    <string name="main_date_base">%1$s 기준</string>
+    <string name="main_date_placeholder">00월 00일 기준</string>
+    <string name="main_widget_badge_title">슈타임 위젯 등록하기</string>
+    <string name="main_widget_badge_description">마감 D-day를 보여드려요</string>
+    <string name="main_urgent_tasks_title">가장 급한 과제예요!</string>
+    <string name="main_relaxed_tasks_title">여유가 있는 할 일 리스트</string>
+    <string name="main_todo_list_title">과제 목록</string>
+    <string name="main_empty_todos">제출할 과제가 없어요</string>
+    <string name="main_late_submission_available">지각 제출 가능해요</string>
+    <string name="main_expand_task_content_description">과제 정보 확장</string>
+    <string name="main_deadline_label">마감기한</string>
+    <string name="main_due_until">%1$s까지</string>
+    <string name="ai_summary_title">AI 요약</string>
+    <string name="ai_estimated_duration">예상 소요시간 %1$d분</string>
+    <string name="ai_estimated_duration_unknown">예상 소요시간 알 수 없음</string>
+    <string name="ai_summary_loading">AI 요약을 불러오는 중이에요.</string>
+    <string name="ai_summary_analyzing">AI 분석을 진행 중이에요.</string>
+    <string name="ai_summary_empty">AI 요약을 준비 중이에요.</string>
+    <string name="ai_summary_error">AI 요약을 불러오지 못했어요.</string>
+
+    <string name="widget_helper_title">위젯을 추가하면 볼 수 있어요</string>
+    <string name="widget_helper_description">홈화면 길게 누르고 위젯 버튼 눌러서\n슈타임 위젯을 추가하세요</string>
+    <string name="widget_helper_preview_title">위젯 미리보기</string>
+    <string name="widget_helper_preview_content_description_1">위젯 미리보기 1</string>
+    <string name="widget_helper_preview_content_description_2">위젯 미리보기 2</string>
+    <string name="widget_helper_preview_content_description_3">위젯 미리보기 3</string>
+
+    <string name="call_alert_setup_title">전화 알림 설정만 하면 끝이에요!</string>
+    <string name="call_alert_setup_description">설정한 시간 기준으로 교수님한테 전화 알림을 받을 수 있어요\n(진짜 전화 연결이 되는 것은 아니에요!)</string>
+    <string name="call_alert_option_1h">마감 당일 1시간 전</string>
+    <string name="call_alert_option_2h">마감 당일 2시간 전</string>
+    <string name="call_alert_option_6h">마감 당일 6시간 전</string>
+    <string name="call_alert_disable">전화 알림 받지 않기</string>
+    <string name="call_alert_time_1h">1시간 전</string>
+    <string name="call_alert_time_2h">2시간 전</string>
+    <string name="call_alert_time_6h">6시간 전</string>
+    <string name="call_alert_time_dropdown_content_description">전화알림 시간 펼치기</string>
+
+    <string name="my_back_content_description">뒤로가기</string>
+    <string name="my_avatar_content_description">프로필 이미지</string>
+    <string name="my_notification_settings">알림 설정</string>
+    <string name="my_no_term_info">학기 정보 없음</string>
+    <string name="my_notification_info_content_description">알림 안내</string>
+    <string name="my_system_alert">시스템 알림</string>
+    <string name="my_call_alert">전화 알림</string>
+    <string name="my_time">시간</string>
+    <string name="my_hours_before">%1$d시간 전</string>
+    <string name="my_contact">문의하기</string>
+    <string name="my_terms">이용약관</string>
+    <string name="my_privacy_policy">개인정보처리방침</string>
+    <string name="my_logout">로그아웃</string>
+    <string name="my_notification_tooltip_system_title">시스템 푸시?</string>
+    <string name="my_notification_tooltip_system_desc">앱 푸시 메시지로 간편하게 알려드려요</string>
+    <string name="my_notification_tooltip_desktop_desc">SSUTime이 실행 중일 때 Windows 시스템 알림으로 마감 일정을 알려드려요.</string>
+    <string name="my_notification_tooltip_call_title">전화 알림?</string>
+    <string name="my_notification_tooltip_call_desc">과제 마감 당일 설정한 시간까지 완료하지 않았다면, 전화 알림을 드려요! * 진짜 전화는 아니니 놀라지 않으셔도 돼요!</string>
+    <string name="my_logout_message">정말 로그아웃 하시겠어요?</string>
+
+    <string name="call_alert_default_title">마감 직전 알림</string>
+    <string name="call_alert_default_avatar">알림</string>
+    <string name="call_alert_display_title">마감 알림</string>
+    <string name="call_alert_default_subject">LMS</string>
+    <string name="call_alert_due_date">마감 %1$s</string>
+    <string name="call_alert_decline">거절</string>
+    <string name="call_alert_answer">응답</string>
+    <string name="call_alert_text">%1$s 마감 직전이에요.</string>
+    <string name="call_alert_notification_title">마감 직전 알림</string>
+
+    <string name="deadline_common_subject">공통</string>
+    <string name="deadline_no_title">제목 없음</string>
+    <string name="deadline_default_item">과제</string>
+    <string name="deadline_today_message">%1$s 오늘 마감이에요!</string>
+    <string name="deadline_d_day_message">%1$s 마감 D-%2$d이에요!</string>
+    <string name="deadline_multiple_message">%1$s 외 %2$d건, 곧 마감이에요!</string>
+    <string name="deadline_title_today">오늘 마감, 아직 안 했죠?</string>
+    <string name="deadline_title_upcoming">마감이 다가오고 있어요!</string>
+
+    <string name="widget_deadline_until">마감까지</string>
+    <string name="widget_refreshing_title">새로고침 중</string>
+    <string name="widget_refreshing_description">LMS에서 할 일을 불러오고 있어요.</string>
+    <string name="widget_refresh_failed_title">새로고침 실패</string>
+    <string name="widget_no_todo">표시할 과제가 없어요</string>
+    <string name="widget_refresh_from_app">앱에서 새로고침해 주세요</string>
+    <string name="widget_updated_before">업데이트 전</string>
+    <string name="widget_updated_at">업데이트 %1$s</string>
+    <string name="widget_updated_at_base">업데이트 %1$s 기준</string>
+    <string name="widget_no_subject">과목명 없음</string>
+    <string name="widget_refresh_failed_default">위젯 새로고침을 실행하지 못했어요.</string>
+    <string name="widget_refresh_error_lms_default">LMS 정보를 불러오지 못했어요.</string>
+    <string name="widget_refresh_error_timeout">새로고침 시간이 초과됐어요.</string>
+    <string name="widget_refresh_error_network">네트워크 연결을 확인해 주세요.</string>
+    <string name="widget_late_submission">지각 제출</string>
+    <string name="widget_late_short">지각</string>
+    <string name="widget_more_todos">그 외 %1$d건의 할 일이 있어요</string>
+</resources>

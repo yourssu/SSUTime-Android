@@ -18,11 +18,16 @@ env:
 jobs:
   publish:
     name: Build and publish production release
+    if: >-
+      startsWith(github.event.release.tag_name, 'android-v') &&
+      github.event.release.prerelease == false
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.release.tag_name }}
 
       - name: Set up JDK
         uses: actions/setup-java@v4

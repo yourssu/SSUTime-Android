@@ -1,6 +1,6 @@
 ---
 name: ssutime-deploy-release
-description: SSUTime Android app release workflow. Use when the user asks in Korean or English to deploy, release, publish, upload to Play Store, or says "배포해줘", "릴리즈 올려줘", "플레이스토어 배포해줘". Guides an agent to verify the app compiles, commit and push the current repository changes, generate user-facing release notes from commits since the previous GitHub Release, create a GitHub Release, and let GitHub Actions publish to Google Play production.
+description: SSUTime Android app release workflow. Use when the user asks in Korean or English to deploy, release, publish, upload to Play Store, or says "배포해줘", "릴리즈 올려줘", "플레이스토어 배포해줘" in the Android app context. Guides an agent to verify the app compiles, commit and push the current repository changes, generate user-facing release notes from commits since the previous Android GitHub Release, create an android-v GitHub Release, and let GitHub Actions publish to Google Play production. Do not use this workflow for Windows Desktop or Microsoft Store releases.
 ---
 
 # SSUTime Deploy Release
@@ -10,6 +10,12 @@ Follow this workflow when the user asks to deploy SSUTime.
 ## Guardrails
 
 - Work from the repository root.
+- This workflow releases only the Android `app` to Google Play. If the user explicitly asks for a Windows, Desktop, MSIX, or Microsoft Store release, do not create an Android release and follow `desktopApp/SKILL.md` instead.
+- Keep release namespaces separate:
+  - Android production: `android-v<version>`
+  - Windows Desktop production: `desktop-v<version>`
+- Never create a bare `v<version>` tag. It does not identify the target platform and can trigger or confuse the wrong release automation.
+- Keep existing historical bare `v<version>` Android releases intact. Do not rename or delete published releases and tags merely to adopt the new namespace.
 - Do not commit secrets or local-only files. In particular, never add `local.properties`, `app/google-services.json`, `app/service-account.json`, keystores, build outputs, or files already ignored by `.gitignore`.
 - Commit only already-tracked changes. Ignore unversioned files by default, even if they appear in `git status --short` as `??`.
 - Inspect `git status --short` before committing. If tracked changes look suspicious, ask before including them.
@@ -21,6 +27,8 @@ Follow this workflow when the user asks to deploy SSUTime.
 1. Confirm the Play release workflow exists:
    - `.github/workflows/google-play-production.yml`
    - It should trigger on GitHub Release `published`.
+   - Its publish job must require an `android-v` tag and reject prereleases.
+   - Its checkout step must explicitly check out `github.event.release.tag_name`, so the uploaded Android bundle is built from the immutable release tag rather than a moving branch head.
 2. Confirm required GitHub Repository Secrets are expected:
    - `ANDROID_GOOGLE_SERVICE_JSON`
    - `ANDROID_FIREBASE_GOOGLE_SERVICES_JSON`
@@ -32,7 +40,7 @@ Follow this workflow when the user asks to deploy SSUTime.
 3. Bump the committed app version before the final release commit:
    - In `app/build.gradle.kts`, increase the hardcoded `versionCode` value by exactly 1.
    - Increase the hardcoded `versionName` by one patch step unless the user specified a version. Example: `1.0.7` -> `1.0.8`.
-   - Use the bumped `versionName` as the GitHub Release tag with a `v` prefix, for example `v1.0.7`.
+   - Use the bumped `versionName` as the GitHub Release tag with an `android-v` prefix, for example `android-v1.0.7`.
    - Do not rely on CI to derive app versions from the GitHub Release tag; the Play build uses the committed Gradle version.
 4. Set the Play in-app update priority before the final release commit:
    - Inspect the release changes and commits to decide whether they include an LMS API version change. Treat changes to the `libs.lms` dependency version, LMS API client compatibility code, or other LMS API version migration work as an LMS API version change.
@@ -82,20 +90,32 @@ If push fails because the remote has moved, pull/rebase only after inspecting th
 
 Generate release notes after pushing.
 
-1. Find the latest GitHub Release:
+1. Find the latest stable Android GitHub Release. Do not use an unfiltered latest release because a `desktop-v` release may be newer:
 
 ```bash
-gh release list --limit 10
+gh release list \
+  --limit 100 \
+  --json tagName,publishedAt,isDraft,isPrerelease \
+  --jq '.[] | select(.isDraft == false and .isPrerelease == false) | select(.tagName | startswith("android-v")) | [.publishedAt, .tagName] | @tsv'
 ```
 
-2. Get the latest release tag and commits since then:
+2. From the filtered results, use the most recently published `android-v` tag and inspect commits since then:
 
 ```bash
-gh release view <latest-tag> --json tagName,publishedAt,name
-git log <latest-tag>..HEAD --no-merges --pretty=format:'- %s'
+gh release view <latest-android-tag> --json tagName,publishedAt,name
+git log <latest-android-tag>..HEAD --no-merges --pretty=format:'- %s'
 ```
 
-If there is no previous GitHub Release, use the project history that is reasonable for the first release.
+For the first namespaced Android release only, there may be no `android-v` release yet because historical Android releases used a bare `v<version>` tag. In that case, find the newest stable legacy tag and use it once as the Android release-note baseline:
+
+```bash
+gh release list \
+  --limit 100 \
+  --json tagName,publishedAt,isDraft,isPrerelease \
+  --jq '.[] | select(.isDraft == false and .isPrerelease == false) | select(.tagName | test("^v[0-9]+\\.[0-9]+\\.[0-9]+$")) | [.publishedAt, .tagName] | @tsv'
+```
+
+After an `android-v` release exists, never fall back to a bare tag. If neither an `android-v` release nor a valid legacy Android release exists, use the project history that is reasonable for the first Android release. Exclude Desktop-only changes from Android user release notes even if those commits are in the inspected range.
 
 3. Write release notes for general users, not developers, in every language supported by the app.
 
@@ -148,14 +168,15 @@ The release body must include separate sections for each supported language so P
 Use the bumped app version from `app/build.gradle.kts` unless the user specified a release tag.
 
 1. Read `versionName` from `app/build.gradle.kts` after the version bump.
-2. Use a `v` prefix, for example `v1.0.7`.
-3. Create the release with the generated notes:
+2. Form the tag as `android-v<version>`, for example `android-v1.0.7`.
+3. Confirm the exact tag does not already exist locally, remotely, or as a GitHub Release.
+4. Create the release with the generated notes:
 
 ```bash
-gh release create v1.0.7 --target <current-branch-or-sha> --title "v1.0.7" --notes-file /tmp/ssutime-release-notes.md
+gh release create android-v1.0.7 --target <current-branch-or-sha> --title "Android v1.0.7" --notes-file /tmp/ssutime-release-notes.md
 ```
 
-Creating the GitHub Release starts the `Google Play Production Release` GitHub Action.
+Creating the `android-v` GitHub Release starts the `Google Play Production Release` GitHub Action. A `desktop-v` release must not start this workflow.
 
 ## After Release Creation
 
