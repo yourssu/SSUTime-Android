@@ -41,15 +41,37 @@ SSUTIME_DATA_DIR=/tmp/ssutime-desktop-qa ./gradlew :desktopApp:run
 - Compose Desktop JVM에는 FCM 클라이언트가 공식 제공되지 않으므로 FCM 토큰 등록과 FCM 백그라운드 수신을 수행하지 않는다.
 - Android 위젯과 전화 형태의 전체 화면 알림은 Windows에서 제공하지 않으며, 관련 UI 공간도 남기지 않는다.
 
-## 검증과 패키징
+## 검증
 
 ```shell
 ./gradlew :desktopApp:test
 ./gradlew :app:testDebugUnitTest :app:assembleDebug
 ```
 
-MSI는 Windows 환경에서 다음 태스크로 생성한다.
+Compose가 제공하는 Windows 실행 이미지는 Windows 환경에서 다음 태스크로 생성한다.
 
 ```shell
-./gradlew :desktopApp:packageMsi
+./gradlew :desktopApp:createDistributable -PdesktopVersion=1.0.0
 ```
+
+Microsoft Store 제출용 MSIX는 실행 이미지를 만든 뒤 Windows PowerShell에서 생성한다.
+
+```powershell
+./desktopApp/scripts/package-msix.ps1 -Version 1.0.0
+```
+
+생성 위치는 `desktopApp/build/msix/SSUTime-1.0.0-windows-x64.msix`다.
+
+## Microsoft Store 릴리즈
+
+- Android 프로덕션 릴리즈는 `android-v<version>` 태그를 사용한다.
+- Windows Desktop 프로덕션 릴리즈는 `desktop-v<version>` 태그를 사용한다.
+- `desktop-v1.0.0` 태그는 MSIX 패키지 버전 `1.0.0.0`으로 변환한다.
+- Desktop MSIX는 `desktop-v` 태그가 가리키는 커밋에서 Windows runner로 생성한다.
+- Store Identity는 Partner Center가 발급한 `Campo.1711AB9C2595`와 `CN=BC44C2C8-25C2-4313-917E-619FF08BC787`을 사용한다.
+- Store ID는 `9N8DJHBJDRGR`이다.
+- Store 제출용 MSIX는 공개 GitHub Release 자산이나 웹사이트 다운로드 파일로 배포하지 않는다.
+- 첫 제출은 Actions artifact를 내려받아 Partner Center에 수동으로 업로드한다.
+- Microsoft Store가 심사를 통과한 MSIX의 배포 서명, 호스팅 및 업데이트를 담당한다.
+
+상세한 배포 순서는 [RELEASE.md](RELEASE.md)를 따른다.

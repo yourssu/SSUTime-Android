@@ -1,0 +1,128 @@
+name: Windows Desktop Store Package
+
+on:
+  release:
+    types:
+      - published
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Desktop version in MAJOR.MINOR.PATCH format
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-desktop-store-${{ github.event.release.tag_name || inputs.version }}
+  cancel-in-progress: false
+
+jobs:
+  package:
+    name: Build Microsoft Store MSIX
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (
+        startsWith(github.event.release.tag_name, 'desktop-v') &&
+        github.event.release.prerelease == false
+      )
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event_name == 'release' && github.event.release.tag_name || github.ref }}
+
+      - name: Resolve and validate version
+        id: version
+        shell: pwsh
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+          MANUAL_VERSION: ${{ inputs.version }}
+        run: |
+          if ($env:EVENT_NAME -eq "release") {
+            if ($env:RELEASE_TAG -notmatch "^desktop-v(?<version>(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*))$") {
+              throw "Desktop release tag must use desktop-vMAJOR.MINOR.PATCH."
+            }
+            $version = $Matches["version"]
+          } else {
+            if ($env:MANUAL_VERSION -notmatch "^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$") {
+              throw "Manual version must use MAJOR.MINOR.PATCH."
+            }
+            $version = $env:MANUAL_VERSION
+          }
+
+          "value=$version" >> $env:GITHUB_OUTPUT
+          "store=$version.0" >> $env:GITHUB_OUTPUT
+
+      - name: Verify release commit belongs to develop
+        if: github.event_name == 'release'
+        shell: pwsh
+        run: |
+          git fetch origin develop
+          git merge-base --is-ancestor HEAD origin/develop
+          if ($LASTEXITCODE -ne 0) {
+            throw "The desktop release tag must point to a commit on develop."
+          }
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Test and create Windows app image
+        shell: pwsh
+        run: |
+          ./gradlew.bat --no-daemon `
+            :desktopApp:test `
+            :desktopApp:createDistributable `
+            "-PdesktopVersion=${{ steps.version.outputs.value }}"
+
+      - name: Build Store MSIX
+        shell: pwsh
+        run: |
+          ./desktopApp/scripts/package-msix.ps1 `
+            -Version "${{ steps.version.outputs.value }}"
+
+      - name: Create checksum
+        shell: pwsh
+        run: |
+          $msix = Get-Item "desktopApp/build/msix/SSUTime-${{ steps.version.outputs.value }}-windows-x64.msix"
+          $hash = (Get-FileHash -LiteralPath $msix.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$hash  $($msix.Name)" |
+            Out-File `
+              -FilePath "$($msix.FullName).sha256" `
+              -Encoding ascii `
+              -NoNewline
+
+      - name: Upload Store submission artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: SSUTime-${{ steps.version.outputs.value }}-Microsoft-Store
+          path: |
+            desktopApp/build/msix/*.msix
+            desktopApp/build/msix/*.sha256
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Write summary
+        shell: pwsh
+        run: |
+          @"
+          ## Microsoft Store MSIX
+
+          - Desktop version: `${{ steps.version.outputs.value }}`
+          - MSIX version: `${{ steps.version.outputs.store }}`
+          - Store ID: `9N8DJHBJDRGR`
+          - Distribution: Partner Center only
+
+          The artifact is intentionally not attached to the public GitHub Release.
+          "@ >> $env:GITHUB_STEP_SUMMARY

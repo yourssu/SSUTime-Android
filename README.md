@@ -2,14 +2,20 @@
 
 숭실대학교 LMS 과제와 퀴즈 마감 정보를 확인하고 알림으로 받아볼 수 있는 Android 앱입니다.
 
-## 배포 방법
+## Android 배포
 
 코드를 모두 작성하셨나요?
 
-레포지토리 루트에 배포 자동화용 `SKILL.md`가 준비되어 있습니다. Codex 또는 LLM에게 아래처럼 요청하면 됩니다.
+레포지토리 루트의 `SKILL.md`는 Android와 Google Play 배포 전용입니다. Codex 또는 LLM에게 아래처럼 요청하면 됩니다.
 
 ```text
 배포해줘
+```
+
+명시적으로 요청하려면 다음 문구도 사용할 수 있습니다.
+
+```text
+Android 배포해줘
 ```
 
 그러면 자동화 가이드를 따라 다음 작업을 진행합니다.
@@ -23,3 +29,19 @@
 - GitHub Actions를 통해 Google Play 프로덕션 배포를 제출합니다.
 
 Google Play 업로드 이후 실제 승인 여부와 노출 시점은 Google Play 심사 상태에 따라 달라질 수 있습니다.
+
+## Windows Desktop 배포
+
+Windows Desktop은 `desktopApp/SKILL.md`의 Microsoft Store MSIX 배포 절차를 사용합니다. Android 배포와 혼동되지 않도록 Windows 또는 Desktop을 반드시 명시합니다.
+
+```text
+윈도우 배포해줘
+```
+
+또는 버전을 지정할 수 있습니다.
+
+```text
+Desktop 1.1.13 버전을 Microsoft Store로 배포해줘
+```
+
+이 요청은 `desktop-v<version>` 릴리즈를 만들고 Windows GitHub Actions에서 Store 제출용 MSIX를 생성합니다. 최초 Store 제출은 Actions artifact를 내려받아 Partner Center에서 수동으로 진행하고, 앱이 Store에 게시된 뒤에는 별도 Store 자격 증명으로 업데이트 제출 자동화를 연결할 수 있습니다.

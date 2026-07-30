@@ -1,5 +1,8 @@
-import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+
+val desktopPackageVersion = providers
+    .gradleProperty("desktopVersion")
+    .orElse("1.1.13")
 
 plugins {
     alias(libs.plugins.jetbrains.kotlin.jvm)
@@ -45,9 +48,8 @@ compose.desktop {
         mainClass = "com.yourssu.ssutime.desktop.MainKt"
 
         nativeDistributions {
-            targetFormats(TargetFormat.Msi)
             packageName = "SSUTime"
-            packageVersion = "1.1.13"
+            packageVersion = desktopPackageVersion.get()
             modules(
                 "java.instrument",
                 "java.management",
