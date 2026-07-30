@@ -66,52 +66,73 @@ private enum class DesktopRoute {
     MY,
 }
 
-fun main() = application {
-    var isWindowVisible by remember { mutableStateOf(true) }
-    var isTrayReady by remember { mutableStateOf(false) }
-    val deadlineNotifier = remember {
-        DesktopDeadlineNotifier(
-            onOpen = { isWindowVisible = true },
-            onExit = ::exitApplication,
-        )
-    }
+fun main() {
+    val singleInstance = DesktopSingleInstance.acquireOrNotifyExisting() ?: return
 
-    LaunchedEffect(deadlineNotifier) {
-        isTrayReady = deadlineNotifier.start()
-    }
-    DisposableEffect(deadlineNotifier) {
-        onDispose {
-            deadlineNotifier.close()
-        }
-    }
+    try {
+        application {
+            var isWindowVisible by remember { mutableStateOf(true) }
+            var windowActivationRequest by remember { mutableStateOf(0L) }
+            var isTrayReady by remember { mutableStateOf(false) }
+            val showWindow = {
+                isWindowVisible = true
+                windowActivationRequest += 1
+            }
+            val deadlineNotifier = remember {
+                DesktopDeadlineNotifier(
+                    onOpen = showWindow,
+                    onExit = ::exitApplication,
+                )
+            }
 
-    Window(
-        onCloseRequest = {
-            if (isTrayReady) {
-                isWindowVisible = false
+            LaunchedEffect(deadlineNotifier) {
+                isTrayReady = deadlineNotifier.start()
             }
-        },
-        visible = isWindowVisible,
-        state = rememberWindowState(
-            width = 480.dp,
-            height = 760.dp,
-        ),
-        title = "SSUTime",
-        icon = painterResource(Res.drawable.checkbox),
-    ) {
-        LaunchedEffect(window, isWindowVisible) {
-            window.minimumSize = Dimension(360, 640)
-            if (isWindowVisible) {
-                window.extendedState = Frame.NORMAL
-                window.toFront()
-                window.requestFocus()
+            DisposableEffect(deadlineNotifier) {
+                onDispose {
+                    deadlineNotifier.close()
+                }
+            }
+            DisposableEffect(singleInstance) {
+                singleInstance.startListening(showWindow)
+                onDispose {
+                    singleInstance.stopListening()
+                }
+            }
+
+            Window(
+                onCloseRequest = {
+                    if (isTrayReady) {
+                        isWindowVisible = false
+                    } else {
+                        exitApplication()
+                    }
+                },
+                visible = isWindowVisible,
+                state = rememberWindowState(
+                    width = 480.dp,
+                    height = 760.dp,
+                ),
+                title = "SSUTime",
+                icon = painterResource(Res.drawable.checkbox),
+            ) {
+                LaunchedEffect(window, isWindowVisible, windowActivationRequest) {
+                    window.minimumSize = Dimension(360, 640)
+                    if (isWindowVisible) {
+                        window.extendedState = Frame.NORMAL
+                        window.toFront()
+                        window.requestFocus()
+                    }
+                }
+                MaterialTheme(typography = ssuTypography()) {
+                    DesktopApp(
+                        deadlineNotifier = deadlineNotifier,
+                    )
+                }
             }
         }
-        MaterialTheme(typography = ssuTypography()) {
-            DesktopApp(
-                deadlineNotifier = deadlineNotifier,
-            )
-        }
+    } finally {
+        singleInstance.close()
     }
 }
 
