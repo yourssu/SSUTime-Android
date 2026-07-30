@@ -1,7 +1,7 @@
 plugins {
     id("java-library")
     alias(libs.plugins.jetbrains.kotlin.jvm)
-    id("org.jetbrains.kotlin.plugin.serialization")
+    alias(libs.plugins.kotlin.serialization)
 }
 java {
     sourceCompatibility = JavaVersion.VERSION_11

@@ -2,10 +2,9 @@ import java.util.Properties
 
 plugins {
     alias(libs.plugins.android.application)
+    alias(libs.plugins.google.services)
     alias(libs.plugins.kotlin.compose)
-    alias(libs.plugins.koin.compiler)
-    id("org.jetbrains.kotlin.plugin.serialization")
-    id("com.google.gms.google-services")
+    alias(libs.plugins.kotlin.serialization)
 }
 
 fun String.toBuildConfigString(): String =
@@ -31,13 +30,6 @@ val hasReleaseSigningConfig = !releaseKeystorePath.isNullOrBlank() &&
     !releaseKeystorePassword.isNullOrBlank() &&
     !releaseKeyAlias.isNullOrBlank() &&
     !releaseKeyPassword.isNullOrBlank()
-
-koinCompiler {
-    userLogs = true
-    debugLogs = false
-    unsafeDslChecks = false
-    compileSafety = false
-}
 
 android {
     namespace = "com.yourssu.ssutime.v2"
@@ -103,67 +95,55 @@ android {
 }
 
 dependencies {
-    val glanceVersion = "1.1.1"
-
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.activity.compose)
+    implementation(libs.androidx.compose.animation)
+    implementation(libs.androidx.compose.foundation)
+    implementation(libs.androidx.compose.material.icons.extended)
     implementation(libs.androidx.compose.material3)
+    implementation(libs.androidx.compose.runtime)
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.core.ktx)
-    implementation(libs.androidx.lifecycle.runtime.ktx)
-    implementation(libs.androidx.datastore.preferences)
+    implementation(libs.androidx.core.splashscreen)
     implementation(libs.androidx.datastore)
+    implementation(libs.androidx.datastore.preferences)
+    implementation(libs.androidx.lifecycle.runtime.compose)
+    implementation(libs.androidx.lifecycle.viewmodel.ktx)
+    implementation(libs.androidx.navigation.compose)
+    implementation(libs.androidx.work.runtime.ktx)
+    implementation(libs.kotlinx.coroutines.android)
     implementation(libs.kotlinx.serialization.json)
 
-    implementation(platform("com.google.firebase:firebase-bom:34.13.0"))
-    implementation("com.google.firebase:firebase-analytics")
-    implementation("com.google.firebase:firebase-messaging")
-    implementation("com.google.firebase:firebase-inappmessaging")
-    implementation("com.google.firebase:firebase-inappmessaging-display")
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.messaging)
 
-    implementation("androidx.glance:glance-appwidget:$glanceVersion")
-    implementation("androidx.glance:glance-material3:$glanceVersion")
-    implementation("androidx.glance:glance-material:$glanceVersion")
-    compileOnly("androidx.glance:glance-preview:$glanceVersion")
-    implementation(libs.androidx.work.runtime.ktx)
-
-    implementation("com.google.android.play:app-update:2.1.0")
+    implementation(libs.androidx.glance.appwidget)
+    compileOnly(libs.androidx.glance.preview)
 
     implementation(libs.ktor.client.core)
     implementation(libs.ktor.client.android)
     implementation(libs.ktor.content.negotiation)
     implementation(libs.ktor.json)
 
-    implementation(libs.androidx.compose.material.icons.extended)
-
     implementation(libs.lms)
-
-    implementation(libs.androidx.navigation.compose)
 
     implementation(platform(libs.koin.bom))
     implementation(libs.koin.android)
     implementation(libs.koin.compose)
-    implementation(libs.koin.navigation)
     implementation(libs.koin.compose.viewmodel)
-    implementation(libs.koin.core)
-    implementation(libs.koin.annotations)  // For annotation support
-
-    implementation(libs.androidx.core.splashscreen)
 
     implementation(project(":data"))
 
-    implementation("com.posthog:posthog-android:3.+")
-    implementation("com.android.installreferrer:installreferrer:2.2")
+    implementation(libs.google.play.app.update)
+    implementation(libs.install.referrer)
+    implementation(libs.posthog.android)
 
     testImplementation(libs.junit)
-    androidTestImplementation(platform(libs.androidx.compose.bom))
-    androidTestImplementation(libs.androidx.compose.ui.test.junit4)
-    androidTestImplementation(libs.androidx.espresso.core)
-    androidTestImplementation(libs.androidx.junit)
-    debugImplementation("androidx.glance:glance-preview:$glanceVersion")
-    debugImplementation("androidx.glance:glance-appwidget-preview:$glanceVersion")
-    debugImplementation(libs.androidx.compose.ui.test.manifest)
+    androidTestImplementation(libs.androidx.test.core)
+    androidTestImplementation(libs.androidx.test.junit)
+    debugImplementation(libs.androidx.glance.preview)
+    debugImplementation(libs.androidx.glance.appwidget.preview)
     debugImplementation(libs.androidx.compose.ui.tooling)
 }

@@ -8,7 +8,7 @@ plugins {
     alias(libs.plugins.jetbrains.kotlin.jvm)
     alias(libs.plugins.compose.multiplatform)
     alias(libs.plugins.kotlin.compose)
-    id("org.jetbrains.kotlin.plugin.serialization")
+    alias(libs.plugins.kotlin.serialization)
 }
 
 kotlin {
@@ -33,7 +33,7 @@ dependencies {
     implementation(libs.ktor.client.cio)
     implementation(libs.ktor.content.negotiation)
     implementation(libs.ktor.json)
-    implementation(libs.lms.desktop)
+    implementation(libs.lms)
     implementation(libs.jna.platform)
     runtimeOnly(libs.slf4j.nop)
     testImplementation(kotlin("test"))
