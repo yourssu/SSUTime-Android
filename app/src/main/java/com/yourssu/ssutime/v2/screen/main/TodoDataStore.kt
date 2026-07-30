@@ -6,6 +6,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.core.Serializer
 import androidx.datastore.dataStore
 import com.yourssu.data.TodoData
+import com.yourssu.ssutime.v2.analytics.SentryExceptionReporter
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 import java.io.InputStream
@@ -24,6 +25,7 @@ object TodoDataSerializer : Serializer<TodoData> {
                 input.readBytes().decodeToString()
             )
         } catch (serialization: SerializationException) {
+            SentryExceptionReporter.capture(serialization)
             throw CorruptionException("과제 정보를 읽어오지 못했습니다.", serialization)
         }
 

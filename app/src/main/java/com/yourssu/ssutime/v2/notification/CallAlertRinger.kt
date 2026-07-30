@@ -11,6 +11,7 @@ import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
 import android.util.Log
+import com.yourssu.ssutime.v2.analytics.SentryExceptionReporter
 
 private const val TAG = "CallAlertRinger"
 private const val CALL_RING_TIMEOUT_MILLIS = 60_000L
@@ -44,6 +45,8 @@ internal object CallAlertRinger {
         mediaPlayer?.runCatching {
             stop()
             release()
+        }?.onFailure { exception ->
+            SentryExceptionReporter.capture(exception)
         }
         mediaPlayer = null
         context.applicationContext.getCallAlertVibrator()?.cancel()
@@ -71,6 +74,7 @@ internal object CallAlertRinger {
                 start()
             }
         }.onFailure { exception ->
+            SentryExceptionReporter.capture(exception)
             Log.w(TAG, "통화 알림 벨소리를 재생하지 못했습니다.", exception)
             mediaPlayer = null
         }

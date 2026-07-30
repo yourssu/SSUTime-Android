@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.yourssu.data.LoginData
 import com.yourssu.ssutime.v2.accessToken
+import com.yourssu.ssutime.v2.analytics.SentryExceptionReporter
 import com.yourssu.ssutime.v2.network.ApiRepository
 import com.yourssu.ssutime.v2.screen.login.LoginRepository
 import kotlinx.coroutines.CancellationException
@@ -49,6 +50,7 @@ class SplashViewModel(
                 throw e
             } catch (e: Exception) {
                 accessToken = loginData.accessToken
+                SentryExceptionReporter.capture(e)
                 Log.e(TAG, "Failed to refresh backend access token on app start.", e)
             }
         }

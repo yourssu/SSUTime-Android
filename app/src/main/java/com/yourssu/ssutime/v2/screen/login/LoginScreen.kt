@@ -30,6 +30,7 @@ import com.google.android.gms.tasks.OnCompleteListener
 import com.google.firebase.messaging.FirebaseMessaging
 import com.yourssu.ssutime.v2.R
 import com.yourssu.ssutime.v2.analytics.Analytics
+import com.yourssu.ssutime.v2.analytics.SentryExceptionReporter
 import com.yourssu.ssutime.v2.component.SButton
 import com.yourssu.ssutime.v2.component.SCheckBox
 import com.yourssu.ssutime.v2.component.SSecureTextField
@@ -163,6 +164,7 @@ private fun registerFCMTokenAndContinue(
             runCatching {
                 viewModel.registerFCMToken(task.result)
             }.onFailure { exception ->
+                SentryExceptionReporter.capture(exception)
                 Log.e("FCM", "FCM token registration failed", exception)
             }
             onComplete()

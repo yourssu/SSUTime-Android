@@ -22,6 +22,7 @@ fun Context.identifyStoredAnalyticsUserIfNeeded() {
                 Analytics.identifyUser(loginData.id)
             }
         }.onFailure { exception ->
+            SentryExceptionReporter.capture(exception)
             Log.w(USER_IDENTITY_TAG, "Failed to identify stored analytics user.", exception)
         }
     }

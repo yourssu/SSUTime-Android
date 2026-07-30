@@ -14,6 +14,7 @@ import com.yourssu.data.TodoInfo
 import com.yourssu.data.TodoType
 import com.yourssu.data.network.ReportedTodoResponse
 import com.yourssu.data.network.matches
+import com.yourssu.ssutime.v2.analytics.SentryExceptionReporter
 import io.github.chlwhdtn03.data.Lms.Term
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
@@ -145,6 +146,7 @@ class MainViewModel(
                 pollAndCacheAiSummary(todo, key, fallbackSuccess)
                 return@launch
             }.onFailure { exception ->
+                SentryExceptionReporter.capture(exception)
                 Log.e(javaClass.name, "AI 요약 요청에 실패했습니다: ${todo.title}", exception)
                 if (fallbackSuccess != null) {
                     return@launch
@@ -161,6 +163,7 @@ class MainViewModel(
             }
 
             if (reportedTodoResult.isFailure) {
+                reportedTodoResult.exceptionOrNull()?.let(SentryExceptionReporter::capture)
                 aiSummaryStates[key] = AiSummaryUiState.Error
                 return@launch
             }
@@ -244,8 +247,9 @@ class MainViewModel(
                     }
                 }
             }
-        } catch(e: Exception) {
-            if(e is CancellationException) throw e
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            SentryExceptionReporter.capture(e)
             Log.e(javaClass.name, "과제 정보를 갱신하지 못했습니다.", e)
             showNetworkError.value = true
             showNetworkCause.value = e.localizedMessage ?: "알 수 없는 에러"
@@ -288,6 +292,7 @@ class MainViewModel(
             todoData
         } catch (e: Exception) {
             if (e is CancellationException) throw e
+            SentryExceptionReporter.capture(e)
             Log.e(javaClass.name, "선택한 학기 정보를 불러오지 못했습니다.", e)
             showNetworkError.value = true
             showNetworkCause.value = e.localizedMessage ?: "알 수 없는 에러"

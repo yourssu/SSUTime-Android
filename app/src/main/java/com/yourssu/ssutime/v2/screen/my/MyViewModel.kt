@@ -12,6 +12,7 @@ import com.yourssu.data.TodoInfo
 import com.yourssu.data.UiState
 import com.yourssu.ssutime.v2.accessToken
 import com.yourssu.ssutime.v2.analytics.Analytics
+import com.yourssu.ssutime.v2.analytics.SentryExceptionReporter
 import com.yourssu.ssutime.v2.lms.getLmsLoginInfo
 import com.yourssu.ssutime.v2.lms.getLmsTerms
 import com.yourssu.ssutime.v2.notification.showCallAlert
@@ -123,6 +124,7 @@ class MyViewModel(
         runCatching {
             context.startActivity(intent)
         }.onFailure { exception ->
+            SentryExceptionReporter.capture(exception)
             Log.e(TAG, "문의하기 링크를 열지 못했습니다.", exception)
         }
     }
@@ -134,6 +136,7 @@ class MyViewModel(
         runCatching {
             context.startActivity(intent)
         }.onFailure { exception ->
+            SentryExceptionReporter.capture(exception)
             Log.e(TAG, "링크를 열지 못했습니다.", exception)
         }
     }

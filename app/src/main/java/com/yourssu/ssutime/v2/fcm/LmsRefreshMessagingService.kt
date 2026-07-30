@@ -8,6 +8,7 @@ import com.yourssu.data.TodoInfo
 import com.yourssu.data.TodoType
 import com.yourssu.data.network.FcmRequest
 import com.yourssu.ssutime.v2.accessToken
+import com.yourssu.ssutime.v2.analytics.SentryExceptionReporter
 import com.yourssu.ssutime.v2.network.ApiRepository
 import com.yourssu.ssutime.v2.notification.showCallAlert
 import com.yourssu.ssutime.v2.screen.login.LoginRepository
@@ -40,6 +41,7 @@ class LmsRefreshMessagingService : FirebaseMessagingService(), KoinComponent {
         runCatching {
             handleBackendMessage(message)
         }.onFailure { exception ->
+            SentryExceptionReporter.capture(exception)
             val detail = "FCM 처리 중 예외가 발생했습니다: ${exception.message ?: exception::class.java.simpleName}"
             Log.e(TAG, detail, exception)
         }
@@ -102,6 +104,7 @@ class LmsRefreshMessagingService : FirebaseMessagingService(), KoinComponent {
             }.onSuccess { status ->
                 Log.i(TAG, "FCM 토큰이 등록되었습니다. status=$status")
             }.onFailure { exception ->
+                SentryExceptionReporter.capture(exception)
                 Log.e(TAG, "FCM 토큰 등록에 실패했습니다.", exception)
             }
         }

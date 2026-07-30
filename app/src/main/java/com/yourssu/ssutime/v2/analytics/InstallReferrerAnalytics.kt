@@ -46,6 +46,7 @@ fun Context.captureInstallReferrerIfNeeded() {
                     appContext.fetchInstallReferrer()
                 }
             }.onFailure { exception ->
+                SentryExceptionReporter.capture(exception)
                 Log.w(TAG, "Failed to fetch install referrer.", exception)
             }.getOrNull()
             Analytics.appStoreInstalled(referrer?.extractUtmProperties().orEmpty())
@@ -53,6 +54,7 @@ fun Context.captureInstallReferrerIfNeeded() {
                 preferences[APP_STORE_INSTALLED_SENT_KEY] = true
             }
         } catch (exception: Exception) {
+            SentryExceptionReporter.capture(exception)
             Log.w(TAG, "Failed to capture install referrer analytics.", exception)
         } finally {
             Analytics.markInstallAttributionHandled()
@@ -74,6 +76,7 @@ private suspend fun Context.fetchInstallReferrer(): String? = suspendCancellable
         runCatching {
             referrerClient.endConnection()
         }.onFailure { exception ->
+            SentryExceptionReporter.capture(exception)
             Log.w(TAG, "Failed to end install referrer connection.", exception)
         }
     }
@@ -91,6 +94,7 @@ private suspend fun Context.fetchInstallReferrer(): String? = suspendCancellable
                             val referrer = runCatching {
                                 referrerClient.installReferrer.installReferrer
                             }.onFailure { exception ->
+                                SentryExceptionReporter.capture(exception)
                                 Log.w(TAG, "Failed to read install referrer.", exception)
                             }.getOrNull()
                             finish(referrer)
@@ -110,6 +114,7 @@ private suspend fun Context.fetchInstallReferrer(): String? = suspendCancellable
             },
         )
     }.onFailure { exception ->
+        SentryExceptionReporter.capture(exception)
         Log.w(TAG, "Failed to start install referrer connection.", exception)
         finish(null)
     }

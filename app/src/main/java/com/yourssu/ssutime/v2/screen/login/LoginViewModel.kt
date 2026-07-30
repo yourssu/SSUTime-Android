@@ -8,6 +8,7 @@ import androidx.lifecycle.viewModelScope
 import com.yourssu.data.LoginData
 import com.yourssu.data.network.FcmRequest
 import com.yourssu.ssutime.v2.accessToken
+import com.yourssu.ssutime.v2.analytics.SentryExceptionReporter
 import com.yourssu.ssutime.v2.lms.loginLms
 import com.yourssu.ssutime.v2.network.ApiRepository
 import kotlinx.coroutines.Dispatchers
@@ -52,6 +53,7 @@ class LoginViewModel(
                         accessToken = apiRepository.requestJwtToken(id, pw).accessToken
                 }
             } catch (e: Exception) {
+                SentryExceptionReporter.capture(e)
                 loginErrorMessage = e.message ?: ""
                 false
             }

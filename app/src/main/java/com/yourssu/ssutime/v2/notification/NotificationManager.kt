@@ -16,6 +16,7 @@ import com.yourssu.data.TodoInfo
 import com.yourssu.ssutime.v2.CALL_CHANNEL_ID
 import com.yourssu.ssutime.v2.R
 import com.yourssu.ssutime.v2.analytics.Analytics
+import com.yourssu.ssutime.v2.analytics.SentryExceptionReporter
 import com.yourssu.ssutime.v2.todo.localizedLabel
 import java.util.concurrent.atomic.AtomicLong
 
@@ -188,6 +189,7 @@ private fun Context.startCallAlertActivity(todo: TodoInfo, notificationId: Int):
             }
         )
     }.onFailure { exception ->
+        SentryExceptionReporter.capture(exception)
         Log.w(TAG, "통화 알림 Activity 실행이 시스템에 의해 거부되거나 실패했습니다.", exception)
     }.isSuccess
 

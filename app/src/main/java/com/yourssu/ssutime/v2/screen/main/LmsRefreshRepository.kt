@@ -12,6 +12,7 @@ import com.yourssu.data.network.toAddEnrollmentRequest
 import com.yourssu.data.network.toTodoReportRequest
 import com.yourssu.ssutime.v2.accessToken
 import com.yourssu.ssutime.v2.analytics.Analytics
+import com.yourssu.ssutime.v2.analytics.SentryExceptionReporter
 import com.yourssu.ssutime.v2.lms.getLmsCookies
 import com.yourssu.ssutime.v2.lms.getLmsTerms
 import com.yourssu.ssutime.v2.lms.getLmsTodoList
@@ -125,6 +126,7 @@ class LmsRefreshRepository(
                 executeRefresh(source, loginData, requestId, loadingState, forceLogin)
             }
         } catch (e: TimeoutCancellationException) {
+            SentryExceptionReporter.capture(e)
             val message = "새로고침 시간이 초과됐어요."
             if (source == RefreshSource.FCM) {
                 markBackgroundRefreshFailed(startedAt, requestId, message)
@@ -133,6 +135,7 @@ class LmsRefreshRepository(
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
+            SentryExceptionReporter.capture(e)
             val message = e.message?.takeIf { it.isNotBlank() } ?: "LMS 정보를 불러오지 못했어요."
             if (source == RefreshSource.FCM) {
                 markBackgroundRefreshFailed(startedAt, requestId, message)
@@ -382,6 +385,7 @@ class LmsRefreshRepository(
                     Log.w(TAG, "Enrollment 백엔드 등록 실패: ${subject.name}, status=$status")
                 }
             }.onFailure { exception ->
+                SentryExceptionReporter.capture(exception)
                 Log.e(TAG, "Enrollment 백엔드 등록 중 오류가 발생했습니다: ${subject.name}", exception)
             }
         }
@@ -409,6 +413,7 @@ class LmsRefreshRepository(
                     Log.w(TAG, request.toString())
                 }
             }.onFailure { exception ->
+                SentryExceptionReporter.capture(exception)
                 Log.e(TAG, "Todo 백엔드 제보 중 오류가 발생했습니다: ${todo.title}", exception)
             }
         }
@@ -433,6 +438,7 @@ class LmsRefreshRepository(
             accessToken = apiRepository.requestJwtToken(loginData.id, loginData.pw).accessToken
             loginRepository.updateLoginData(loginData.copy(accessToken = accessToken))
         }.onFailure { exception ->
+            SentryExceptionReporter.capture(exception)
             Log.e(TAG, "백엔드 토큰 갱신에 실패했습니다.", exception)
         }.isSuccess
     }

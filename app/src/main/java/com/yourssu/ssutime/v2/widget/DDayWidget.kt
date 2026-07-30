@@ -48,6 +48,7 @@ import com.yourssu.data.TodoInfo
 import com.yourssu.ssutime.v2.MainActivity
 import com.yourssu.ssutime.v2.R
 import com.yourssu.ssutime.v2.analytics.Analytics
+import com.yourssu.ssutime.v2.analytics.SentryExceptionReporter
 import com.yourssu.ssutime.v2.getRemainingDays
 import com.yourssu.ssutime.v2.getStringSimpleDate
 import com.yourssu.ssutime.v2.screen.main.LmsRefreshRepository
@@ -580,6 +581,7 @@ class DDayWidgetRefreshAction : ActionCallback, KoinComponent {
                 }
             }
         }.onFailure { exception ->
+            SentryExceptionReporter.capture(exception)
             context.markWidgetRefreshFailed(
                 exception.message?.takeIf { it.isNotBlank() }
                     ?: context.getString(R.string.widget_refresh_failed_default),

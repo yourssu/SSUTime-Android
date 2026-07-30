@@ -11,6 +11,7 @@ import androidx.datastore.dataStore
 import com.yourssu.data.AlertData
 import com.yourssu.data.LoginData
 import com.yourssu.data.TodoData
+import com.yourssu.ssutime.v2.analytics.SentryExceptionReporter
 import com.yourssu.ssutime.v2.network.ApiRepository
 import com.yourssu.ssutime.v2.screen.login.LoginRepository
 import com.yourssu.ssutime.v2.screen.login.LoginViewModel
@@ -172,12 +173,15 @@ object LoginDataSerializer : Serializer<LoginData> {
             }
             Json.decodeFromString<LoginData>(json)
         } catch (serialization: SerializationException) {
+            SentryExceptionReporter.capture(serialization)
             throw CorruptionException("계정 정보를 읽어오지 못했습니다.", serialization)
         } catch (security: GeneralSecurityException) {
             lastReadWasPlainText = false
+            SentryExceptionReporter.capture(security)
             throw CorruptionException("계정 정보를 복호화하지 못했습니다.", security)
         } catch (illegalArgument: IllegalArgumentException) {
             lastReadWasPlainText = false
+            SentryExceptionReporter.capture(illegalArgument)
             throw CorruptionException("계정 정보 암호문 형식이 올바르지 않습니다.", illegalArgument)
         }
 

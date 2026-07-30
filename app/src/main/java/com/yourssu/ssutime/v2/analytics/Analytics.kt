@@ -213,6 +213,7 @@ object Analytics {
             PostHog.identify(distinctId = distinctId)
             identifiedDistinctId.set(distinctId)
         }.onFailure { exception ->
+            SentryExceptionReporter.capture(exception)
             Log.w(TAG, "Failed to identify user.", exception)
         }
     }
@@ -222,6 +223,7 @@ object Analytics {
         runCatching {
             PostHog.reset()
         }.onFailure { exception ->
+            SentryExceptionReporter.capture(exception)
             Log.w(TAG, "Failed to reset user.", exception)
         }
     }
@@ -276,6 +278,7 @@ object Analytics {
                 properties = properties,
             )
         }.onFailure { exception ->
+            SentryExceptionReporter.capture(exception)
             Log.w(TAG, "Failed to capture event: $event", exception)
         }
     }
@@ -290,6 +293,7 @@ object Analytics {
         runCatching {
             PostHog.flush()
         }.onFailure { exception ->
+            SentryExceptionReporter.capture(exception)
             Log.w(TAG, "Failed to flush events.", exception)
         }
     }
