@@ -5,6 +5,8 @@ plugins {
     alias(libs.plugins.google.services)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.serialization)
+
+    id("io.sentry.android.gradle") version "6.16.0"
 }
 
 fun String.toBuildConfigString(): String =
@@ -146,4 +148,14 @@ dependencies {
     debugImplementation(libs.androidx.glance.preview)
     debugImplementation(libs.androidx.glance.appwidget.preview)
     debugImplementation(libs.androidx.compose.ui.tooling)
+}
+
+
+sentry {
+    org.set("chlwhdtn")
+    projectName.set("android")
+
+    // this will upload your source code to Sentry to show it as part of the stack traces
+    // disable if you don't want to expose your sources
+    includeSourceContext.set(true)
 }
