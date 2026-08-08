@@ -1,4 +1,4 @@
-name: Windows Desktop Store Release
+name: Windows Desktop MSIX Release
 
 on:
   push:
@@ -10,14 +10,13 @@ permissions:
   contents: write
 
 concurrency:
-  group: windows-desktop-store-${{ github.ref_name }}
+  group: windows-desktop-msix-${{ github.ref_name }}
   cancel-in-progress: false
 
 jobs:
   package:
-    name: Build and submit Microsoft Store MSIX
+    name: Build Windows MSIX
     runs-on: windows-latest
-    environment: microsoft-store
 
     steps:
       - name: Checkout
@@ -122,75 +121,24 @@ jobs:
               --notes-file $notes
           }
 
-      - name: Upload Store submission artifact
+      - name: Upload Windows MSIX artifact
         uses: actions/upload-artifact@v4
         with:
-          name: SSUTime-${{ steps.version.outputs.value }}-Microsoft-Store
+          name: SSUTime-${{ steps.version.outputs.value }}-Windows-MSIX
           path: |
             desktopApp/build/msix/*.msix
             desktopApp/build/msix/*.sha256
           if-no-files-found: error
           retention-days: 30
 
-      - name: Validate Microsoft Store credentials
-        shell: pwsh
-        env:
-          AZURE_AD_APPLICATION_CLIENT_ID: ${{ secrets.AZURE_AD_APPLICATION_CLIENT_ID }}
-          AZURE_AD_APPLICATION_SECRET: ${{ secrets.AZURE_AD_APPLICATION_SECRET }}
-          AZURE_AD_TENANT_ID: ${{ secrets.AZURE_AD_TENANT_ID }}
-          SELLER_ID: ${{ secrets.SELLER_ID }}
-        run: |
-          $required = @(
-            "AZURE_AD_APPLICATION_CLIENT_ID",
-            "AZURE_AD_APPLICATION_SECRET",
-            "AZURE_AD_TENANT_ID",
-            "SELLER_ID"
-          )
-          foreach ($name in $required) {
-            $value = [Environment]::GetEnvironmentVariable($name)
-            if ([string]::IsNullOrWhiteSpace($value)) {
-              throw "Missing required Microsoft Store secret: $name"
-            }
-          }
-
-      - name: Set up Microsoft Store Developer CLI
-        uses: microsoft/microsoft-store-apppublisher@v1.1
-
-      - name: Authenticate Microsoft Store Developer CLI
-        shell: pwsh
-        env:
-          AZURE_AD_APPLICATION_CLIENT_ID: ${{ secrets.AZURE_AD_APPLICATION_CLIENT_ID }}
-          AZURE_AD_APPLICATION_SECRET: ${{ secrets.AZURE_AD_APPLICATION_SECRET }}
-          AZURE_AD_TENANT_ID: ${{ secrets.AZURE_AD_TENANT_ID }}
-          SELLER_ID: ${{ secrets.SELLER_ID }}
-        run: |
-          msstore reconfigure `
-            --tenantId $env:AZURE_AD_TENANT_ID `
-            --sellerId $env:SELLER_ID `
-            --clientId $env:AZURE_AD_APPLICATION_CLIENT_ID `
-            --clientSecret $env:AZURE_AD_APPLICATION_SECRET
-
-      - name: Upload package and request Store certification
-        shell: pwsh
-        run: |
-          $msix = Get-Item "desktopApp/build/msix/SSUTime-${{ steps.version.outputs.value }}-windows-x64.msix"
-          msstore publish $msix.FullName -id "9N8DJHBJDRGR"
-
-      - name: Read Store submission status
-        shell: pwsh
-        run: msstore submission status "9N8DJHBJDRGR"
-
       - name: Write summary
         shell: pwsh
         run: |
           @"
-          ## Microsoft Store MSIX
+          ## Windows MSIX
 
           - Desktop version: `${{ steps.version.outputs.value }}`
           - MSIX version: `${{ steps.version.outputs.store }}`
-          - Store ID: `9N8DJHBJDRGR`
-          - Distribution: Microsoft Store
-          - Submission: Package uploaded and certification requested automatically
-
-          The artifact is intentionally not attached to the public GitHub Release.
+          - Distribution: GitHub Actions artifact
+          - Store submission: Manual upload required
           "@ >> $env:GITHUB_STEP_SUMMARY
