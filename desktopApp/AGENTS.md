@@ -3,6 +3,9 @@
 ## 1. 목표와 기준 구현
 
 - Android 앱을 기능, 상태 전이, 문구 및 시각 디자인의 기준 구현으로 삼는다.
+- Desktop의 기준 개발·배포 브랜치는 `desktop`이며 Desktop 작업은 이 브랜치에서 수행한다.
+- Android의 최신 기준을 반영할 때만 `desktop`에서 `develop`을 merge하고, 반영된 Android 동작을 Desktop 코드로 구현한다.
+- Desktop 작업에서는 Android `app` 소스, Android 버전 및 Google Play workflow를 수정하거나 배포하지 않는다.
 - Desktop은 Android와 동일한 사용자 목적과 기능을 제공하되 Screen은 별도로 구현한다.
 - Desktop이라는 이유로 UI 디자인이나 정보 구조를 임의로 바꾸지 않는다.
 - 창 크기, 스크롤, 포커스, 키보드 및 마우스 입력처럼 플랫폼상 필요한 차이만 적용한다.
@@ -41,13 +44,16 @@
 - Android와 Desktop은 같은 저장소를 사용하되 릴리즈 태그와 버전을 독립적으로 관리한다.
 - Android 프로덕션 릴리즈 태그는 `android-v<version>`, Desktop 프로덕션 릴리즈 태그는 `desktop-v<version>` 형식을 사용한다.
 - Android 릴리즈 workflow는 `android-v` 태그에서만, Desktop 릴리즈 workflow는 `desktop-v` 태그에서만 실행되도록 작업 수준 조건을 둔다.
+- Desktop 릴리즈 태그는 `desktop` 브랜치 이력에 속해야 하며 `develop`에서 Desktop 릴리즈를 만들지 않는다.
+- Desktop 버전은 `desktopApp/version.txt`만 올리고 Android `versionCode`와 `versionName`은 변경하지 않는다.
 - `desktop-v<MAJOR.MINOR.PATCH>` 태그는 MSIX의 `MAJOR.MINOR.PATCH.0` 버전과 일치해야 하며, 다르면 패키징을 중단한다.
 - Store 제출용 MSIX는 릴리즈 태그가 가리키는 커밋에서 빌드한다. 릴리즈 시점의 가변적인 브랜치 HEAD를 다시 빌드하지 않는다.
 - Store Identity의 `Name`, `Publisher`, `PublisherDisplayName` 및 Store ID는 Partner Center가 제공한 값을 사용하며 임의로 재생성하거나 변경하지 않는다.
 - 제품 배포는 Microsoft Store MSIX 경로만 지원한다. MSI/EXE, GitHub Release 자산 및 웹사이트 직접 다운로드를 공식 배포 경로로 추가하지 않는다.
 - Store 제출용 MSIX에는 개발자 소유의 공개 신뢰 코드 서명을 요구하지 않는다. Microsoft Store가 인증 완료 후 배포 패키지를 서명한다.
 - 로컬 설치 테스트에 사용하는 자체 서명 인증서와 개인 키는 개발 전용이며 저장소, Actions artifact 또는 GitHub Secret에 커밋하지 않는다.
-- 첫 Store 제출은 Partner Center에서 수동으로 수행한다. 앱이 Store에 게시된 뒤에만 Microsoft Store Developer CLI를 이용한 업데이트 자동 제출을 구성한다.
+- 게시된 무료 Store 제품의 업데이트는 Microsoft Store Developer CLI로 패키지를 업로드하고 인증 심사를 자동 요청한다.
+- Store 자동 제출 자격 증명은 `microsoft-store` GitHub Environment secret으로만 제공한다.
 - Store가 설치와 업데이트를 담당하므로 자체 MSI 업데이터나 GitHub Release 다운로드 기반 자동 업데이트를 구현하지 않는다.
 - 앱 안에서 업데이트 진입점을 제공할 경우 Store 제품 페이지를 열도록 하며 별도 설치 파일을 내려받지 않는다.
 - MSIX manifest는 트레이, 단일 인스턴스 및 백그라운드 알림 동작을 위해 `packagedClassicApp`, `mediumIL`, `runFullTrust`를 유지한다.
@@ -128,8 +134,8 @@ Desktop 기능을 추가하거나 변경할 때마다 다음 순서를 지킨다
 - [ ] MSIX의 Store Identity와 Store ID가 Partner Center 값과 일치한다.
 - [ ] MSIX가 `packagedClassicApp`, `mediumIL`, `runFullTrust`를 유지한다.
 - [ ] Store 제출 산출물이 공개 GitHub Release 자산으로 첨부되지 않았다.
-- [ ] 첫 제출은 Partner Center에서 수동 검증하고, 이후 자동 제출은 Store 게시 완료와 전용 자격 증명을 확인한 뒤 구성했다.
-- [ ] Android와 Desktop의 관련 빌드 및 테스트를 실행했다.
+- [ ] Store 제출 workflow가 전용 자격 증명으로 패키지를 업로드하고 인증 심사를 요청했다.
+- [ ] Desktop 관련 빌드 및 테스트를 실행했으며 Android 빌드나 배포를 실행하지 않았다.
 - [ ] 제외하거나 대체한 기능과 검증 결과를 사용자에게 보고했다.
 
 ## 11. 작업 결과 보고 형식

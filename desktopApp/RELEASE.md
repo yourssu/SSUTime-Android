@@ -9,6 +9,14 @@
 
 Windows 배포 요청에는 `Windows`, `윈도우`, `Desktop`, `MSIX` 또는 `Microsoft Store` 중 하나를 반드시 포함한다. Desktop 배포 자동화는 `desktopApp/SKILL.md`를 따르며 Android 배포 스킬을 실행하지 않는다.
 
+## 브랜치 운영
+
+- Android의 기준 개발·배포 브랜치는 `develop`이다.
+- Desktop의 기준 개발·배포 브랜치는 `desktop`이다.
+- Android 변경을 반영할 때는 `desktop`에서 `develop`을 merge한 후 필요한 Desktop 구현을 진행한다.
+- Windows 배포에서는 Desktop 변경만 커밋하며 Android 소스, Android 버전 및 Google Play workflow를 수정하거나 배포하지 않는다.
+- Android 배포에서는 Desktop 버전과 Windows Store workflow를 변경하지 않는다.
+
 ## 배포 형식
 
 - SSUTime Desktop의 공식 배포 경로는 Microsoft Store용 x64 MSIX다.
@@ -34,6 +42,8 @@ Store ID는 MSIX manifest 항목이 아니라 Partner Center 제출과 Store 제
 
 - Android 프로덕션 릴리즈: `android-v<version>`
 - Windows Desktop 프로덕션 릴리즈: `desktop-v<version>`
+- Desktop의 현재 버전은 `desktopApp/version.txt`에서 관리한다.
+- 버전이 지정되지 않은 Windows 배포 요청은 현재 Desktop 버전의 patch를 1 올리고 릴리스 커밋에 포함한다.
 - Desktop 태그는 `MAJOR.MINOR.PATCH` 형식을 사용한다.
 - MSIX Identity는 네 자리 버전을 요구하므로 마지막 구성요소 `0`을 붙인다.
 - 예: `desktop-v1.1.13` → `1.1.13.0`
@@ -61,36 +71,25 @@ MSIX는 다음 Desktop 권한 모델을 사용한다.
 
 `.github/workflows/desktop-store-package.yml`은 다음 경우 실행한다.
 
-- 안정 `desktop-v<version>` GitHub Release가 게시된 경우
-- Actions에서 `MAJOR.MINOR.PATCH` 버전으로 수동 실행한 경우
+- `desktop` 이력의 `desktop-v<version>` 태그가 push된 경우
+- Actions에서 `desktop` 브랜치를 선택해 수동 복구 실행한 경우
 
-Release 실행에서는 태그 커밋이 `develop` 이력에 속하는지 확인한다. 생성한 `.msix`와 `.sha256`은 30일 동안 GitHub Actions artifact로만 보관하며 공개 GitHub Release에는 첨부하지 않는다.
+Release 실행에서는 태그 버전이 `desktopApp/version.txt`와 일치하고 태그 커밋이 `desktop` 이력에 속하는지 확인한다. 생성한 `.msix`와 `.sha256`은 30일 동안 GitHub Actions artifact로 보관하며 공개 GitHub Release에는 첨부하지 않는다.
 
-## 첫 Partner Center 제출
+## Microsoft Store 자동 제출
 
-최초 제출은 Partner Center에서 수동으로 수행한다.
+workflow는 MSIX 생성 후 Microsoft 공식 Store Developer CLI를 설정하고 Store ID `9N8DJHBJDRGR`에 패키지를 업로드한다. `msstore publish`가 제출을 확정해 Microsoft 인증 심사를 요청하며, workflow 마지막에 현재 제출 상태를 조회한다.
 
-1. `Windows Desktop Store Package` workflow가 성공했는지 확인한다.
-2. workflow의 `SSUTime-<version>-Microsoft-Store` artifact를 내려받는다.
-3. 압축을 풀고 `.msix` 파일을 Partner Center 패키지 영역에 업로드한다.
-4. 앱 설명, 개인정보처리방침 URL, 연령 등급, 스크린샷, 지원 연락처, 인증 참고사항 및 배포 국가를 입력한다.
-5. 무료 앱으로 설정할지 확인한 후 인증을 제출한다.
-6. Partner Center가 통과 상태를 표시하기 전에는 배포 완료로 보고하지 않는다.
-
-Store 심사용 계정이 필요한 앱이므로 인증 참고사항에 정상적으로 테스트할 수 있는 로그인 방법을 제공해야 한다. 실제 개인 계정의 비밀번호를 저장소나 Release 본문에 적지 않는다.
-
-## 게시 후 자동 업데이트 제출
-
-Microsoft Store Developer CLI를 통한 자동 업데이트 제출은 앱이 이미 Store에 게시되어 있고 무료 제품일 때 구성한다.
-
-Partner Center와 연결한 Microsoft Entra 애플리케이션에 Manager 역할을 부여하고 다음 값을 GitHub의 보호된 Environment secret으로 등록한다.
+Partner Center와 연결한 Microsoft Entra 애플리케이션에 Manager 역할을 부여하고 다음 값을 GitHub의 `microsoft-store` 보호 Environment secret으로 등록한다.
 
 - `AZURE_AD_APPLICATION_CLIENT_ID`
 - `AZURE_AD_APPLICATION_SECRET`
 - `AZURE_AD_TENANT_ID`
 - `SELLER_ID`
 
-비밀 값은 문서, workflow, 채팅 또는 GitHub Release 본문에 기록하지 않는다. 자격 증명을 구성하기 전에는 CI가 MSIX artifact 생성까지만 수행하고 Store 제출을 시도하지 않는다.
+비밀 값은 문서, workflow, 채팅 또는 GitHub Release 본문에 기록하지 않는다. 누락되면 workflow는 Store 업로드 전에 실패한다. 자동 업데이트 제출은 게시된 무료 제품에서 지원되며, Partner Center가 인증 통과를 표시하기 전에는 배포 완료로 보고하지 않는다.
+
+Store 심사용 계정이 필요한 앱이므로 Partner Center 인증 참고사항에는 정상적인 테스트 로그인 방법을 별도로 유지한다. 실제 개인 계정의 비밀번호를 저장소나 Release 본문에 적지 않는다.
 
 ## 앱 내 업데이트 동작
 

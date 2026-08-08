@@ -158,6 +158,21 @@ Write-SquarePng `
     -DestinationPath (Join-Path $stagingDirectory "Assets\Square150x150Logo.png") `
     -Size 150
 
+$appListIconSizes = @(16, 20, 24, 30, 32, 36, 40, 48, 60, 64, 72, 80, 96, 256)
+$appListIconVariants = @(
+    "",
+    "_altform-unplated",
+    "_altform-lightunplated"
+)
+foreach ($size in $appListIconSizes) {
+    foreach ($variant in $appListIconVariants) {
+        Write-SquarePng `
+            -SourcePath $sourceIcon `
+            -DestinationPath (Join-Path $stagingDirectory "Assets\Square44x44Logo.targetsize-$size$variant.png") `
+            -Size $size
+    }
+}
+
 $manifestTemplatePath = Join-Path $desktopAppDirectory "src\main\msix\AppxManifest.xml"
 $manifestOutputPath = Join-Path $stagingDirectory "AppxManifest.xml"
 $manifest = [System.IO.File]::ReadAllText($manifestTemplatePath)
@@ -185,6 +200,9 @@ $identity = $packagedManifest.Package.Identity
 $identityName = $identity.GetAttribute("Name")
 $identityPublisher = $identity.GetAttribute("Publisher")
 $identityVersion = $identity.GetAttribute("Version")
+$application = $packagedManifest.Package.Applications.Application
+$applicationId = $application.GetAttribute("Id")
+$backgroundColor = $application.VisualElements.GetAttribute("BackgroundColor")
 if ($identityName -ne "Campo.1711AB9C2595") {
     throw "Unexpected MSIX Identity Name: $identityName"
 }
@@ -193,6 +211,21 @@ if ($identityPublisher -ne "CN=BC44C2C8-25C2-4313-917E-619FF08BC787") {
 }
 if ($identityVersion -ne $storeVersion) {
     throw "Unexpected MSIX version: $identityVersion"
+}
+if ($applicationId -ne "SSUTime") {
+    throw "Unexpected MSIX application ID: $applicationId"
+}
+if ($backgroundColor -ne "transparent") {
+    throw "The MSIX app icon background must be transparent: $backgroundColor"
+}
+foreach ($size in $appListIconSizes) {
+    foreach ($variant in $appListIconVariants) {
+        $assetName = "Square44x44Logo.targetsize-$size$variant.png"
+        $assetPath = Join-Path $verificationDirectory "Assets\$assetName"
+        if (-not (Test-Path -LiteralPath $assetPath -PathType Leaf)) {
+            throw "The transparent app icon asset is missing: $assetName"
+        }
+    }
 }
 
 Remove-Item -LiteralPath $verificationDirectory -Recurse -Force

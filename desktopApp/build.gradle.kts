@@ -2,7 +2,11 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 val desktopPackageVersion = providers
     .gradleProperty("desktopVersion")
-    .orElse("1.1.13")
+    .orElse(
+        providers.fileContents(layout.projectDirectory.file("version.txt"))
+            .asText
+            .map(String::trim),
+    )
 
 plugins {
     alias(libs.plugins.jetbrains.kotlin.jvm)

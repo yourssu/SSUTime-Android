@@ -1,72 +1,67 @@
-name: Windows Desktop Store Package
+name: Windows Desktop Store Release
 
 on:
-  release:
-    types:
-      - published
+  push:
+    tags:
+      - "desktop-v*"
   workflow_dispatch:
-    inputs:
-      version:
-        description: Desktop version in MAJOR.MINOR.PATCH format
-        required: true
-        type: string
 
 permissions:
   contents: read
 
 concurrency:
-  group: windows-desktop-store-${{ github.event.release.tag_name || inputs.version }}
+  group: windows-desktop-store-${{ github.ref_name }}
   cancel-in-progress: false
 
 jobs:
   package:
-    name: Build Microsoft Store MSIX
-    if: >-
-      github.event_name == 'workflow_dispatch' ||
-      (
-        startsWith(github.event.release.tag_name, 'desktop-v') &&
-        github.event.release.prerelease == false
-      )
+    name: Build and submit Microsoft Store MSIX
     runs-on: windows-latest
+    environment: microsoft-store
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          ref: ${{ github.event_name == 'release' && github.event.release.tag_name || github.ref }}
+          ref: ${{ github.ref }}
 
       - name: Resolve and validate version
         id: version
         shell: pwsh
         env:
           EVENT_NAME: ${{ github.event_name }}
-          RELEASE_TAG: ${{ github.event.release.tag_name }}
-          MANUAL_VERSION: ${{ inputs.version }}
+          RELEASE_TAG: ${{ github.ref_name }}
         run: |
-          if ($env:EVENT_NAME -eq "release") {
-            if ($env:RELEASE_TAG -notmatch "^desktop-v(?<version>(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*))$") {
-              throw "Desktop release tag must use desktop-vMAJOR.MINOR.PATCH."
+          $version = (Get-Content -LiteralPath "desktopApp/version.txt" -Raw).Trim()
+          if ($version -notmatch "^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$") {
+            throw "desktopApp/version.txt must use MAJOR.MINOR.PATCH."
+          }
+
+          if ($env:EVENT_NAME -eq "push") {
+            $expectedTag = "desktop-v$version"
+            if ($env:RELEASE_TAG -ne $expectedTag) {
+              throw "Desktop release tag must match the committed Desktop version: $expectedTag"
             }
-            $version = $Matches["version"]
-          } else {
-            if ($env:MANUAL_VERSION -notmatch "^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$") {
-              throw "Manual version must use MAJOR.MINOR.PATCH."
-            }
-            $version = $env:MANUAL_VERSION
           }
 
           "value=$version" >> $env:GITHUB_OUTPUT
           "store=$version.0" >> $env:GITHUB_OUTPUT
 
-      - name: Verify release commit belongs to develop
-        if: github.event_name == 'release'
+      - name: Verify Desktop release source
         shell: pwsh
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          REF_NAME: ${{ github.ref_name }}
         run: |
-          git fetch origin develop
-          git merge-base --is-ancestor HEAD origin/develop
+          if ($env:EVENT_NAME -eq "workflow_dispatch" -and $env:REF_NAME -ne "desktop") {
+            throw "Manual Desktop Store releases must run from the desktop branch."
+          }
+
+          git fetch origin desktop
+          git merge-base --is-ancestor HEAD origin/desktop
           if ($LASTEXITCODE -ne 0) {
-            throw "The desktop release tag must point to a commit on develop."
+            throw "The Desktop release commit must belong to the desktop branch."
           }
 
       - name: Set up JDK
@@ -113,6 +108,54 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
+      - name: Validate Microsoft Store credentials
+        shell: pwsh
+        env:
+          AZURE_AD_APPLICATION_CLIENT_ID: ${{ secrets.AZURE_AD_APPLICATION_CLIENT_ID }}
+          AZURE_AD_APPLICATION_SECRET: ${{ secrets.AZURE_AD_APPLICATION_SECRET }}
+          AZURE_AD_TENANT_ID: ${{ secrets.AZURE_AD_TENANT_ID }}
+          SELLER_ID: ${{ secrets.SELLER_ID }}
+        run: |
+          $required = @(
+            "AZURE_AD_APPLICATION_CLIENT_ID",
+            "AZURE_AD_APPLICATION_SECRET",
+            "AZURE_AD_TENANT_ID",
+            "SELLER_ID"
+          )
+          foreach ($name in $required) {
+            $value = [Environment]::GetEnvironmentVariable($name)
+            if ([string]::IsNullOrWhiteSpace($value)) {
+              throw "Missing required Microsoft Store secret: $name"
+            }
+          }
+
+      - name: Set up Microsoft Store Developer CLI
+        uses: microsoft/microsoft-store-apppublisher@v1.1
+
+      - name: Authenticate Microsoft Store Developer CLI
+        shell: pwsh
+        env:
+          AZURE_AD_APPLICATION_CLIENT_ID: ${{ secrets.AZURE_AD_APPLICATION_CLIENT_ID }}
+          AZURE_AD_APPLICATION_SECRET: ${{ secrets.AZURE_AD_APPLICATION_SECRET }}
+          AZURE_AD_TENANT_ID: ${{ secrets.AZURE_AD_TENANT_ID }}
+          SELLER_ID: ${{ secrets.SELLER_ID }}
+        run: |
+          msstore reconfigure `
+            --tenantId $env:AZURE_AD_TENANT_ID `
+            --sellerId $env:SELLER_ID `
+            --clientId $env:AZURE_AD_APPLICATION_CLIENT_ID `
+            --clientSecret $env:AZURE_AD_APPLICATION_SECRET
+
+      - name: Upload package and request Store certification
+        shell: pwsh
+        run: |
+          $msix = Get-Item "desktopApp/build/msix/SSUTime-${{ steps.version.outputs.value }}-windows-x64.msix"
+          msstore publish $msix.FullName -id "9N8DJHBJDRGR"
+
+      - name: Read Store submission status
+        shell: pwsh
+        run: msstore submission status "9N8DJHBJDRGR"
+
       - name: Write summary
         shell: pwsh
         run: |
@@ -122,7 +165,8 @@ jobs:
           - Desktop version: `${{ steps.version.outputs.value }}`
           - MSIX version: `${{ steps.version.outputs.store }}`
           - Store ID: `9N8DJHBJDRGR`
-          - Distribution: Partner Center only
+          - Distribution: Microsoft Store
+          - Submission: Package uploaded and certification requested automatically
 
           The artifact is intentionally not attached to the public GitHub Release.
           "@ >> $env:GITHUB_STEP_SUMMARY

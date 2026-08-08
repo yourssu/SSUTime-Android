@@ -1,6 +1,6 @@
 ---
 name: ssutime-desktop-store-release
-description: SSUTime Windows Desktop Microsoft Store MSIX release workflow. Use when the user explicitly asks to release, deploy, publish, or upload the Desktop or Windows app to Microsoft Store. Creates a desktop-v release from develop, builds an unsigned Store MSIX on Windows, and keeps the package out of public GitHub Release assets.
+description: SSUTime Windows Desktop Microsoft Store release workflow. Use when the user explicitly asks to release, deploy, publish, or upload the Desktop or Windows app. Automatically bumps the committed Desktop patch version, commits Desktop changes on the desktop branch, creates a desktop-v release, and submits the MSIX for Microsoft Store certification.
 ---
 
 # SSUTime Desktop Store Release
@@ -10,9 +10,10 @@ Follow this workflow only for the Windows `desktopApp`.
 ## Guardrails
 
 - Apply `desktopApp/AGENTS.md`.
-- Do not modify the Android `app` to make a Desktop release.
+- Work only on the `desktop` branch. Treat it as the main development and release branch for Desktop.
+- Do not modify, stage, build, version, tag, or release the Android `app` to make a Desktop release.
 - Use `desktop-v<MAJOR.MINOR.PATCH>` tags. Never use `android-v` or a bare `v` tag.
-- Build the MSIX from the immutable release tag commit and verify that commit belongs to `develop`.
+- Build the MSIX from the immutable release tag commit and verify that commit belongs to `desktop`.
 - Do not create or publish an MSI/EXE installer.
 - Do not attach the Store MSIX to a public GitHub Release or website.
 - Do not purchase, request, or configure a production code signing certificate for Store-only MSIX distribution.
@@ -32,30 +33,33 @@ If Partner Center displays different values later, stop and ask before changing 
 
 ## Version
 
-1. Choose the Desktop version independently from the Android version.
-2. Use `MAJOR.MINOR.PATCH` for the Git tag, for example `desktop-v1.1.13`.
-3. The MSIX manifest version must be the corresponding four-part value, for example `1.1.13.0`.
-4. Confirm the tag does not already exist locally, remotely, or as a GitHub Release.
+1. Read the current Desktop version from `desktopApp/version.txt` independently of the Android version.
+2. Unless the user specifies a version, increment the patch component by exactly 1. If specified, require a version greater than the current Desktop version.
+3. Write the selected `MAJOR.MINOR.PATCH` value back to `desktopApp/version.txt` before the release commit.
+4. Use the same value for the `desktop-v<version>` tag; the workflow converts it to the four-part MSIX version `<version>.0`.
+5. Confirm the selected tag does not already exist locally, remotely, or as a GitHub Release.
 
 ## Preflight
 
 1. Inspect tracked changes and exclude suspicious or unrelated changes.
-2. Confirm `.github/workflows/desktop-store-package.yml` exists.
-3. Confirm the Store Identity in `desktopApp/src/main/msix/AppxManifest.xml`.
-4. Run:
+2. Confirm the current branch is `desktop`. If not, stop before modifying or committing files.
+3. Confirm `.github/workflows/desktop-store-package.yml` exists.
+4. Confirm the Store Identity in `desktopApp/src/main/msix/AppxManifest.xml`.
+5. Run:
 
 ```bash
 ./gradlew :desktopApp:test :desktopApp:createDistributable -PdesktopVersion=<version>
-./gradlew :app:assembleDebug
 ```
 
 The local `createDistributable` result is only a compile/package-image check when not running on Windows. The final MSIX must be created and verified by the Windows workflow.
 
 ## Commit And Push
 
-1. Commit the intended tracked changes and any new Desktop release files.
-2. Push the current `develop` branch without rewriting history.
-3. Confirm the pushed commit is the intended release commit.
+1. Review `git status --short` and ensure Android paths are not part of the Desktop release changes.
+2. Stage only Desktop-owned paths, including `desktopApp/**` and `.github/workflows/desktop-store-package.yml`. Never use `git add .` or `git add -u` for a Desktop release.
+3. Include intended new Desktop files, the `desktopApp/version.txt` bump, and all uncommitted Desktop changes approved for the release.
+4. Commit with a concise Korean Desktop release message and push the `desktop` branch without rewriting history.
+5. Confirm the pushed commit is the intended release commit. Do not create an Android commit, tag, or Release.
 
 ## Release Notes
 
@@ -66,34 +70,24 @@ The local `createDistributable` result is only a compile/package-image check whe
 
 ## Create Release
 
-Create a GitHub Release whose tag points to the intended `develop` commit:
+Create a GitHub Release whose tag points to the intended `desktop` commit:
 
 ```bash
 gh release create desktop-v1.1.13 \
-  --target <develop-release-commit> \
+  --target <desktop-release-commit> \
   --title "Windows v1.1.13" \
   --notes-file /tmp/ssutime-desktop-release-notes.md
 ```
 
-The Release triggers `Windows Desktop Store Package`. The workflow uploads the MSIX only as a private workflow artifact and never as a public Release asset.
+The Release triggers `Windows Desktop Store Release`. The workflow keeps the MSIX as a private workflow artifact, uploads it to Microsoft Store, and commits the submission to request certification. It never attaches the package to a public GitHub Release.
 
-## First Store Submission
+## Automatic Store Submission
 
-For the first release:
-
-1. Wait for `Windows Desktop Store Package` to succeed.
-2. Download the `SSUTime-<version>-Microsoft-Store` Actions artifact.
-3. Upload the `.msix` file manually in Partner Center.
-4. Complete the Store listing, privacy policy, age rating, screenshots, certification notes, and availability.
-5. Report the Partner Center submission status without claiming approval prematurely.
-
-## Later Automatic Updates
-
-Only after the product is published and live, configure Microsoft Store Developer CLI automation. Store these values as protected GitHub Environment secrets, never in the repository:
+The published free Store product uses Microsoft Store Developer CLI automation. Store these values in the protected `microsoft-store` GitHub Environment, never in the repository:
 
 - `AZURE_AD_APPLICATION_CLIENT_ID`
 - `AZURE_AD_APPLICATION_SECRET`
 - `AZURE_AD_TENANT_ID`
 - `SELLER_ID`
 
-The Entra application must be connected to Partner Center with the Manager role. Automatic update submission currently applies only to free Store products, so verify that condition before enabling it.
+The Entra application must be connected to Partner Center with the Manager role. The workflow runs `msstore publish` with Store ID `9N8DJHBJDRGR`, which uploads the MSIX and requests certification. Report the resulting submission status, but do not claim approval until Partner Center reports certification success.
