@@ -9,8 +9,9 @@ Follow this workflow when the user asks to deploy SSUTime.
 
 ## Guardrails
 
-- Work from the repository root.
+- Work from the repository root and only from the `develop` branch.
 - This workflow releases only the Android `app` to Google Play. If the user explicitly asks for a Windows, Desktop, MSIX, or Microsoft Store release, do not create an Android release and follow `desktopApp/SKILL.md` instead.
+- Never modify, stage, bump, tag, or release `desktopApp/**`, `desktopApp/version.txt`, or `.github/workflows/desktop-store-package.yml` during an Android release.
 - Keep release namespaces separate:
   - Android production: `android-v<version>`
   - Windows Desktop production: `desktop-v<version>`
@@ -42,6 +43,7 @@ Follow this workflow when the user asks to deploy SSUTime.
    - Increase the hardcoded `versionName` by one patch step unless the user specified a version. Example: `1.0.7` -> `1.0.8`.
    - Use the bumped `versionName` as the GitHub Release tag with an `android-v` prefix, for example `android-v1.0.7`.
    - Do not rely on CI to derive app versions from the GitHub Release tag; the Play build uses the committed Gradle version.
+   - Do not read or change the independent Desktop version in `desktopApp/version.txt`.
 4. Set the Play in-app update priority before the final release commit:
    - If the user explicitly says `인앱 업데이트 대상`, set `.github/workflows/google-play-production.yml` `inAppUpdatePriority` to `5`.
    - If the user explicitly says `인앱 업데이트 비대상`, set `inAppUpdatePriority` to `0`.
@@ -68,10 +70,10 @@ git status --short
 git diff --stat
 ```
 
-2. Add tracked changes only. Do not add `??` unversioned files unless the user explicitly asks. A safe default is:
+2. Add Android tracked changes only. Do not add `??` unversioned files unless the user explicitly asks. A safe default is:
 
 ```bash
-git add -u
+git add -u -- . ':(exclude)desktopApp/**' ':(exclude).github/workflows/desktop-store-package.yml'
 git add .github/workflows/google-play-production.yml SKILL.md
 ```
 
@@ -82,10 +84,10 @@ Only add new tracked-intended files that are part of release automation or sourc
 git commit -m "릴리즈 배포 준비"
 ```
 
-4. Push the current branch:
+4. Push the `develop` branch:
 
 ```bash
-git push
+git push origin develop
 ```
 
 If push fails because the remote has moved, pull/rebase only after inspecting the situation. Do not overwrite remote history.
