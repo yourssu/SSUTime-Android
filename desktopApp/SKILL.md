@@ -66,20 +66,18 @@ The local `createDistributable` result is only a compile/package-image check whe
 - Find the latest stable `desktop-v` release only. Never use an Android release as the Desktop comparison baseline.
 - Describe user-visible Windows Desktop changes and Store-relevant fixes.
 - Exclude Android-only changes and internal build details.
-- Write separate `## English` and `## 한국어` sections.
+- Write separate `## English` and `## 한국어` sections to `desktopApp/release-notes/desktop-v<version>.md` and include that file in the release commit.
 
 ## Create Release
 
-Create a GitHub Release whose tag points to the intended `desktop` commit:
+Create and push a tag that points to the intended `desktop` commit:
 
 ```bash
-gh release create desktop-v1.1.13 \
-  --target <desktop-release-commit> \
-  --title "Windows v1.1.13" \
-  --notes-file /tmp/ssutime-desktop-release-notes.md
+git tag desktop-v1.1.14 <desktop-release-commit>
+git push origin desktop-v1.1.14
 ```
 
-The Release triggers `Windows Desktop Store Release`. The workflow keeps the MSIX as a private workflow artifact, uploads it to Microsoft Store, and commits the submission to request certification. It never attaches the package to a public GitHub Release.
+The tag triggers `Windows Desktop Store Release`. The workflow creates the GitHub Release from the committed bilingual notes, keeps the MSIX as a private workflow artifact, uploads it to Microsoft Store, and commits the submission to request certification. It never attaches the package to the public GitHub Release.
 
 ## Automatic Store Submission
 

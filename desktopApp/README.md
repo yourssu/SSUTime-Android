@@ -70,6 +70,7 @@ Microsoft Store 제출용 MSIX는 실행 이미지를 만든 뒤 Windows PowerSh
 - 현재 Desktop 버전은 `desktopApp/version.txt`에서 Android와 독립적으로 관리한다.
 - `desktop-v1.0.0` 태그는 MSIX 패키지 버전 `1.0.0.0`으로 변환한다.
 - Desktop MSIX는 `desktop` 이력의 `desktop-v` 태그 커밋에서 Windows runner로 생성한다.
+- 태그와 같은 이름의 `desktopApp/release-notes/desktop-v<version>.md`로 영어·한국어 GitHub Release 노트를 자동 게시한다.
 - Store Identity는 Partner Center가 발급한 `Campo.1711AB9C2595`와 `CN=BC44C2C8-25C2-4313-917E-619FF08BC787`을 사용한다.
 - Store ID는 `9N8DJHBJDRGR`이다.
 - Store 제출용 MSIX는 공개 GitHub Release 자산이나 웹사이트 다운로드 파일로 배포하지 않는다.

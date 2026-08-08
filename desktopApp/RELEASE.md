@@ -74,7 +74,7 @@ MSIX는 다음 Desktop 권한 모델을 사용한다.
 - `desktop` 이력의 `desktop-v<version>` 태그가 push된 경우
 - Actions에서 `desktop` 브랜치를 선택해 수동 복구 실행한 경우
 
-Release 실행에서는 태그 버전이 `desktopApp/version.txt`와 일치하고 태그 커밋이 `desktop` 이력에 속하는지 확인한다. 생성한 `.msix`와 `.sha256`은 30일 동안 GitHub Actions artifact로 보관하며 공개 GitHub Release에는 첨부하지 않는다.
+Release 실행에서는 태그 버전이 `desktopApp/version.txt`와 일치하고 태그 커밋이 `desktop` 이력에 속하는지 확인한다. `desktopApp/release-notes/desktop-v<version>.md`의 영어·한국어 문구로 GitHub Release를 생성하며, `.msix`와 `.sha256`은 30일 동안 Actions artifact로만 보관하고 공개 Release에는 첨부하지 않는다.
 
 ## Microsoft Store 자동 제출
 
