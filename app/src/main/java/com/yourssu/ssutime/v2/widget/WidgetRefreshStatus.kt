@@ -18,10 +18,15 @@ internal val TodoData.widgetRefreshErrorMessage: String?
     get() = lastWidgetRefreshErrorMessage
         .takeIf { lastWidgetRefreshStatus == WIDGET_REFRESH_STATUS_FAILED && it.isNotBlank() }
 
-internal suspend fun Context.markWidgetRefreshRunning() {
+internal val TodoData.widgetRefreshProgressMessage: String?
+    get() = lastWidgetRefreshProgressMessage
+        .takeIf { lastWidgetRefreshStatus == WIDGET_REFRESH_STATUS_RUNNING && it.isNotBlank() }
+
+internal suspend fun Context.markWidgetRefreshRunning(progressMessage: String = "") {
     todoDataStore.updateData { currentData ->
         currentData.copy(
             lastWidgetRefreshStatus = WIDGET_REFRESH_STATUS_RUNNING,
+            lastWidgetRefreshProgressMessage = progressMessage,
             lastWidgetRefreshErrorMessage = "",
             lastWidgetRefreshFinishedAt = "",
         )
@@ -32,6 +37,7 @@ internal suspend fun Context.markWidgetRefreshFailed(message: String) {
     todoDataStore.updateData { currentData ->
         currentData.copy(
             lastWidgetRefreshStatus = WIDGET_REFRESH_STATUS_FAILED,
+            lastWidgetRefreshProgressMessage = "",
             lastWidgetRefreshErrorMessage = message.toWidgetRefreshReason(this),
             lastWidgetRefreshFinishedAt = Instant.now().toString(),
         )
