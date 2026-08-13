@@ -132,6 +132,10 @@
     <string name="widget_deadline_until">Until deadline</string>
     <string name="widget_refreshing_title">Refreshing</string>
     <string name="widget_refreshing_description">Loading tasks from LMS.</string>
+    <string name="widget_refreshing_login">Signing in to LMS…</string>
+    <string name="widget_refreshing_terms">Loading current term…</string>
+    <string name="widget_refreshing_subjects">Loading courses for %1$s…</string>
+    <string name="widget_refreshing_saving">Saving task information…</string>
     <string name="widget_refresh_failed_title">Refresh failed</string>
     <string name="widget_no_todo">No tasks to show</string>
     <string name="widget_refresh_from_app">Refresh in the app</string>

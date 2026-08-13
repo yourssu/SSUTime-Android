@@ -50,6 +50,14 @@ private const val BACKGROUND_REFRESH_FAILED = "failed"
 private const val LMS_API_TOKEN_ERROR_MESSAGE = "API 토큰값을 불러오지 못했습니다. 다시 시도해주세요."
 private const val LMS_API_TOKEN_MAX_RETRIES = 2
 private val BACKGROUND_REFRESH_LOCK_WINDOW: Duration = Duration.ofMinutes(10)
+private val TRAILING_COURSE_NUMBER = Regex("\\s*\\(\\d+\\)\\s*$")
+
+sealed interface LmsRefreshStage {
+    data object LoggingIn : LmsRefreshStage
+    data object LoadingTerms : LmsRefreshStage
+    data class LoadingSubjects(val semester: String) : LmsRefreshStage
+    data object SavingResult : LmsRefreshStage
+}
 
 class LmsRefreshRepository(
     private val loginRepository: LoginRepository,
@@ -94,6 +102,7 @@ class LmsRefreshRepository(
         timeoutMillis: Long? = null,
         forceLogin: Boolean = false,
         loadingState: (Float) -> Unit = {},
+        onRefreshStage: suspend (LmsRefreshStage) -> Unit = {},
     ): TodoRefreshResult {
         if (!isRefreshing.compareAndSet(false, true)) {
             return TodoRefreshResult.Skipped("이미 새로고침 중입니다.")
@@ -120,10 +129,10 @@ class LmsRefreshRepository(
 
             if (timeoutMillis != null) {
                 withTimeout(timeoutMillis) {
-                    executeRefresh(source, loginData, requestId, loadingState, forceLogin)
+                    executeRefresh(source, loginData, requestId, loadingState, forceLogin, onRefreshStage)
                 }
             } else {
-                executeRefresh(source, loginData, requestId, loadingState, forceLogin)
+                executeRefresh(source, loginData, requestId, loadingState, forceLogin, onRefreshStage)
             }
         } catch (e: TimeoutCancellationException) {
             SentryExceptionReporter.capture(e)
@@ -242,12 +251,16 @@ class LmsRefreshRepository(
         requestId: String?,
         loadingState: (Float) -> Unit,
         forceLogin: Boolean,
+        onRefreshStage: suspend (LmsRefreshStage) -> Unit,
     ): TodoRefreshResult.Success = withContext(Dispatchers.IO) {
+        onRefreshStage(LmsRefreshStage.LoggingIn)
         loginIfNeeded(source, loginData, forceLogin)
 
+        onRefreshStage(LmsRefreshStage.LoadingTerms)
         val terms = getLmsTerms()
         val currentTerm = terms.currentTermAt(Clock.System.now())
             ?: throw IllegalStateException("현재 진행 중인 학기 정보를 찾지 못했어요.")
+        onRefreshStage(LmsRefreshStage.LoadingSubjects(currentTerm.name.orEmpty()))
         val subjects = fetchSubjects(currentTerm, loginData, loadingState)
         val subjectInfos = buildSubjectInfos(subjects)
         val completedAt = Instant.now()
@@ -256,6 +269,7 @@ class LmsRefreshRepository(
             terms = terms,
             subjects = subjects,
         )
+        onRefreshStage(LmsRefreshStage.SavingResult)
         val todoData = saveRefreshResult(
             source = source,
             requestId = requestId,
@@ -330,6 +344,7 @@ class LmsRefreshRepository(
 
     private fun TodoData.withWidgetRefreshCompleted(finishedAt: String): TodoData = copy(
         lastWidgetRefreshStatus = "",
+        lastWidgetRefreshProgressMessage = "",
         lastWidgetRefreshErrorMessage = "",
         lastWidgetRefreshFinishedAt = finishedAt,
     )
@@ -534,7 +549,7 @@ class LmsRefreshRepository(
     }
 
     private fun buildSubjectInfos(subjects: List<Subject>): List<SubjectInfo> = subjects
-        .map { SubjectInfo(it.id, it.name, it.professor) }
+        .map { SubjectInfo(it.id, it.name.withoutTrailingCourseNumber(), it.professor) }
         .distinctBy { it.id }
 
     private suspend fun markBackgroundRefreshStarted(startedAt: Instant, requestId: String?) {
@@ -568,6 +583,9 @@ class LmsRefreshRepository(
         }
     }
 }
+
+internal fun String.withoutTrailingCourseNumber(): String =
+    replace(TRAILING_COURSE_NUMBER, "")
 
 enum class RefreshSource {
     FOREGROUND,
