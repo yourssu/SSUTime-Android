@@ -64,7 +64,9 @@
     <string name="main_deadline_label">마감기한</string>
     <string name="main_due_until">%1$s까지</string>
     <string name="ai_summary_title">AI 요약</string>
-    <string name="ai_estimated_duration">예상 소요시간 %1$d분</string>
+    <string name="ai_estimated_duration">예상 소요시간</string>
+    <string name="ai_estimated_duration_minutes">%1$d분</string>
+    <string name="ai_estimated_duration_value_unknown">알 수 없음</string>
     <string name="ai_estimated_duration_unknown">예상 소요시간 알 수 없음</string>
     <string name="ai_summary_loading">AI 요약을 불러오는 중이에요.</string>
     <string name="ai_summary_analyzing">AI 분석을 진행 중이에요.</string>

@@ -12,8 +12,6 @@ import android.os.Build
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -44,7 +42,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.ModalBottomSheetProperties
 import androidx.compose.material3.Scaffold
@@ -63,6 +60,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -71,7 +69,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -81,6 +78,9 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.core.content.ContextCompat
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
 import com.yourssu.data.AlertData
 import com.yourssu.data.TodoInfo
 import com.yourssu.data.TodoType
@@ -93,8 +93,8 @@ import com.yourssu.ssutime.v2.component.SCheckBox
 import com.yourssu.ssutime.v2.getRemainingDays
 import com.yourssu.ssutime.v2.getRemainingTimeText
 import com.yourssu.ssutime.v2.getStringDate
-import com.yourssu.ssutime.v2.getStringDateWithTime
 import com.yourssu.ssutime.v2.getStringSimpleDate
+import com.yourssu.ssutime.v2.screen.main.todo.TodoDetailScreen
 import com.yourssu.ssutime.v2.todo.localizedLabel
 import com.yourssu.ssutime.v2.todo.toTodoDeadlineInstant
 import com.yourssu.ssutime.v2.ui.theme.G100
@@ -111,9 +111,13 @@ import com.yourssu.ssutime.v2.ui.theme.WHITE
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.serialization.json.Json
 import org.koin.compose.viewmodel.koinViewModel
 import java.time.Instant
 import java.time.temporal.ChronoUnit
+
+private const val MAIN_LIST_ROUTE = "main_list"
+private const val TODO_DETAIL_ROUTE = "todo_detail"
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -130,9 +134,11 @@ fun MainScreen(
     onProfileClick: () -> Unit = {},
 ) {
     val context = LocalContext.current
-    var showSubmittedBottomSheet by remember { mutableStateOf(false) }
-    var showWidgetHelperDialog by remember { mutableStateOf(false) }
-    val showOnboardingInitialLoading = remember { mutableStateOf(skipInitialLmsRefresh) }
+    var showSubmittedBottomSheet by rememberSaveable { mutableStateOf(false) }
+    var showWidgetHelperDialog by rememberSaveable { mutableStateOf(false) }
+    val mainContentNavController = rememberNavController()
+    var currentTodoJson by rememberSaveable { mutableStateOf<String?>(null) }
+    val showOnboardingInitialLoading = rememberSaveable { mutableStateOf(skipInitialLmsRefresh) }
     val showInitialLmsLoading = showOnboardingInitialLoading.value &&
         viewModel.onboardingInitialRefreshInProgress.value &&
         viewModel.loadedAt.value.isEmpty()
@@ -228,42 +234,76 @@ fun MainScreen(
                 errorCause = viewModel.showNetworkCause.value
             )
         } else {
-            MainFragment(
-                innerPadding = innerPadding,
-                todos = viewModel.todos,
-                submitted = viewModel.submitted,
-                loadedAt = viewModel.loadedAt.value,
-                showWidgetBadge = viewModel.showWidgetBadge.value,
-                aiSummaryStates = viewModel.aiSummaryStates,
-                isRefreshing = viewModel.isLoading.value,
-                refreshProgress = viewModel.loadingProgress.value,
-                onRefresh = {
-                    refreshTodos(
-                        showBlockingLoading = false,
-                        source = RefreshSource.PULL_TO_REFRESH,
-                        captureRefreshEvent = Analytics::pullToRefresh,
+            NavHost(
+                navController = mainContentNavController,
+                startDestination = MAIN_LIST_ROUTE,
+                modifier = Modifier.fillMaxSize(),
+            ) {
+                composable(MAIN_LIST_ROUTE) {
+                    MainFragment(
+                        innerPadding = innerPadding,
+                        todos = viewModel.todos,
+                        submitted = viewModel.submitted,
+                        loadedAt = viewModel.loadedAt.value,
+                        showWidgetBadge = viewModel.showWidgetBadge.value,
+                        isRefreshing = viewModel.isLoading.value,
+                        refreshProgress = viewModel.loadingProgress.value,
+                        onClickTodo = { todo ->
+                            currentTodoJson = Json.encodeToString(todo)
+                            mainContentNavController.navigate(TODO_DETAIL_ROUTE)
+                        },
+                        onRefresh = {
+                            refreshTodos(
+                                showBlockingLoading = false,
+                                source = RefreshSource.PULL_TO_REFRESH,
+                                captureRefreshEvent = Analytics::pullToRefresh,
+                            )
+                        },
+                        onClickRefresh = {
+                            refreshTodos(
+                                showBlockingLoading = true,
+                                source = RefreshSource.REFRESH_BUTTON,
+                                captureRefreshEvent = Analytics::refreshClick,
+                            )
+                        },
+                        onClickSubmitted = {
+                            showSubmittedBottomSheet = true
+                        },
+                        onClickWidgetBadge = {
+                            Analytics.widgetBannerClick()
+                            showWidgetHelperDialog = true
+                        },
+                        onDismissWidgetBadge = {
+                            Analytics.widgetBannerDismiss()
+                            viewModel.dismissWidgetHelperBadge()
+                        },
                     )
-                },
-                onClickRefresh = {
-                    refreshTodos(
-                        showBlockingLoading = true,
-                        source = RefreshSource.REFRESH_BUTTON,
-                        captureRefreshEvent = Analytics::refreshClick,
-                    )
-                },
-                onClickSubmitted = {
-                    showSubmittedBottomSheet = true
-                },
-                onClickWidgetBadge = {
-                    Analytics.widgetBannerClick()
-                    showWidgetHelperDialog = true
-                },
-                onDismissWidgetBadge = {
-                    Analytics.widgetBannerDismiss()
-                    viewModel.dismissWidgetHelperBadge()
-                },
-                onExpandTodo = viewModel::loadAiSummary,
-            )
+                }
+
+                composable(TODO_DETAIL_ROUTE) {
+                    val currentTodoInfo = remember(currentTodoJson) {
+                        currentTodoJson?.let { todoJson ->
+                            runCatching {
+                                Json.decodeFromString<TodoInfo>(todoJson)
+                            }.getOrNull()
+                        }
+                    }
+
+                    if (currentTodoInfo != null) {
+                        TodoDetailScreen(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(innerPadding),
+                            onPreviousClick = mainContentNavController::popBackStack,
+                            todo = currentTodoInfo,
+                        )
+                    } else {
+                        LaunchedEffect(Unit) {
+                            mainContentNavController.popBackStack()
+                        }
+                    }
+                }
+            }
         }
 
         if (showWidgetHelperDialog) {
@@ -491,15 +531,14 @@ fun MainFragment(
     submitted: List<TodoInfo> = emptyList(),
     loadedAt: String = "",
     showWidgetBadge: Boolean = false,
-    aiSummaryStates: Map<String, AiSummaryUiState> = emptyMap(),
     isRefreshing: Boolean = false,
     refreshProgress: Float = 0f,
     onRefresh: () -> Unit = {},
+    onClickTodo: (TodoInfo) -> Unit = {},
     onClickRefresh: () -> Unit = {},
     onClickSubmitted: () -> Unit = {},
     onClickWidgetBadge: () -> Unit = {},
     onDismissWidgetBadge: () -> Unit = {},
-    onExpandTodo: (TodoInfo) -> Unit = {},
 ) {
     val context = LocalContext.current
     val density = LocalDensity.current
@@ -590,13 +629,12 @@ fun MainFragment(
                         .fillMaxWidth()
                         .padding(bottom = 32.dp),
                     todos = todos,
-                    aiSummaryStates = aiSummaryStates,
                     emptyStateMinHeight = emptyStateMinHeight,
                     onClickSubmitted = {
                         Analytics.submitCompleteClick()
                         onClickSubmitted()
                     },
-                    onExpandTodo = onExpandTodo,
+                    onClickTodo = { arg -> onClickTodo(arg) },
                     submittedSize = submitted.size,
                 )
             }
@@ -700,10 +738,9 @@ private fun LmsRefreshIndicator(
 fun TodoList(
     modifier: Modifier = Modifier,
     todos: List<TodoInfo>,
-    aiSummaryStates: Map<String, AiSummaryUiState> = emptyMap(),
     emptyStateMinHeight: Dp = 240.dp,
     onClickSubmitted: () -> Unit,
-    onExpandTodo: (TodoInfo) -> Unit = {},
+    onClickTodo: (TodoInfo) -> Unit = {},
     submittedSize: Int
 ) {
     val sortedTodos = todos.sortedForMainDisplay()
@@ -739,8 +776,7 @@ fun TodoList(
                     Spacer(Modifier.height(8.dp))
                     TodoItem(
                         todoInfo = it,
-                        aiSummaryState = aiSummaryStates[it.aiSummaryKey()],
-                        onExpandTodo = onExpandTodo,
+                        onClickTodo = { arg -> onClickTodo(arg) },
                     )
                 }
             }
@@ -758,8 +794,7 @@ fun TodoList(
                         Spacer(Modifier.height(8.dp))
                         TodoItem(
                             todoInfo = it,
-                            aiSummaryState = aiSummaryStates[it.aiSummaryKey()],
-                            onExpandTodo = onExpandTodo,
+                            onClickTodo = { arg -> onClickTodo(arg) },
                         )
                     }
                 }
@@ -789,8 +824,7 @@ fun TodoList(
                     Spacer(Modifier.height(8.dp))
                     TodoItem(
                         todoInfo = it,
-                        aiSummaryState = aiSummaryStates[it.aiSummaryKey()],
-                        onExpandTodo = onExpandTodo,
+                        onClickTodo = { arg -> onClickTodo(arg) },
                     )
                 }
             }
@@ -846,11 +880,8 @@ fun TodoList(
 @Composable
 fun TodoItem(
     todoInfo: TodoInfo,
-    aiSummaryState: AiSummaryUiState? = null,
-    onExpandTodo: (TodoInfo) -> Unit = {},
+    onClickTodo: (TodoInfo) -> Unit = {},
 ) {
-    val uriHandler = LocalUriHandler.current
-    var expanded by remember { mutableStateOf(false) }
     var isLate by remember { mutableStateOf(false) }
 
     // 1초마다 갱신되는 기준 시간 상태 (시스템 클럭의 000ms에 맞춰 갱신되도록 보정)
@@ -880,6 +911,9 @@ fun TodoItem(
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
             .background(N100)
+            .clickable {
+                onClickTodo(todoInfo)
+            }
     ) {
         Column(
             modifier = Modifier
@@ -992,127 +1026,7 @@ fun TodoItem(
                     )
                 }
                 Spacer(Modifier.weight(1f))
-
-                Image(
-                    modifier = Modifier.clickable {
-                        val nextExpanded = !expanded
-                        if (nextExpanded) {
-                            Analytics.taskDetailExpand(
-                                todo = todoInfo,
-                                dDay = leftDay.toInt(),
-                                hasAiSummary = aiSummaryState is AiSummaryUiState.Success,
-                            )
-                            onExpandTodo(todoInfo)
-                        } else {
-                            Analytics.taskDetailCollapse()
-                        }
-                        expanded = nextExpanded
-                    },
-                    painter = if (!expanded) painterResource(R.drawable.icon_collapsed) else painterResource(R.drawable.icon_expand),
-                    contentDescription = stringResource(R.string.main_expand_task_content_description)
-                )
             }
-
-            AnimatedVisibility(expanded) {
-                Column {
-                    Row(
-                        modifier = Modifier
-                            .padding(top = 12.dp)
-                    ) {
-                        Text(
-                            text = stringResource(R.string.main_deadline_label),
-                            style = SSUType.H5SemiBold
-                        )
-                        Spacer(Modifier.weight(1f))
-                        Text(
-                            text = stringResource(
-                                R.string.main_due_until,
-                                getStringDateWithTime(todoInfo.due_date),
-                            ),
-                            style = SSUType.H5SemiBold
-                        )
-                    }
-
-                    if (todoInfo.canRequestAiSummary()) {
-                        AiSummaryBlock(aiSummaryState = aiSummaryState)
-                    }
-                    Spacer(Modifier.height(5.dp))
-                    if(todoInfo.url.startsWith("http")) {
-                        Text(
-                            text = "브라우저에서 확인하기",
-                            style = SSUType.Body1Regular,
-                            color = Color.Blue,
-                            modifier = Modifier.clickable {
-                                uriHandler.openUri(todoInfo.url)
-                            }
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun AiSummaryBlock(
-    aiSummaryState: AiSummaryUiState?,
-) {
-    val estimatedDurationText = when (aiSummaryState) {
-        is AiSummaryUiState.Success -> aiSummaryState.estimatedDurationMinutes
-            ?.takeIf { it > 0 }
-            ?.let { stringResource(R.string.ai_estimated_duration, it) }
-            ?: stringResource(R.string.ai_estimated_duration_unknown)
-        else -> stringResource(R.string.ai_estimated_duration_unknown)
-    }
-
-    Column(
-        modifier = Modifier
-            .padding(top = 14.dp)
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(14.dp))
-            .background(WHITE)
-            .padding(14.dp),
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Icon(
-                painter = painterResource(R.drawable.ai),
-                contentDescription = null,
-                tint = Color.Black,
-            )
-            Spacer(Modifier.width(8.dp))
-            Text(
-                text = stringResource(R.string.ai_summary_title),
-                style = SSUType.H5SemiBold,
-                color = Color.Black,
-            )
-            Spacer(Modifier.weight(1f))
-            Text(
-                text = estimatedDurationText,
-                style = SSUType.Caption1SemiBold,
-                color = N500,
-            )
-        }
-
-        Spacer(Modifier.height(12.dp))
-
-        Crossfade(
-            targetState = aiSummaryState,
-            label = "AiSummaryText",
-        ) { state ->
-            Text(
-                text = when (state) {
-                    is AiSummaryUiState.Success -> state.summary
-                    AiSummaryUiState.Loading -> stringResource(R.string.ai_summary_loading)
-                    AiSummaryUiState.Analyzing -> stringResource(R.string.ai_summary_analyzing)
-                    AiSummaryUiState.Empty -> stringResource(R.string.ai_summary_empty)
-                    AiSummaryUiState.Error -> stringResource(R.string.ai_summary_error)
-                    null -> stringResource(R.string.ai_summary_loading)
-                },
-                style = SSUType.Body1Medium,
-                color = N500,
-            )
         }
     }
 }

@@ -15,6 +15,7 @@ data class TodoInfo(
     val url: String = "", // 상세보기 주소
 ) {
     var subjectId = 0
+    var duration = 0 // 영상 강의인 경우에만 유효
 }
 
 @Serializable

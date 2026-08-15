@@ -65,7 +65,9 @@
     <string name="main_deadline_label">Deadline</string>
     <string name="main_due_until">Until %1$s</string>
     <string name="ai_summary_title">AI Summary</string>
-    <string name="ai_estimated_duration">Estimated time: %1$d min</string>
+    <string name="ai_estimated_duration">Estimated time</string>
+    <string name="ai_estimated_duration_minutes">%1$d min</string>
+    <string name="ai_estimated_duration_value_unknown">Unknown</string>
     <string name="ai_estimated_duration_unknown">Estimated time unknown</string>
     <string name="ai_summary_loading">Loading AI summary.</string>
     <string name="ai_summary_analyzing">AI analysis is in progress.</string>
