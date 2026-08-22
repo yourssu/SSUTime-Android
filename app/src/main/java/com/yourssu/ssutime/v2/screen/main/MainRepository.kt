@@ -41,6 +41,8 @@ class MainRepository(
         val updatedAlertData = alertData.copy(
             valid = true,
             showWidgetHelperBadge = currentAlertData.showWidgetHelperBadge,
+            lastCallAlertRemindPeriod = alertData.lastCallAlertRemindPeriod
+                ?: currentAlertData.lastCallAlertRemindPeriod,
         )
         alertDataStore.updateData { updatedAlertData }
         if (updatedAlertData.allowSystemAlert) {

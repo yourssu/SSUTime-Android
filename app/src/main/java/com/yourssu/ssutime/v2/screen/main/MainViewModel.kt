@@ -52,7 +52,7 @@ class MainViewModel(
     init {
         viewModelScope.launch {
             val alertData = mainRepository.getAlertData()
-            requiredShowAlertBottomSheet.value = !alertData.valid
+            requiredShowAlertBottomSheet.value = shouldShowCallingAlertBottomSheet(alertData)
             showWidgetBadge.value = alertData.showWidgetHelperBadge
         }
 
@@ -92,8 +92,14 @@ class MainViewModel(
     }
 
     fun updateAlertState(alertData: AlertData) {
+        val currentPeriod = callAlertRemindPeriod()
+        val dataToSave = if (currentPeriod != null) {
+            alertData.copy(lastCallAlertRemindPeriod = currentPeriod)
+        } else {
+            alertData
+        }
         viewModelScope.launch {
-            mainRepository.updateAlertData(alertData)
+            mainRepository.updateAlertData(dataToSave)
         }
         requiredShowAlertBottomSheet.value = false
     }
