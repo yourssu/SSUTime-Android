@@ -29,7 +29,7 @@
     <string name="login_auto_login">자동 로그인 하기</string>
     <string name="login_button">로그인</string>
     <string name="splash_logo_content_description">로고</string>
-    <string name="splash_tagline">과제 놓쳐서 학점을 말아먹었다고?ㅏ</string>
+    <string name="splash_tagline">과제 놓쳐서 학점을 말아먹었다고?</string>
 
     <string name="onboarding_notification_title">과제 알림을 받으려면\n알림을 허용해주세요</string>
     <string name="onboarding_notification_image_content_description">알림 권한 요청 예시</string>

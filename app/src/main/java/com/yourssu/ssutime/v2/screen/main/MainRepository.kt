@@ -65,6 +65,22 @@ class MainRepository(
         updateTodoData(TodoData())
     }
 
+    suspend fun markDiscussionAsRead(discussionId: Int) {
+        updateTodoData { currentData ->
+            val updatedSubjects = currentData.subjects.map { subject ->
+                val updatedDiscussions = subject.discussions.map { discussion ->
+                    if (discussion.id == discussionId) {
+                        discussion.copy(readState = "read")
+                    } else {
+                        discussion
+                    }
+                }
+                subject.copy(discussions = updatedDiscussions)
+            }
+            currentData.copy(subjects = updatedSubjects)
+        }
+    }
+
     suspend fun clearAlertData() {
         Log.i("AlertData", "Clear AlertData")
         updateAlertData(AlertData(valid = false, false, false, 60L))

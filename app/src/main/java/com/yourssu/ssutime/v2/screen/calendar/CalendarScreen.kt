@@ -43,10 +43,14 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
 import com.yourssu.data.TodoInfo
 import com.yourssu.data.TodoType
 import com.yourssu.ssutime.v2.R
 import com.yourssu.ssutime.v2.screen.main.MainViewModel
+import com.yourssu.ssutime.v2.screen.notice.NoticeScreen
 import com.yourssu.ssutime.v2.todo.TODO_DEADLINE_ZONE_ID
 import com.yourssu.ssutime.v2.todo.toTodoDeadlineInstantOrNull
 import com.yourssu.ssutime.v2.ui.theme.N100
@@ -63,6 +67,9 @@ import org.koin.compose.viewmodel.koinViewModel
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.temporal.ChronoUnit
+
+private const val CALENDAR_MAIN_ROUTE = "calendar_main"
+private const val CALENDAR_NOTICE_ROUTE = "calendar_notice"
 
 /**
  * TodoType별 뱃지 배경색 매핑 (MainScreen 기준)
@@ -105,18 +112,44 @@ fun TodoInfo.toDueTimeText(): String {
 fun CalendarScreen(
     modifier: Modifier = Modifier,
     viewModel: MainViewModel = koinViewModel(),
-    noticeCount: Int = 4,
     onNoticeClick: () -> Unit = {},
 ) {
     // SnapshotStateList의 변경을 감지하기 위해 toList()로 상태 전달
     val todos = viewModel.todos.toList()
+    val subjects = viewModel.subjects.toList()
+    val unreadNoticeCount = viewModel.unreadNoticeCount
+    val calendarNavController = rememberNavController()
 
-    CalendarScreenContent(
-        modifier = modifier,
-        todos = todos,
-        noticeCount = noticeCount,
-        onNoticeClick = onNoticeClick,
-    )
+    NavHost(
+        navController = calendarNavController,
+        startDestination = CALENDAR_MAIN_ROUTE,
+        modifier = modifier.fillMaxSize(),
+    ) {
+        composable(route = CALENDAR_MAIN_ROUTE) {
+            CalendarScreenContent(
+                modifier = Modifier.fillMaxSize(),
+                todos = todos,
+                noticeCount = unreadNoticeCount,
+                onNoticeClick = {
+                    onNoticeClick()
+                    calendarNavController.navigate(CALENDAR_NOTICE_ROUTE)
+                },
+            )
+        }
+
+        composable(route = CALENDAR_NOTICE_ROUTE) {
+            NoticeScreen(
+                modifier = Modifier.fillMaxSize(),
+                subjects = subjects,
+                onBackClick = {
+                    calendarNavController.popBackStack()
+                },
+                onDiscussionExpanded = { discussion ->
+                    viewModel.markDiscussionAsRead(discussion.id)
+                },
+            )
+        }
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -450,7 +483,7 @@ fun CalendarDayCell(
             .clip(RoundedCornerShape(6.dp))
             .clickable(onClick = onClick)
             .padding(horizontal = 2.dp)
-            .heightIn(min = 55.dp),
+            .heightIn(min = 60.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         // 날짜 뱃지 / 텍스트

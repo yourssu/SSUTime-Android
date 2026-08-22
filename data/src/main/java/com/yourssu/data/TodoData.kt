@@ -6,6 +6,7 @@ import kotlinx.serialization.Serializable
 data class TodoData(
     val todos: List<TodoInfo> = emptyList(),
     val submitted: List<TodoInfo> = emptyList(),
+    val subjects: List<SubjectInfo> = emptyList(),
     val aiSummaryCache: Map<String, AiSummaryCache> = emptyMap(),
     val loadedAt: String = "",
     val lastBackgroundRefreshStartedAt: String = "",

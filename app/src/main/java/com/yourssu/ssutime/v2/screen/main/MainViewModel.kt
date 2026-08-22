@@ -7,9 +7,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.yourssu.data.AlertData
+import com.yourssu.data.SubjectInfo
 import com.yourssu.data.TodoData
 import com.yourssu.data.TodoInfo
-import com.yourssu.data.TodoType
 import com.yourssu.ssutime.v2.analytics.SentryExceptionReporter
 import io.github.chlwhdtn03.data.Lms.Term
 import kotlinx.coroutines.CancellationException
@@ -32,6 +32,7 @@ class MainViewModel(
 ) : ViewModel() {
     var todos = mutableStateListOf<TodoInfo>()
     var submitted = mutableStateListOf<TodoInfo>()
+    var subjects = mutableStateListOf<SubjectInfo>()
     var isLoading = mutableStateOf(false)
     var showLoading = mutableStateOf(false)
     var loadingProgress = mutableFloatStateOf(0f)
@@ -42,6 +43,11 @@ class MainViewModel(
     var onboardingInitialRefreshInProgress = mutableStateOf(false)
     var requiredShowAlertBottomSheet = mutableStateOf(false)
     private var handledHomeEntryVersion: Int? = null
+
+    val unreadNoticeCount: Int
+        get() = subjects.flatMap { it.discussions }.count {
+            it.readState.equals("unread", ignoreCase = true)
+        }
 
     init {
         viewModelScope.launch {
@@ -99,7 +105,27 @@ class MainViewModel(
     fun dismissWidgetHelperBadge() {
         showWidgetBadge.value = false
         viewModelScope.launch {
-            mainRepository.dismissWidgetHelperBadge()
+            val alertData = mainRepository.getAlertData()
+            mainRepository.updateAlertData(alertData.copy(showWidgetHelperBadge = false))
+        }
+    }
+
+    fun markDiscussionAsRead(discussionId: Int) {
+        val updatedList = subjects.map { subject ->
+            val updatedDiscussions = subject.discussions.map { discussion ->
+                if (discussion.id == discussionId) {
+                    discussion.copy(readState = "read")
+                } else {
+                    discussion
+                }
+            }
+            subject.copy(discussions = updatedDiscussions)
+        }
+        subjects.clear()
+        subjects.addAll(updatedList)
+
+        viewModelScope.launch {
+            mainRepository.markDiscussionAsRead(discussionId)
         }
     }
 
@@ -108,45 +134,32 @@ class MainViewModel(
         forceLogin: Boolean = false,
         allowRefresh: Boolean = true,
         showBlockingLoading: Boolean = true,
-        source: RefreshSource = RefreshSource.APP_START,
+        source: RefreshSource = RefreshSource.FOREGROUND,
     ): TodoData? {
-        termSelectionStore.selectedTerm.value?.let { selectedTerm ->
-            return loadSelectedTermTodos(
-                term = selectedTerm,
-                forceLogin = forceLogin,
-                showBlockingLoading = showBlockingLoading,
-            )
-        }
-
-        if(isLoading.value) {
+        if (isLoading.value) {
             return null
         }
 
         isLoading.value = true
         loadingProgress.value = 0f
+        showLoading.value = showBlockingLoading
         showNetworkError.value = false
 
         return try {
             val cachedTodoData = mainRepository.getTodoData()
-            val hasCachedTodoData = cachedTodoData.loadedAt.isNotEmpty()
-            if(hasCachedTodoData) {
-                updateTodoState(cachedTodoData)
-            }
+            val hasCachedTodoData = cachedTodoData.todos.isNotEmpty() || cachedTodoData.submitted.isNotEmpty()
+            val shouldRefresh = allowRefresh && (forceRefresh || shouldRefreshOnOpen(cachedTodoData))
 
-            if (!allowRefresh && hasCachedTodoData) {
-                cachedTodoData
-            } else if (!forceRefresh && !shouldRefreshOnOpen(cachedTodoData)) {
+            if (!shouldRefresh) {
+                updateTodoState(cachedTodoData)
                 cachedTodoData
             } else {
-                showLoading.value = showBlockingLoading
                 when (val refreshResult = lmsRefreshRepository.refreshTodos(
                     source = source,
                     forceLogin = forceLogin,
-                    loadingState = {
-                        viewModelScope.launch {
-                            loadingProgress.value = it
-                        }
-                    }
+                    loadingState = { progress ->
+                        loadingProgress.value = progress
+                    },
                 )) {
                     is TodoRefreshResult.Success -> {
                         loadingProgress.value = 1f
@@ -232,11 +245,14 @@ class MainViewModel(
         submitted.apply {
             clear()
             addAll(todoData.submitted)
-//            addAll(todoData.submitted.filterRecentlySubmitted())
+        }
+
+        subjects.apply {
+            clear()
+            addAll(todoData.subjects)
         }
 
         loadedAt.value = todoData.loadedAt
-
     }
 
     private fun shouldRefreshOnOpen(todoData: TodoData): Boolean {
@@ -256,18 +272,13 @@ class MainViewModel(
             .toLocalDate()
     }.getOrNull()
 
-}
-
-private fun List<TodoInfo>.filterRecentlySubmitted(
-    now: Instant = Instant.now(),
-): List<TodoInfo> = filter { todo ->
-    if (todo.type != TodoType.SUBMITTED && todo.type != TodoType.SUBMITTED_LATE) {
-        return@filter false
+    private fun List<TodoInfo>.filterRecentlySubmitted(): List<TodoInfo> = filter { todo ->
+        val submittedInstant = todo.submittedAt.toInstantOrNull() ?: return@filter false
+        val threshold = Instant.now().minus(SUBMITTED_VISIBLE_WINDOW)
+        submittedInstant.isAfter(threshold)
     }
-    val submittedAt = todo.submittedAt.toInstantOrNull() ?: return@filter false
-    Duration.between(submittedAt, now) <= SUBMITTED_VISIBLE_WINDOW
-}
 
-private fun String.toInstantOrNull(): Instant? = runCatching {
-    Instant.parse(this)
-}.getOrNull()
+    private fun String.toInstantOrNull(): Instant? = runCatching {
+        Instant.parse(this)
+    }.getOrNull()
+}

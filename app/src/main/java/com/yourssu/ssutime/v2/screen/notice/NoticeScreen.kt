@@ -17,6 +17,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -30,6 +32,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.DropdownMenu
@@ -50,6 +53,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.yourssu.data.DiscussionAttachment
@@ -189,6 +193,8 @@ fun NoticeScreen(
     subjects: List<SubjectInfo> = emptyList(),
     onBackClick: () -> Unit = {},
     onAttachmentClick: (DiscussionInfo) -> Unit = {},
+    onDiscussionExpanded: (DiscussionInfo) -> Unit = {},
+    defaultExpandedIndex: Int = -1,
 ) {
     val context = LocalContext.current
     val effectiveSubjects = if (subjects.isNotEmpty()) subjects else MockSubjectInfos
@@ -240,7 +246,10 @@ fun NoticeScreen(
                 ) { index, discussion ->
                     NoticeAccordionItem(
                         discussion = discussion,
-                        defaultExpanded = (index == 1),
+                        defaultExpanded = (index == defaultExpandedIndex),
+                        onExpanded = {
+                            onDiscussionExpanded(discussion)
+                        },
                         onAttachmentClick = {
                             onAttachmentClick(discussion)
                             val targetUrl = discussion.attachments.firstOrNull()?.url?.takeIf { it.isNotBlank() }
@@ -308,7 +317,9 @@ fun NoticeSubjectDropdown(
     modifier: Modifier = Modifier,
 ) {
     var expanded by remember { mutableStateOf(false) }
-    val selectedSubjectName = subjects.getOrNull(selectedIndex)?.name ?: ""
+    val currentSubject = subjects.getOrNull(selectedIndex)
+    val selectedSubjectName = currentSubject?.name ?: ""
+    val selectedUnreadCount = currentSubject?.discussions?.count { it.readState.equals("unread", ignoreCase = true) } ?: 0
 
     Box(
         modifier = modifier.fillMaxWidth()
@@ -323,11 +334,25 @@ fun NoticeSubjectDropdown(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Text(
-                text = selectedSubjectName,
-                style = SSUType.H4Medium,
-                color = N600
-            )
+            Row(
+                modifier = Modifier.weight(1f, fill = false),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Text(
+                    text = selectedSubjectName,
+                    style = SSUType.H4Medium,
+                    color = N600
+                )
+
+                if (selectedUnreadCount > 0) {
+                    Text(
+                        text = "$selectedUnreadCount",
+                        style = SSUType.Caption1SemiBold,
+                        color = R400
+                    )
+                }
+            }
 
             Icon(
                 imageVector = if (expanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
@@ -345,13 +370,27 @@ fun NoticeSubjectDropdown(
                 .fillMaxWidth(0.9f)
         ) {
             subjects.forEachIndexed { index, subject ->
+                val unreadCount = subject.discussions.count { it.readState.equals("unread", ignoreCase = true) }
                 DropdownMenuItem(
                     text = {
-                        Text(
-                            text = subject.name,
-                            style = SSUType.Body1Regular,
-                            color = if (index == selectedIndex) N700 else N500
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Text(
+                                text = subject.name,
+                                style = SSUType.Body1Regular,
+                                color = if (index == selectedIndex) N700 else N500
+                            )
+
+                            if (unreadCount > 0) {
+                                Text(
+                                    text = "$unreadCount",
+                                    style = SSUType.Caption1SemiBold,
+                                    color = R400
+                                )
+                            }
+                        }
                     },
                     onClick = {
                         onSelectSubject(index)
@@ -363,18 +402,21 @@ fun NoticeSubjectDropdown(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun NoticeAccordionItem(
     discussion: DiscussionInfo,
     modifier: Modifier = Modifier,
     defaultExpanded: Boolean = false,
+    onExpanded: () -> Unit = {},
     onAttachmentClick: () -> Unit = {},
 ) {
+    val context = LocalContext.current
     var isExpanded by rememberSaveable(discussion.id) { mutableStateOf(defaultExpanded) }
     val formattedDate = remember(discussion.createdAt) { formatDiscussionDate(discussion.createdAt) }
     val plainContent = remember(discussion.message) { parseHtmlToPlainText(discussion.message) }
     val isNew = discussion.readState.equals("unread", ignoreCase = true)
-    val hasAttachment = discussion.attachments.isNotEmpty() || discussion.url.isNotBlank()
+    val hasAttachment = discussion.attachments.isNotEmpty()
 
     Column(
         modifier = modifier.fillMaxWidth()
@@ -383,7 +425,13 @@ fun NoticeAccordionItem(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .clickable { isExpanded = !isExpanded }
+                .clickable {
+                    val nextExpanded = !isExpanded
+                    isExpanded = nextExpanded
+                    if (nextExpanded && isNew) {
+                        onExpanded()
+                    }
+                }
                 .padding(vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
@@ -391,9 +439,10 @@ fun NoticeAccordionItem(
             Column(
                 modifier = Modifier.weight(1f)
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                FlowRow(
+                    verticalArrangement = Arrangement.Center,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    modifier = Modifier.fillMaxWidth(),
                 ) {
                     Text(
                         text = discussion.title,
@@ -401,12 +450,24 @@ fun NoticeAccordionItem(
                         color = N700
                     )
 
+                    if (hasAttachment) {
+                        Icon(
+                            imageVector = Icons.Default.AttachFile,
+                            contentDescription = "첨부파일 있음",
+                            tint = N400,
+                            modifier = Modifier
+                                .size(16.dp)
+                                .align(Alignment.CenterVertically)
+                        )
+                    }
+
                     if (isNew) {
                         Box(
                             modifier = Modifier
                                 .size(16.dp)
                                 .clip(CircleShape)
-                                .background(R400),
+                                .background(R400)
+                                .align(Alignment.CenterVertically),
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
@@ -464,35 +525,87 @@ fun NoticeAccordionItem(
                 }
 
                 if (hasAttachment) {
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.End
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(6.dp))
-                                .background(N600)
-                                .clickable(onClick = onAttachmentClick)
-                                .padding(horizontal = 10.dp, vertical = 8.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = "첨부파일 보기",
-                                style = SSUType.Caption1SemiBold,
-                                color = WHITE
-                            )
-                        }
-                    }
+                    DiscussionAttachmentButtonGroup(
+                        attachments = discussion.attachments,
+                        onOpenUrl = { url ->
+                            openAttachmentUrl(context, url)
+                        },
+                        modifier = Modifier.padding(top = 12.dp)
+                    )
                 }
             }
         }
     }
 }
 
+/**
+ * 다중 첨부파일 버튼 그룹 (언제든 삭제/교체 가능하도록 모듈화)
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun DiscussionAttachmentButtonGroup(
+    attachments: List<DiscussionAttachment>,
+    onOpenUrl: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    if (attachments.isEmpty()) return
+
+    FlowRow(
+        modifier = modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        if (attachments.size == 1) {
+            val attachment = attachments.first()
+            val buttonText = if (attachment.name.isNotBlank()) "첨부파일: ${attachment.name}" else "첨부파일 보기"
+            DiscussionAttachmentButton(
+                title = buttonText,
+                onClick = {
+                    onOpenUrl(attachment.url)
+                }
+            )
+        } else {
+            attachments.forEachIndexed { index, attachment ->
+                val buttonText = if (attachment.name.isNotBlank()) attachment.name else "첨부파일 ${index + 1}"
+                DiscussionAttachmentButton(
+                    title = buttonText,
+                    onClick = {
+                        onOpenUrl(attachment.url)
+                    }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun DiscussionAttachmentButton(
+    title: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Box(
+        modifier = modifier
+            .clip(RoundedCornerShape(6.dp))
+            .background(N600)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 10.dp, vertical = 8.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = title,
+            style = SSUType.Caption1SemiBold,
+            color = WHITE,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
+}
+
 @Preview(showBackground = true, backgroundColor = 0xFFFFFFFF)
 @Composable
 private fun NoticeScreenPreview() {
-    NoticeScreen()
+    NoticeScreen(
+        defaultExpandedIndex = 1
+    )
 }

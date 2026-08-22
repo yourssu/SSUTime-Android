@@ -1,6 +1,8 @@
 package com.yourssu.ssutime.v2.screen.main
 
 import android.util.Log
+import com.yourssu.data.DiscussionAttachment
+import com.yourssu.data.DiscussionInfo
 import com.yourssu.data.LoginData
 import com.yourssu.data.SubjectInfo
 import com.yourssu.data.TodoData
@@ -540,16 +542,52 @@ class LmsRefreshRepository(
                 }
         }
         val newSubmitted = reportedSubmitted.sortedByDeadlineThenName()
+        val locallyReadDiscussionIds = previousData.subjects
+            .flatMap { it.discussions }
+            .filter { it.readState.equals("read", ignoreCase = true) }
+            .map { it.id }
+            .toSet()
 
         return previousData.copy(
             todos = newTodos,
             submitted = newSubmitted,
+            subjects = buildSubjectInfos(subjects, locallyReadDiscussionIds),
             loadedAt = loadedAt,
         )
     }
 
-    private fun buildSubjectInfos(subjects: List<Subject>): List<SubjectInfo> = subjects
-        .map { SubjectInfo(it.id, it.name.withoutTrailingCourseNumber(), it.professor) }
+    private fun buildSubjectInfos(
+        subjects: List<Subject>,
+        locallyReadDiscussionIds: Set<Int> = emptySet(),
+    ): List<SubjectInfo> = subjects
+        .map { subject ->
+            SubjectInfo(
+                id = subject.id,
+                name = subject.name.withoutTrailingCourseNumber(),
+                professor = subject.professor,
+                discussions = subject.discussions.map { discussion ->
+                    val isLocallyRead = discussion.id in locallyReadDiscussionIds
+                    val initialReadState = if (isLocallyRead) "read" else "unread"
+                    DiscussionInfo(
+                        id = discussion.id,
+                        title = discussion.title,
+                        message = discussion.message.orEmpty(),
+                        url = discussion.url.orEmpty(),
+                        published = discussion.published,
+                        readState = initialReadState,
+                        createdAt = discussion.created_at.orEmpty(),
+                        author = discussion.user_name.orEmpty(),
+                        attachments = discussion.attachments.map { att ->
+                            DiscussionAttachment(
+                                id = att.id,
+                                name = att.display_name.ifBlank { att.file_name }.orEmpty(),
+                                url = att.url.orEmpty(),
+                            )
+                        }
+                    )
+                }
+            )
+        }
         .distinctBy { it.id }
 
     private suspend fun markBackgroundRefreshStarted(startedAt: Instant, requestId: String?) {
