@@ -12,6 +12,7 @@ import com.yourssu.data.network.LmsSessionCookieRequest
 import com.yourssu.data.network.LmsSessionRequest
 import com.yourssu.data.network.toAddEnrollmentRequest
 import com.yourssu.data.network.toTodoReportRequest
+import com.yourssu.data.todoUniqueKey
 import com.yourssu.ssutime.v2.accessToken
 import com.yourssu.ssutime.v2.analytics.Analytics
 import com.yourssu.ssutime.v2.analytics.SentryExceptionReporter
@@ -177,7 +178,7 @@ class LmsRefreshRepository(
         buildTodoData(
             subjects = subjects,
             subjectInfos = buildSubjectInfos(subjects),
-            previousData = TodoData(),
+            previousData = mainRepository.getTodoData(),
             loadedAt = Instant.now().toString(),
         )
     }
@@ -573,10 +574,14 @@ class LmsRefreshRepository(
             .map { it.id }
             .toSet()
 
+        val hiddenKeysSet = previousData.hiddenTodoKeys.toSet()
+        val (hiddenNewTodos, activeNewTodos) = newTodos.partition { it.todoUniqueKey() in hiddenKeysSet }
+
         return previousData.copy(
-            todos = newTodos,
+            todos = activeNewTodos,
             submitted = newSubmitted,
             subjects = buildSubjectInfos(subjects, locallyReadDiscussionIds),
+            hiddenTodos = hiddenNewTodos,
             loadedAt = loadedAt,
         )
     }

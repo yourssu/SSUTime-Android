@@ -1,6 +1,5 @@
 package com.yourssu.ssutime.v2.screen.calendar
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -14,8 +13,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -37,8 +36,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -48,7 +45,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.yourssu.data.TodoInfo
 import com.yourssu.data.TodoType
-import com.yourssu.ssutime.v2.R
+import com.yourssu.ssutime.v2.component.SSUTimeTopBar
 import com.yourssu.ssutime.v2.screen.main.MainViewModel
 import com.yourssu.ssutime.v2.screen.notice.NoticeScreen
 import com.yourssu.ssutime.v2.todo.TODO_DEADLINE_ZONE_ID
@@ -188,9 +185,8 @@ fun CalendarScreenContent(
         modifier = modifier
             .fillMaxSize()
             .background(WHITE)
-            .statusBarsPadding()
     ) {
-        CalendarTopBar()
+        SSUTimeTopBar()
 
         LazyColumn(
             modifier = Modifier
@@ -254,18 +250,7 @@ fun CalendarScreenContent(
 fun CalendarTopBar(
     modifier: Modifier = Modifier,
 ) {
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Image(
-            modifier = Modifier.height(18.dp),
-            painter = painterResource(R.drawable.logo_red),
-            contentDescription = stringResource(R.string.app_name)
-        )
-    }
+    SSUTimeTopBar(modifier = modifier)
 }
 
 /**
@@ -601,6 +586,7 @@ fun CalendarDateDetailBottomSheet(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .safeDrawingPadding()
                 .padding(horizontal = 20.dp)
                 .padding(bottom = 36.dp)
         ) {

@@ -65,6 +65,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
 import com.yourssu.data.AlertData
 import com.yourssu.data.UiState
 import com.yourssu.ssutime.v2.BuildConfig
@@ -83,11 +86,44 @@ import io.github.chlwhdtn03.data.Lms.Term
 import kotlinx.coroutines.launch
 import org.koin.compose.viewmodel.koinViewModel
 
-@OptIn(ExperimentalMaterial3Api::class)
+const val MY_PAGE_MAIN_ROUTE = "my_page_main"
+const val HIDDEN_TODOS_ROUTE = "hidden_todos"
+
 @Composable
 fun MyPageScreen(
     viewModel: MyViewModel = koinViewModel(),
     onLogout: () -> Unit = {},
+) {
+    val myNavController = rememberNavController()
+
+    NavHost(
+        navController = myNavController,
+        startDestination = MY_PAGE_MAIN_ROUTE,
+    ) {
+        composable(MY_PAGE_MAIN_ROUTE) {
+            MyPageContent(
+                viewModel = viewModel,
+                onLogout = onLogout,
+                onNavigateToHiddenTodos = {
+                    myNavController.navigate(HIDDEN_TODOS_ROUTE)
+                },
+            )
+        }
+
+        composable(HIDDEN_TODOS_ROUTE) {
+            HiddenTodosScreen(
+                viewModel = viewModel,
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun MyPageContent(
+    viewModel: MyViewModel = koinViewModel(),
+    onLogout: () -> Unit = {},
+    onNavigateToHiddenTodos: () -> Unit = {},
 ) {
     val context = LocalContext.current
     val loginInfo = viewModel.loginInfo.value
@@ -403,6 +439,12 @@ fun MyPageScreen(
                     }
                 }
             )
+
+            OptionButton(
+                text = stringResource(R.string.my_hidden_todos)
+            ) {
+                onNavigateToHiddenTodos()
+            }
 
             OptionButton(
                 text = stringResource(R.string.my_contact)

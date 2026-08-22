@@ -24,3 +24,11 @@ enum class TodoType(
 ) {
     COMMONS("강의"), ASSIGNMENT("과제"), QUIZ("퀴즈"), SUBMITTED("정상 제출"), SUBMITTED_LATE("지각 제출")
 }
+
+fun TodoInfo.todoUniqueKey(): String =
+    if (todoId > 0) {
+        "${subject?.id ?: subjectId}:$todoId:${type.name}"
+    } else {
+        "${subject?.id ?: subjectId}:$todoId:${type.name}:$title:$due_date"
+    }
+

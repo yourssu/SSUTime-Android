@@ -110,6 +110,12 @@
     <string name="my_notification_tooltip_call_title">전화 알림?</string>
     <string name="my_notification_tooltip_call_desc">과제 마감 당일 설정한 시간까지 완료하지 않았다면, 전화 알림을 드려요! * 진짜 전화는 아니니 놀라지 않으셔도 돼요!</string>
     <string name="my_logout_message">정말 로그아웃 하시겠어요?</string>
+    <string name="my_hidden_todos">숨긴 할 일</string>
+    <string name="todo_hide_from_list">목록에서 숨기기</string>
+    <string name="todo_hide_popup_title">과제를 숨길까요?</string>
+    <string name="todo_hide_popup_message">마이페이지의 [숨긴 과제]에서 복원할 수 있어요.</string>
+    <string name="hidden_todos_empty">숨긴 할 일이 없어요</string>
+    <string name="hidden_todos_restore">복원하기</string>
 
     <string name="call_alert_default_title">마감 직전 알림</string>
     <string name="call_alert_default_avatar">알림</string>

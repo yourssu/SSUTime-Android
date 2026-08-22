@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBackIosNew
@@ -26,6 +27,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -38,12 +41,14 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
 import com.yourssu.data.SubjectInfo
 import com.yourssu.data.TodoInfo
 import com.yourssu.data.TodoType
 import com.yourssu.ssutime.v2.R
 import com.yourssu.ssutime.v2.component.SButton_Small
 import com.yourssu.ssutime.v2.getStringDateWithTime
+import com.yourssu.ssutime.v2.screen.my.PopupButton
 import com.yourssu.ssutime.v2.todo.toTodoDeadlineInstant
 import com.yourssu.ssutime.v2.ui.theme.N100
 import com.yourssu.ssutime.v2.ui.theme.N200
@@ -64,11 +69,28 @@ fun TodoDetailScreen(
     onPreviousClick: () -> Unit = {},
     todo: TodoInfo,
 ) {
+    var showHidePopup by remember { mutableStateOf(false) }
+
+    if (showHidePopup) {
+        Dialog(onDismissRequest = { showHidePopup = false }) {
+            HideTodoPopup(
+                onCancel = { showHidePopup = false },
+                onConfirm = {
+                    showHidePopup = false
+                    viewModel.hideTodo(todo) {
+                        onPreviousClick()
+                    }
+                }
+            )
+        }
+    }
+
     TodoDetailContent(
         modifier = modifier,
         aiSummaryState = viewModel.aiSummaryState,
         onLoadAiSummary = { viewModel.loadAiSummary(todo) },
         onPreviousClick = onPreviousClick,
+        onHideClick = { showHidePopup = true },
         todo = todo
     )
 }
@@ -79,6 +101,7 @@ fun TodoDetailContent(
     aiSummaryState: AiSummaryUiState?,
     onLoadAiSummary: () -> Unit,
     onPreviousClick: () -> Unit,
+    onHideClick: () -> Unit = {},
     todo: TodoInfo,
 ) {
     LaunchedEffect(todo.aiSummaryKey()) {
@@ -101,6 +124,7 @@ fun TodoDetailContent(
             TodoOverView(
                 todo = todo,
                 aiSummaryState = aiSummaryState,
+                onHideClick = onHideClick,
             )
         }
         Spacer(Modifier.fillMaxWidth().height(12.dp).background(color = N100))
@@ -264,6 +288,7 @@ fun previewSummaryScreen() {
 fun TodoOverView(
     todo: TodoInfo,
     aiSummaryState: AiSummaryUiState?,
+    onHideClick: () -> Unit = {},
 ) {
     val estimatedDurationText = (aiSummaryState as? AiSummaryUiState.Success)
         ?.estimatedDurationMinutes
@@ -340,13 +365,59 @@ fun TodoOverView(
             }
 
             Text(
-                modifier = Modifier.fillMaxWidth().padding(top = 5.dp, end = 5.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 5.dp, end = 5.dp)
+                    .clickable { onHideClick() },
                 textAlign = TextAlign.Right,
-                text = "목록에서 숨기기",
+                text = stringResource(R.string.todo_hide_from_list),
                 style = SSUType.Label3Medium.copy(N600),
                 textDecoration = TextDecoration.Underline
             )
 
+        }
+    }
+}
+
+@Composable
+fun HideTodoPopup(
+    onCancel: () -> Unit = {},
+    onConfirm: () -> Unit = {},
+) {
+    Column(
+        Modifier
+            .width(300.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .background(WHITE)
+            .padding(top = 18.dp, start = 12.dp, end = 12.dp, bottom = 12.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        Text(
+            text = stringResource(R.string.todo_hide_popup_title),
+            style = SSUType.H4SemiBold
+        )
+        Text(
+            text = stringResource(R.string.todo_hide_popup_message),
+            style = SSUType.Body1Medium,
+            textAlign = TextAlign.Center
+        )
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            PopupButton(
+                modifier = Modifier.weight(1f),
+                text = stringResource(R.string.common_cancel),
+                color = N200,
+                onClick = onCancel
+            )
+            PopupButton(
+                modifier = Modifier.weight(1f),
+                text = stringResource(R.string.common_confirm),
+                color = R400,
+                textColor = WHITE,
+                onClick = onConfirm
+            )
         }
     }
 }

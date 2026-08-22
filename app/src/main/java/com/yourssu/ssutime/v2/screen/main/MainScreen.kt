@@ -29,8 +29,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -89,6 +89,7 @@ import com.yourssu.ssutime.v2.analytics.Analytics
 import com.yourssu.ssutime.v2.component.OutlinedButton
 import com.yourssu.ssutime.v2.component.SButton
 import com.yourssu.ssutime.v2.component.SCheckBox
+import com.yourssu.ssutime.v2.component.SSUTimeTopBar
 import com.yourssu.ssutime.v2.getRemainingDays
 import com.yourssu.ssutime.v2.getRemainingTimeText
 import com.yourssu.ssutime.v2.getStringDate
@@ -177,7 +178,7 @@ fun MainScreen(
     }
 
     val sheetState = rememberModalBottomSheetState(
-        skipPartiallyExpanded = false,
+        skipPartiallyExpanded = true,
     )
     fun refreshTodos(
         showBlockingLoading: Boolean,
@@ -203,9 +204,7 @@ fun MainScreen(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         containerColor = WHITE,
         topBar = {
-            SSUTimeTopBar(
-                modifier = Modifier.statusBarsPadding()
-            )
+            SSUTimeTopBar()
         }
     ) { innerPadding ->
         if (viewModel.showNetworkError.value) {
@@ -366,6 +365,8 @@ fun MainScreen(
             ) {
                 Column(
                     modifier = Modifier
+                        .fillMaxWidth()
+                        .safeDrawingPadding()
                         .padding(16.dp)
                 ) {
                     Row(
@@ -1078,25 +1079,6 @@ fun SubmittedItem(
     }
 }
 
-@Composable
-@Preview
-fun SSUTimeTopBar(
-    modifier: Modifier = Modifier,
-) {
-    Row(
-        modifier = modifier
-            .padding(16.dp)
-            .fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Image(
-            modifier = Modifier.height(18.dp),
-            painter = painterResource(R.drawable.logo_red),
-            contentDescription = stringResource(R.string.app_name)
-        )
-    }
-}
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CallingAlertBottomSheet(
@@ -1142,6 +1124,7 @@ fun CallingAlertBody(
     Column(
         modifier = Modifier
             .fillMaxWidth()
+            .safeDrawingPadding()
             .padding(horizontal = 20.dp, vertical = 36.dp),
         verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {

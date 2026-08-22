@@ -27,8 +27,11 @@ import io.github.chlwhdtn03.data.Lms.Info
 import io.github.chlwhdtn03.data.Lms.Term
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
@@ -47,6 +50,14 @@ class MyViewModel(
 
     private val _uiState = MutableStateFlow<UiState<AlertData>>(UiState.Loading)
     val uiState: StateFlow<UiState<AlertData>> = _uiState.asStateFlow()
+
+    val hiddenTodos: StateFlow<List<TodoInfo>> = mainRepository.todoData
+        .map { it.hiddenTodos }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5_000),
+            initialValue = emptyList(),
+        )
 
     init {
         viewModelScope.launch {
@@ -129,6 +140,12 @@ class MyViewModel(
                 alertData
             )
             _uiState.value = UiState.Success(mainRepository.getAlertData())
+        }
+    }
+
+    fun restoreTodo(todo: TodoInfo) {
+        viewModelScope.launch {
+            mainRepository.restoreTodo(todo)
         }
     }
 

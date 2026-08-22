@@ -111,6 +111,12 @@
     <string name="my_notification_tooltip_call_title">Call alert?</string>
     <string name="my_notification_tooltip_call_desc">If you have not completed an assignment by the time you set on its due date, we will send a call-style alert. * It is not a real phone call, so do not be surprised!</string>
     <string name="my_logout_message">Are you sure you want to log out?</string>
+    <string name="my_hidden_todos">Hidden Tasks</string>
+    <string name="todo_hide_from_list">Hide from list</string>
+    <string name="todo_hide_popup_title">Hide assignment?</string>
+    <string name="todo_hide_popup_message">You can restore it from [Hidden Tasks] in My Page.</string>
+    <string name="hidden_todos_empty">No hidden tasks</string>
+    <string name="hidden_todos_restore">Restore</string>
 
     <string name="call_alert_default_title">Deadline alert</string>
     <string name="call_alert_default_avatar">Alert</string>

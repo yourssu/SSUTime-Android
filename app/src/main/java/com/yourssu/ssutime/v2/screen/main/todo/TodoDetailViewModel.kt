@@ -37,6 +37,13 @@ class TodoDetailViewModel(
     private var aiSummaryJob: Job? = null
     private var activeTodoKey: String? = null
 
+    fun hideTodo(todo: TodoInfo, onCompleted: () -> Unit = {}) {
+        viewModelScope.launch {
+            mainRepository.hideTodo(todo)
+            onCompleted()
+        }
+    }
+
     fun loadAiSummary(todo: TodoInfo) {
         val key = todo.aiSummaryKey()
         if (activeTodoKey == key && aiSummaryJob?.isActive == true) {
