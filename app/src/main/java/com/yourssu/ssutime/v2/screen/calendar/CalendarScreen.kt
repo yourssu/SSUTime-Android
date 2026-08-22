@@ -283,13 +283,11 @@ fun CalendarNoticeBanner(
                 style = SSUType.Caption1SemiBold,
                 color = N500
             )
-            if (noticeCount > 0) {
-                Text(
-                    text = "$noticeCount",
-                    style = SSUType.Caption1SemiBold,
-                    color = R400
-                )
-            }
+            Text(
+                text = "$noticeCount",
+                style = SSUType.Caption1SemiBold,
+                color = R400
+            )
         }
 
         Icon(

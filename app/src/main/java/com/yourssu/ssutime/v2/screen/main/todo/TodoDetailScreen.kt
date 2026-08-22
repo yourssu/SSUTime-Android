@@ -144,24 +144,39 @@ fun TodoDetailTabArea(
     todo: TodoInfo,
     aiSummaryState: AiSummaryUiState?,
 ) {
+    val shouldShowAiSummaryTab = todo.canRequestAiSummary() && when (aiSummaryState) {
+        is AiSummaryUiState.Success -> true
+        AiSummaryUiState.Loading, AiSummaryUiState.Analyzing -> true
+        AiSummaryUiState.Empty, AiSummaryUiState.Error, null -> false
+    }
+
+    val availableTabs = remember(shouldShowAiSummaryTab) {
+        if (shouldShowAiSummaryTab) {
+            listOf(TodoDetailTab.DESCRIPTION, TodoDetailTab.AI_SUMMARY)
+        } else {
+            listOf(TodoDetailTab.DESCRIPTION)
+        }
+    }
+
     Column(
         modifier = Modifier.padding(16.dp)
     ) {
-        val startDestination = TodoDetailTab.DESCRIPTION
-        var selectedDestination by rememberSaveable { mutableIntStateOf(startDestination.ordinal) }
+        var selectedDestination by rememberSaveable { mutableIntStateOf(0) }
+        val safeIndex = selectedDestination.coerceIn(0, availableTabs.lastIndex)
+        val currentTab = availableTabs[safeIndex]
+
         PrimaryTabRow(
-            selectedTabIndex = selectedDestination,
+            selectedTabIndex = safeIndex,
             indicator = {
                 TabRowDefaults.SecondaryIndicator(
-                    modifier = Modifier.tabIndicatorOffset(selectedDestination),
+                    modifier = Modifier.tabIndicatorOffset(safeIndex),
                     color = N500,
                     height = 2.dp
                 )
             },
-
         ) {
-            TodoDetailTab.entries.forEachIndexed { index, destination ->
-                val isSelected = selectedDestination == index
+            availableTabs.forEachIndexed { index, destination ->
+                val isSelected = safeIndex == index
                 Tab(
                     modifier = Modifier.background(WHITE),
                     selected = isSelected,
@@ -182,7 +197,7 @@ fun TodoDetailTabArea(
             }
         }
         TodoDetailTabContent(
-            destination = TodoDetailTab.entries[selectedDestination],
+            destination = currentTab,
             todo = todo,
             aiSummaryState = aiSummaryState,
         )
@@ -364,16 +379,20 @@ fun TodoOverView(
                 )
             }
 
-            Text(
+            Box(
                 modifier = Modifier
-                    .fillMaxWidth()
                     .padding(top = 5.dp, end = 5.dp)
-                    .clickable { onHideClick() },
-                textAlign = TextAlign.Right,
-                text = stringResource(R.string.todo_hide_from_list),
-                style = SSUType.Label3Medium.copy(N600),
-                textDecoration = TextDecoration.Underline
-            )
+                    .fillMaxWidth(),
+                contentAlignment = Alignment.CenterEnd
+            ) {
+                Text(
+                    modifier = Modifier
+                        .clickable { onHideClick() },
+                    text = stringResource(R.string.todo_hide_from_list),
+                    style = SSUType.Label3Medium.copy(N600),
+                    textDecoration = TextDecoration.Underline
+                )
+            }
 
         }
     }
