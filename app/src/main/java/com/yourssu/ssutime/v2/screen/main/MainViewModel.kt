@@ -3,21 +3,16 @@ package com.yourssu.ssutime.v2.screen.main
 import android.util.Log
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.yourssu.data.AiSummaryCache
 import com.yourssu.data.AlertData
+import com.yourssu.data.SubjectInfo
 import com.yourssu.data.TodoData
 import com.yourssu.data.TodoInfo
-import com.yourssu.data.TodoType
-import com.yourssu.data.network.ReportedTodoResponse
-import com.yourssu.data.network.matches
 import com.yourssu.ssutime.v2.analytics.SentryExceptionReporter
 import io.github.chlwhdtn03.data.Lms.Term
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import java.time.Duration
@@ -28,10 +23,6 @@ import kotlin.time.ExperimentalTime
 
 private val REFRESH_DATE_ZONE_ID: ZoneId = ZoneId.of("Asia/Seoul")
 private val SUBMITTED_VISIBLE_WINDOW: Duration = Duration.ofHours(24)
-private const val AI_SUMMARY_POLL_ATTEMPTS = 8
-private const val AI_SUMMARY_POLL_INTERVAL_MILLIS = 2_000L
-private const val TODO_STATUS_PROVISIONAL = "PROVISIONAL"
-private const val TODO_STATUS_CONFIRMED = "CONFIRMED"
 
 @OptIn(ExperimentalTime::class)
 class MainViewModel(
@@ -41,6 +32,7 @@ class MainViewModel(
 ) : ViewModel() {
     var todos = mutableStateListOf<TodoInfo>()
     var submitted = mutableStateListOf<TodoInfo>()
+    var subjects = mutableStateListOf<SubjectInfo>()
     var isLoading = mutableStateOf(false)
     var showLoading = mutableStateOf(false)
     var loadingProgress = mutableFloatStateOf(0f)
@@ -49,15 +41,18 @@ class MainViewModel(
     var showNetworkCause = mutableStateOf("")
     var showWidgetBadge = mutableStateOf(false)
     var onboardingInitialRefreshInProgress = mutableStateOf(false)
-    val aiSummaryStates = mutableStateMapOf<String, AiSummaryUiState>()
-
     var requiredShowAlertBottomSheet = mutableStateOf(false)
     private var handledHomeEntryVersion: Int? = null
+
+    val unreadNoticeCount: Int
+        get() = subjects.flatMap { it.discussions }.count {
+            it.readState.equals("unread", ignoreCase = true)
+        }
 
     init {
         viewModelScope.launch {
             val alertData = mainRepository.getAlertData()
-            requiredShowAlertBottomSheet.value = !alertData.valid
+            requiredShowAlertBottomSheet.value = shouldShowCallingAlertBottomSheet(alertData)
             showWidgetBadge.value = alertData.showWidgetHelperBadge
         }
 
@@ -73,7 +68,6 @@ class MainViewModel(
             termSelectionStore.selectedTerm.collectLatest { selectedTerm ->
                 if (selectedTerm == null) {
                     showNetworkError.value = false
-                    aiSummaryStates.clear()
                     updateTodoState(mainRepository.getTodoData())
                 } else {
                     loadSelectedTermTodos(selectedTerm)
@@ -98,8 +92,14 @@ class MainViewModel(
     }
 
     fun updateAlertState(alertData: AlertData) {
+        val currentPeriod = callAlertRemindPeriod()
+        val dataToSave = if (currentPeriod != null) {
+            alertData.copy(lastCallAlertRemindPeriod = currentPeriod)
+        } else {
+            alertData
+        }
         viewModelScope.launch {
-            mainRepository.updateAlertData(alertData)
+            mainRepository.updateAlertData(dataToSave)
         }
         requiredShowAlertBottomSheet.value = false
     }
@@ -111,74 +111,54 @@ class MainViewModel(
     fun dismissWidgetHelperBadge() {
         showWidgetBadge.value = false
         viewModelScope.launch {
-            mainRepository.dismissWidgetHelperBadge()
+            val alertData = mainRepository.getAlertData()
+            mainRepository.updateAlertData(alertData.copy(showWidgetHelperBadge = false))
         }
     }
 
-    fun loadAiSummary(todo: TodoInfo) {
-        if (!todo.canRequestAiSummary()) {
+    fun markDiscussionAsRead(discussionId: Int) {
+        val updatedList = subjects.map { subject ->
+            val updatedDiscussions = subject.discussions.map { discussion ->
+                if (discussion.id == discussionId) {
+                    discussion.copy(readState = "read")
+                } else {
+                    discussion
+                }
+            }
+            subject.copy(discussions = updatedDiscussions)
+        }
+        subjects.clear()
+        subjects.addAll(updatedList)
+
+        viewModelScope.launch {
+            mainRepository.markDiscussionAsRead(discussionId)
+        }
+    }
+
+    fun startInitialLoad(
+        homeEntryVersion: Int,
+        forceRefresh: Boolean = false,
+        forceLogin: Boolean = false,
+        allowRefresh: Boolean = true,
+        showBlockingLoading: Boolean = true,
+        source: RefreshSource = RefreshSource.APP_START,
+        onSuccess: (TodoData) -> Unit = {},
+    ) {
+        if (!shouldRunInitialLoad(homeEntryVersion)) {
             return
         }
 
-        val key = todo.aiSummaryKey()
-        when (aiSummaryStates[key]) {
-            AiSummaryUiState.Loading,
-            AiSummaryUiState.Analyzing -> return
-            is AiSummaryUiState.Success,
-            AiSummaryUiState.Empty,
-            AiSummaryUiState.Error,
-            null -> Unit
-        }
-
         viewModelScope.launch {
-            val fallbackSuccess = (aiSummaryStates[key] as? AiSummaryUiState.Success)
-                ?: mainRepository.getCachedAiSummary(key)?.toAiSummarySuccessOrNull()
-
-            if (fallbackSuccess != null) {
-                aiSummaryStates[key] = fallbackSuccess
-            } else {
-                aiSummaryStates[key] = AiSummaryUiState.Loading
+            val todoData = loadTodos(
+                forceRefresh = forceRefresh,
+                forceLogin = forceLogin,
+                allowRefresh = allowRefresh,
+                showBlockingLoading = showBlockingLoading,
+                source = source,
+            )
+            if (todoData != null && !showNetworkError.value) {
+                onSuccess(todoData)
             }
-
-            runCatching {
-                requestAiSummary(todo)
-            }.onSuccess {
-                pollAndCacheAiSummary(todo, key, fallbackSuccess)
-                return@launch
-            }.onFailure { exception ->
-                SentryExceptionReporter.capture(exception)
-                Log.e(javaClass.name, "AI 요약 요청에 실패했습니다: ${todo.title}", exception)
-                if (fallbackSuccess != null) {
-                    return@launch
-                }
-            }
-
-            val reportedTodoResult = runCatching {
-                findReportedTodo(todo)
-            }
-            val reportedTodo = reportedTodoResult.getOrNull()
-            reportedTodo?.toAiSummarySuccessOrNull()?.let { success ->
-                cacheAndShowAiSummary(key, success)
-                return@launch
-            }
-
-            if (reportedTodoResult.isFailure) {
-                reportedTodoResult.exceptionOrNull()?.let(SentryExceptionReporter::capture)
-                aiSummaryStates[key] = AiSummaryUiState.Error
-                return@launch
-            }
-
-            if (reportedTodo?.isProvisional == true) {
-                pollAndCacheAiSummary(todo, key)
-                return@launch
-            }
-
-            if (reportedTodo?.isConfirmed == true) {
-                aiSummaryStates[key] = AiSummaryUiState.Empty
-                return@launch
-            }
-
-            aiSummaryStates[key] = AiSummaryUiState.Error
         }
     }
 
@@ -187,45 +167,32 @@ class MainViewModel(
         forceLogin: Boolean = false,
         allowRefresh: Boolean = true,
         showBlockingLoading: Boolean = true,
-        source: RefreshSource = RefreshSource.APP_START,
+        source: RefreshSource = RefreshSource.FOREGROUND,
     ): TodoData? {
-        termSelectionStore.selectedTerm.value?.let { selectedTerm ->
-            return loadSelectedTermTodos(
-                term = selectedTerm,
-                forceLogin = forceLogin,
-                showBlockingLoading = showBlockingLoading,
-            )
-        }
-
-        if(isLoading.value) {
+        if (isLoading.value) {
             return null
         }
 
         isLoading.value = true
         loadingProgress.value = 0f
+        showLoading.value = showBlockingLoading
         showNetworkError.value = false
 
         return try {
             val cachedTodoData = mainRepository.getTodoData()
-            val hasCachedTodoData = cachedTodoData.loadedAt.isNotEmpty()
-            if(hasCachedTodoData) {
-                updateTodoState(cachedTodoData)
-            }
+            val hasCachedTodoData = cachedTodoData.todos.isNotEmpty() || cachedTodoData.submitted.isNotEmpty()
+            val shouldRefresh = allowRefresh && (forceRefresh || shouldRefreshOnOpen(cachedTodoData))
 
-            if (!allowRefresh && hasCachedTodoData) {
-                cachedTodoData
-            } else if (!forceRefresh && !shouldRefreshOnOpen(cachedTodoData)) {
+            if (!shouldRefresh) {
+                updateTodoState(cachedTodoData)
                 cachedTodoData
             } else {
-                showLoading.value = showBlockingLoading
                 when (val refreshResult = lmsRefreshRepository.refreshTodos(
                     source = source,
                     forceLogin = forceLogin,
-                    loadingState = {
-                        viewModelScope.launch {
-                            loadingProgress.value = it
-                        }
-                    }
+                    loadingState = { progress ->
+                        loadingProgress.value = progress
+                    },
                 )) {
                     is TodoRefreshResult.Success -> {
                         loadingProgress.value = 1f
@@ -287,7 +254,6 @@ class MainViewModel(
             }
 
             loadingProgress.floatValue = 1f
-            aiSummaryStates.clear()
             updateTodoState(todoData)
             todoData
         } catch (e: Exception) {
@@ -312,70 +278,14 @@ class MainViewModel(
         submitted.apply {
             clear()
             addAll(todoData.submitted)
-//            addAll(todoData.submitted.filterRecentlySubmitted())
+        }
+
+        subjects.apply {
+            clear()
+            addAll(todoData.subjects)
         }
 
         loadedAt.value = todoData.loadedAt
-
-        todoData.aiSummaryCache.forEach { (key, cache) ->
-            cache.toAiSummarySuccessOrNull()?.let { success ->
-                aiSummaryStates[key] = success
-            }
-        }
-    }
-
-    private suspend fun findReportedTodo(todo: TodoInfo): ReportedTodoResponse? =
-        mainRepository.getReportedTodos()
-            .firstOrNull { response -> response.todo.matches(todo) }
-            ?.todo
-
-    private suspend fun requestAiSummary(todo: TodoInfo) {
-        val lmsSession = lmsRefreshRepository.getLmsSessionRequest()
-        mainRepository.reportTodoWithAnalysis(
-            todo = todo,
-            lmsSession = lmsSession,
-        )
-    }
-
-    private suspend fun pollAndCacheAiSummary(
-        todo: TodoInfo,
-        key: String,
-        fallbackSuccess: AiSummaryUiState.Success? = null,
-    ) {
-        if (fallbackSuccess == null) {
-            aiSummaryStates[key] = AiSummaryUiState.Analyzing
-        }
-
-        repeat(AI_SUMMARY_POLL_ATTEMPTS) { attempt ->
-            val success = runCatching {
-                findReportedTodo(todo)?.toAiSummarySuccessOrNull()
-            }.getOrNull()
-
-            if (success != null) {
-                cacheAndShowAiSummary(key, success)
-                return
-            }
-
-            if (attempt < AI_SUMMARY_POLL_ATTEMPTS - 1) {
-                delay(AI_SUMMARY_POLL_INTERVAL_MILLIS)
-            }
-        }
-
-        aiSummaryStates[key] = fallbackSuccess ?: AiSummaryUiState.Empty
-    }
-
-    private suspend fun cacheAndShowAiSummary(
-        key: String,
-        success: AiSummaryUiState.Success,
-    ) {
-        if (termSelectionStore.selectedTerm.value == null) {
-            mainRepository.cacheAiSummary(
-                key = key,
-                summary = success.summary,
-                estimatedDurationMinutes = success.estimatedDurationMinutes,
-            )
-        }
-        aiSummaryStates[key] = success
     }
 
     private fun shouldRefreshOnOpen(todoData: TodoData): Boolean {
@@ -395,62 +305,13 @@ class MainViewModel(
             .toLocalDate()
     }.getOrNull()
 
-}
-
-sealed interface AiSummaryUiState {
-    data object Loading : AiSummaryUiState
-    data object Analyzing : AiSummaryUiState
-    data object Empty : AiSummaryUiState
-    data class Success(
-        val summary: String,
-        val estimatedDurationMinutes: Int?,
-    ) : AiSummaryUiState
-    data object Error : AiSummaryUiState
-}
-
-fun TodoInfo.aiSummaryKey(): String =
-    "${subject?.id ?: subjectId}:$todoId:${type.name}"
-
-fun TodoInfo.canRequestAiSummary(): Boolean =
-    type == TodoType.ASSIGNMENT && description.isNotBlank()
-
-private fun ReportedTodoResponse.toAiSummarySuccessOrNull(): AiSummaryUiState.Success? {
-    val summary = aiSummary.orEmpty().trim()
-        .takeIf { isConfirmed && it.isNotBlank() }
-        ?: return null
-
-    return AiSummaryUiState.Success(
-        summary = summary,
-        estimatedDurationMinutes = estimatedDurationMinutes,
-    )
-}
-
-private fun AiSummaryCache.toAiSummarySuccessOrNull(): AiSummaryUiState.Success? =
-    summary.trim()
-        .takeIf { it.isNotBlank() }
-        ?.let { summary ->
-            AiSummaryUiState.Success(
-                summary = summary,
-                estimatedDurationMinutes = estimatedDurationMinutes,
-            )
-        }
-
-private val ReportedTodoResponse.isProvisional: Boolean
-    get() = status.equals(TODO_STATUS_PROVISIONAL, ignoreCase = true)
-
-private val ReportedTodoResponse.isConfirmed: Boolean
-    get() = status.equals(TODO_STATUS_CONFIRMED, ignoreCase = true)
-
-private fun List<TodoInfo>.filterRecentlySubmitted(
-    now: Instant = Instant.now(),
-): List<TodoInfo> = filter { todo ->
-    if (todo.type != TodoType.SUBMITTED && todo.type != TodoType.SUBMITTED_LATE) {
-        return@filter false
+    private fun List<TodoInfo>.filterRecentlySubmitted(): List<TodoInfo> = filter { todo ->
+        val submittedInstant = todo.submittedAt.toInstantOrNull() ?: return@filter false
+        val threshold = Instant.now().minus(SUBMITTED_VISIBLE_WINDOW)
+        submittedInstant.isAfter(threshold)
     }
-    val submittedAt = todo.submittedAt.toInstantOrNull() ?: return@filter false
-    Duration.between(submittedAt, now) <= SUBMITTED_VISIBLE_WINDOW
-}
 
-private fun String.toInstantOrNull(): Instant? = runCatching {
-    Instant.parse(this)
-}.getOrNull()
+    private fun String.toInstantOrNull(): Instant? = runCatching {
+        Instant.parse(this)
+    }.getOrNull()
+}

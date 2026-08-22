@@ -15,6 +15,7 @@ data class TodoInfo(
     val url: String = "", // 상세보기 주소
 ) {
     var subjectId = 0
+    var duration = 0 // 영상 강의인 경우에만 유효
 }
 
 @Serializable
@@ -23,3 +24,11 @@ enum class TodoType(
 ) {
     COMMONS("강의"), ASSIGNMENT("과제"), QUIZ("퀴즈"), SUBMITTED("정상 제출"), SUBMITTED_LATE("지각 제출")
 }
+
+fun TodoInfo.todoUniqueKey(): String =
+    if (todoId > 0) {
+        "${subject?.id ?: subjectId}:$todoId:${type.name}"
+    } else {
+        "${subject?.id ?: subjectId}:$todoId:${type.name}:$title:$due_date"
+    }
+

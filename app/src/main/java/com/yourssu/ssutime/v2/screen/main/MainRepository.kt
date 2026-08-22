@@ -10,11 +10,13 @@ import com.yourssu.data.TodoInfo
 import com.yourssu.data.network.LmsSessionRequest
 import com.yourssu.data.network.UserTodoStatusResponse
 import com.yourssu.data.network.toReportWithAnalysisRequestOrNull
+import com.yourssu.data.todoUniqueKey
 import com.yourssu.ssutime.v2.network.ApiRepository
 import com.yourssu.ssutime.v2.notification.cancelDeadlineNotifications
 import com.yourssu.ssutime.v2.notification.scheduleDeadlineNotifications
 import com.yourssu.ssutime.v2.notification.sendDeadlineNotificationsIfNeeded
 import com.yourssu.ssutime.v2.notification.withSentDeadlineReminderKeys
+import com.yourssu.ssutime.v2.todo.sortedByDeadlineThenName
 import com.yourssu.ssutime.v2.widget.updateAllTodoWidgets
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
@@ -41,6 +43,8 @@ class MainRepository(
         val updatedAlertData = alertData.copy(
             valid = true,
             showWidgetHelperBadge = currentAlertData.showWidgetHelperBadge,
+            lastCallAlertRemindPeriod = alertData.lastCallAlertRemindPeriod
+                ?: currentAlertData.lastCallAlertRemindPeriod,
         )
         alertDataStore.updateData { updatedAlertData }
         if (updatedAlertData.allowSystemAlert) {
@@ -63,6 +67,52 @@ class MainRepository(
 
     suspend fun clearTodoData() {
         updateTodoData(TodoData())
+    }
+
+    suspend fun markDiscussionAsRead(discussionId: Int) {
+        updateTodoData { currentData ->
+            val updatedSubjects = currentData.subjects.map { subject ->
+                val updatedDiscussions = subject.discussions.map { discussion ->
+                    if (discussion.id == discussionId) {
+                        discussion.copy(readState = "read")
+                    } else {
+                        discussion
+                    }
+                }
+                subject.copy(discussions = updatedDiscussions)
+            }
+            currentData.copy(subjects = updatedSubjects)
+        }
+    }
+
+    suspend fun hideTodo(todo: TodoInfo) {
+        val key = todo.todoUniqueKey()
+        updateTodoData { currentData ->
+            val updatedKeys = (currentData.hiddenTodoKeys + key).distinct()
+            val updatedTodos = currentData.todos.filterNot { it.todoUniqueKey() == key }
+            val updatedHiddenTodos = (currentData.hiddenTodos.filterNot { it.todoUniqueKey() == key } + todo)
+                .sortedByDeadlineThenName()
+            currentData.copy(
+                todos = updatedTodos,
+                hiddenTodos = updatedHiddenTodos,
+                hiddenTodoKeys = updatedKeys,
+            )
+        }
+    }
+
+    suspend fun restoreTodo(todo: TodoInfo) {
+        val key = todo.todoUniqueKey()
+        updateTodoData { currentData ->
+            val updatedKeys = currentData.hiddenTodoKeys.filterNot { it == key }
+            val updatedHiddenTodos = currentData.hiddenTodos.filterNot { it.todoUniqueKey() == key }
+            val updatedTodos = (currentData.todos.filterNot { it.todoUniqueKey() == key } + todo)
+                .sortedByDeadlineThenName()
+            currentData.copy(
+                todos = updatedTodos,
+                hiddenTodos = updatedHiddenTodos,
+                hiddenTodoKeys = updatedKeys,
+            )
+        }
     }
 
     suspend fun clearAlertData() {

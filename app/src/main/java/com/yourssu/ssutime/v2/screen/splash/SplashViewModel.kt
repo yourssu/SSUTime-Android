@@ -62,8 +62,5 @@ enum class SplashDestination {
     Main,
 }
 
-private val LoginData.hasAutoLoginCredentials: Boolean
-    get() = isAutoLogin && id.isNotBlank() && pw.isNotBlank()
-
 private const val TAG = "SplashViewModel"
 private const val SPLASH_DELAY_MILLIS = 100L

@@ -22,7 +22,8 @@ object AlertDataSerializer : Serializer<AlertData> {
         valid = false,
         allowSystemAlert = false,
         allowCallAlert = false,
-        callingAlertThresholdMinutes = 60
+        callingAlertThresholdMinutes = 60,
+        lastCallAlertRemindPeriod = null,
     )
     override suspend fun readFrom(input: InputStream): AlertData =
         try {

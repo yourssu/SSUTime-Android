@@ -9,4 +9,6 @@ data class AlertData(
     val allowCallAlert: Boolean,
     val callingAlertThresholdMinutes: Long,
     val showWidgetHelperBadge: Boolean = true,
+    val lastCallAlertRemindPeriod: String? = null,
 )
+

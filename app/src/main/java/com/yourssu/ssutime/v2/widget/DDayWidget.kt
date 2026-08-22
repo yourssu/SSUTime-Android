@@ -65,7 +65,6 @@ import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 import java.time.Instant
 import java.time.temporal.ChronoUnit
-import kotlin.math.abs
 
 private const val TAG = "DDayWidget"
 private const val SECONDS_PER_DAY = 24 * 60 * 60L
@@ -437,15 +436,33 @@ private fun backgroundFor(
     }
 
     if (remainingSeconds <= SECONDS_PER_DAY) {
-        return R.drawable.d0
+        val backgrounds = intArrayOf(
+            R.drawable.d0_1,
+            R.drawable.d0_2,
+            R.drawable.d0_3,
+            R.drawable.d0_4
+        )
+        return backgrounds.random()
     }
 
-    val urgentBackgrounds = intArrayOf(R.drawable.d1_1, R.drawable.d1_2)
-    val relaxedBackgrounds = intArrayOf(R.drawable.oth_1, R.drawable.oth_2)
+    val urgentBackgrounds = intArrayOf(
+        R.drawable.d1_1,
+        R.drawable.d1_2,
+        R.drawable.d1_3,
+        R.drawable.d1_4,
+        R.drawable.d1_5,
+        R.drawable.d1_6,
+        R.drawable.d1_7
+    )
+    val relaxedBackgrounds = intArrayOf(
+        R.drawable.oth_1,
+        R.drawable.oth_2,
+        R.drawable.oth_3,
+        R.drawable.oth_4,
+        R.drawable.oth_5
+    )
     val candidates = if (remainingDays <= 1) urgentBackgrounds else relaxedBackgrounds
-    val seed = todo.todoId * 31 + loadedAt.hashCode()
-    val index = abs(seed) % candidates.size
-    return candidates[index]
+    return candidates.random()
 }
 
 @OptIn(ExperimentalGlancePreviewApi::class)

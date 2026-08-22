@@ -20,6 +20,7 @@ import com.yourssu.ssutime.v2.screen.main.MainRepository
 import com.yourssu.ssutime.v2.screen.main.MainViewModel
 import com.yourssu.ssutime.v2.screen.main.TermSelectionStore
 import com.yourssu.ssutime.v2.screen.main.notificationStore
+import com.yourssu.ssutime.v2.screen.main.todo.TodoDetailViewModel
 import com.yourssu.ssutime.v2.screen.main.todoDataStore
 import com.yourssu.ssutime.v2.screen.my.MyViewModel
 import com.yourssu.ssutime.v2.screen.onboarding.OnBoardingData
@@ -85,6 +86,7 @@ val appModule = module {
     viewModel { MyViewModel(get(), get(), get()) }
     viewModel { SplashViewModel(get(), get()) }
     viewModel { LoginViewModel(get(), get()) }
+    viewModel { TodoDetailViewModel(get(), get(), get()) }
     viewModel {
         OnBoardingViewModel(
             androidContext(),
@@ -132,6 +134,7 @@ val previewModule = module {
     viewModel { MyViewModel(get(), get(), get()) }
     viewModel { SplashViewModel(get(), get()) }
     viewModel { LoginViewModel(get(), get()) }
+    viewModel { TodoDetailViewModel(get(), get(), get()) }
     viewModel {
         OnBoardingViewModel(
             androidContext(),

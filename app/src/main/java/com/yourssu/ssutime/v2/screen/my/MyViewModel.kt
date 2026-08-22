@@ -15,6 +15,7 @@ import com.yourssu.ssutime.v2.analytics.Analytics
 import com.yourssu.ssutime.v2.analytics.SentryExceptionReporter
 import com.yourssu.ssutime.v2.lms.getLmsLoginInfo
 import com.yourssu.ssutime.v2.lms.getLmsTerms
+import com.yourssu.ssutime.v2.lms.loginLms
 import com.yourssu.ssutime.v2.notification.showCallAlert
 import com.yourssu.ssutime.v2.screen.login.LoginRepository
 import com.yourssu.ssutime.v2.screen.main.MainRepository
@@ -26,8 +27,11 @@ import io.github.chlwhdtn03.data.Lms.Info
 import io.github.chlwhdtn03.data.Lms.Term
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
@@ -47,24 +51,75 @@ class MyViewModel(
     private val _uiState = MutableStateFlow<UiState<AlertData>>(UiState.Loading)
     val uiState: StateFlow<UiState<AlertData>> = _uiState.asStateFlow()
 
+    val hiddenTodos: StateFlow<List<TodoInfo>> = mainRepository.todoData
+        .map { it.hiddenTodos }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5_000),
+            initialValue = emptyList(),
+        )
+
     init {
         viewModelScope.launch {
             _uiState.value = UiState.Success(
                 mainRepository.getAlertData()
             )
-            if(LmsApi.isLoggined) {
-                loginInfo.value = getLmsLoginInfo()
-                val loadedTerms = getLmsTerms()
-                    .sortedWith(
-                        compareByDescending<Term> { it.start_at }
-                            .thenByDescending { it.id }
-                    )
-                terms.value = loadedTerms
-                currentTerm.value = loadedTerms.currentTermAt(now = Clock.System.now())
+            loadLmsData()
+        }
+    }
 
-                val selectedTermId = selectedTerm.value?.id
-                if (selectedTermId != null && loadedTerms.none { it.id == selectedTermId }) {
-                    termSelectionStore.clear()
+    fun loadLmsData() {
+        viewModelScope.launch {
+            val loginData = loginRepository.getLoginData()
+            if (!LmsApi.isLoggined && loginData.hasAutoLoginCredentials) {
+                runCatching {
+                    loginLms(loginData.id, loginData.pw)
+                }
+            }
+
+            val loadSuccess = runCatching {
+                if (LmsApi.isLoggined) {
+                    val info = getLmsLoginInfo()
+                    loginInfo.value = info
+                    val loadedTerms = getLmsTerms()
+                        .sortedWith(
+                            compareByDescending<Term> { it.start_at }
+                                .thenByDescending { it.id }
+                        )
+                    terms.value = loadedTerms
+                    currentTerm.value = loadedTerms.currentTermAt(now = Clock.System.now())
+
+                    val selectedTermId = selectedTerm.value?.id
+                    if (selectedTermId != null && loadedTerms.none { it.id == selectedTermId }) {
+                        termSelectionStore.clear()
+                    }
+                    true
+                } else {
+                    false
+                }
+            }.getOrDefault(false)
+
+            // 세션 만료 등으로 실패했고 자동 로그인 정보가 있는 경우 강제 재로그인 후 1회 재시도
+            if (!loadSuccess && loginData.hasAutoLoginCredentials) {
+                runCatching {
+                    if (loginLms(loginData.id, loginData.pw)) {
+                        loginInfo.value = getLmsLoginInfo()
+                        val loadedTerms = getLmsTerms()
+                            .sortedWith(
+                                compareByDescending<Term> { it.start_at }
+                                    .thenByDescending { it.id }
+                            )
+                        terms.value = loadedTerms
+                        currentTerm.value = loadedTerms.currentTermAt(now = Clock.System.now())
+
+                        val selectedTermId = selectedTerm.value?.id
+                        if (selectedTermId != null && loadedTerms.none { it.id == selectedTermId }) {
+                            termSelectionStore.clear()
+                        }
+                    }
+                }.onFailure { exception ->
+                    SentryExceptionReporter.capture(exception)
+                    Log.e(TAG, "마이페이지 LMS 정보 로드 재시도 실패", exception)
                 }
             }
         }
@@ -85,6 +140,12 @@ class MyViewModel(
                 alertData
             )
             _uiState.value = UiState.Success(mainRepository.getAlertData())
+        }
+    }
+
+    fun restoreTodo(todo: TodoInfo) {
+        viewModelScope.launch {
+            mainRepository.restoreTodo(todo)
         }
     }
 

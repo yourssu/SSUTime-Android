@@ -2,7 +2,6 @@ package com.yourssu.ssutime.v2.analytics
 
 import android.content.Context
 import android.util.Log
-import com.yourssu.data.LoginData
 import com.yourssu.ssutime.v2.loginDataStore
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -27,6 +26,3 @@ fun Context.identifyStoredAnalyticsUserIfNeeded() {
         }
     }
 }
-
-private val LoginData.hasAutoLoginCredentials: Boolean
-    get() = isAutoLogin && id.isNotBlank() && pw.isNotBlank()

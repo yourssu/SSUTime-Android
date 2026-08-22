@@ -25,14 +25,13 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.ArrowBackIosNew
 import androidx.compose.material.icons.outlined.KeyboardArrowDown
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -40,7 +39,6 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
@@ -67,6 +65,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
 import com.yourssu.data.AlertData
 import com.yourssu.data.UiState
 import com.yourssu.ssutime.v2.BuildConfig
@@ -85,12 +86,44 @@ import io.github.chlwhdtn03.data.Lms.Term
 import kotlinx.coroutines.launch
 import org.koin.compose.viewmodel.koinViewModel
 
-@OptIn(ExperimentalMaterial3Api::class)
+const val MY_PAGE_MAIN_ROUTE = "my_page_main"
+const val HIDDEN_TODOS_ROUTE = "hidden_todos"
+
 @Composable
 fun MyPageScreen(
     viewModel: MyViewModel = koinViewModel(),
-    onPressBack: () -> Unit = {},
     onLogout: () -> Unit = {},
+) {
+    val myNavController = rememberNavController()
+
+    NavHost(
+        navController = myNavController,
+        startDestination = MY_PAGE_MAIN_ROUTE,
+    ) {
+        composable(MY_PAGE_MAIN_ROUTE) {
+            MyPageContent(
+                viewModel = viewModel,
+                onLogout = onLogout,
+                onNavigateToHiddenTodos = {
+                    myNavController.navigate(HIDDEN_TODOS_ROUTE)
+                },
+            )
+        }
+
+        composable(HIDDEN_TODOS_ROUTE) {
+            HiddenTodosScreen(
+                viewModel = viewModel,
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun MyPageContent(
+    viewModel: MyViewModel = koinViewModel(),
+    onLogout: () -> Unit = {},
+    onNavigateToHiddenTodos: () -> Unit = {},
 ) {
     val context = LocalContext.current
     val loginInfo = viewModel.loginInfo.value
@@ -277,22 +310,13 @@ fun MyPageScreen(
         modifier = Modifier
             .fillMaxSize()
             .padding(horizontal = 16.dp)
-            .safeDrawingPadding()
+            .statusBarsPadding()
             .verticalScroll(scrollState)
     ) {
-        Row {
-            IconButton(onClick = onPressBack) {
-                Image(
-                    imageVector = Icons.Outlined.ArrowBackIosNew,
-                    contentDescription = stringResource(R.string.my_back_content_description)
-                )
-            }
-        }
-
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 28.dp),
+                .padding(top = 16.dp, bottom = 28.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
@@ -415,6 +439,12 @@ fun MyPageScreen(
                     }
                 }
             )
+
+            OptionButton(
+                text = stringResource(R.string.my_hidden_todos)
+            ) {
+                onNavigateToHiddenTodos()
+            }
 
             OptionButton(
                 text = stringResource(R.string.my_contact)
