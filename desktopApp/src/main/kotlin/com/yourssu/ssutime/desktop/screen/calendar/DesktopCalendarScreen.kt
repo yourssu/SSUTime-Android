@@ -38,13 +38,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.yourssu.ssutime.desktop.core.model.AppTodo
 import com.yourssu.ssutime.desktop.core.model.AppTodoType
-import com.yourssu.ssutime.desktop.core.model.aiSummaryKey
 import com.yourssu.ssutime.desktop.core.model.dueDate
 import com.yourssu.ssutime.desktop.ui.component.SButton
 import com.yourssu.ssutime.desktop.ui.resources.Res
 import com.yourssu.ssutime.desktop.ui.resources.calendar_empty_events
 import com.yourssu.ssutime.desktop.ui.resources.common_close
 import com.yourssu.ssutime.desktop.ui.resources.ic_arrow_back
+import com.yourssu.ssutime.desktop.ui.resources.ic_arrow_right
 import com.yourssu.ssutime.desktop.ui.resources.icon_collapsed
 import com.yourssu.ssutime.desktop.ui.resources.main_deadline_label
 import com.yourssu.ssutime.desktop.ui.resources.notice_new
@@ -267,7 +267,7 @@ private fun CalendarMonthHeader(
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(
-                        painter = painterResource(Res.drawable.icon_collapsed),
+                        painter = painterResource(Res.drawable.ic_arrow_right),
                         contentDescription = "다음 달",
                         tint = N500,
                         modifier = Modifier.size(14.dp),
@@ -497,16 +497,14 @@ fun DesktopCalendarDateDetailDialog(
                     )
                 }
             } else {
-                LazyColumn(
+                Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .heightIn(max = 340.dp),
+                        .heightIn(max = 340.dp)
+                        .verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(14.dp),
                 ) {
-                    items(
-                        items = todos,
-                        key = { it.aiSummaryKey() },
-                    ) { todo ->
+                    todos.forEach { todo ->
                         CalendarTodoDetailItem(
                             todo = todo,
                             onClick = { onTodoClick(todo) },
