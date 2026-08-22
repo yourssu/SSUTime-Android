@@ -535,13 +535,16 @@ class LmsRefreshRepository(
         val newTodos = subjects.flatMap { subject ->
             subject.todoList.map { todo ->
                 TodoInfo(
-                    todo.assignment_id ?: -1,
-                    todo.title,
-                    todo.due_date,
-                    TodoType.valueOf(todo.component_type.uppercase()),
-                    subjectInfoById[subject.id],
+                    todoId = todo.assignment_id ?: -1,
+                    title = todo.title,
+                    due_date = todo.due_date,
+                    type = TodoType.valueOf(todo.component_type.uppercase()),
+                    subject = subjectInfoById[subject.id],
                     description = todo.description.orEmpty(),
                     url = todo.url.orEmpty(),
+                    duration = todo.durationOfVideo ?: -1.0,
+                    componentId = todo.component_id ?: -1,
+                    moduleItemId = todo.moduleItemId ?: -1,
                 )
             }
         }.sortedByDeadlineThenName()
@@ -557,11 +560,11 @@ class LmsRefreshRepository(
                 .filter { it.isReportableSubmission() }
                 .map { todo ->
                     TodoInfo(
-                        todo.assignment_id ?: -1,
-                        todo.name,
-                        todo.cached_due_date ?: "",
-                        if (todo.late == true) TodoType.SUBMITTED_LATE else TodoType.SUBMITTED,
-                        subjectInfoById[subject.id],
+                        todoId = todo.assignment_id ?: -1,
+                        title = todo.name,
+                        due_date = todo.cached_due_date ?: "",
+                        type = if (todo.late == true) TodoType.SUBMITTED_LATE else TodoType.SUBMITTED,
+                        subject = subjectInfoById[subject.id],
                         submittedAt = todo.submitted_at.orEmpty(),
                         url = todo.url.orEmpty(),
                     )

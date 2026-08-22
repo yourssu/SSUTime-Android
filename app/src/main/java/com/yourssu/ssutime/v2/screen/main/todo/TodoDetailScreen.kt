@@ -1,5 +1,9 @@
 package com.yourssu.ssutime.v2.screen.main.todo
 
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
+import android.widget.Toast
 import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -34,6 +38,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
@@ -264,6 +269,34 @@ fun SummaryScreen(
     }
 }
 
+/**
+ * 할일 유형별 LMS 상세 페이지 URL 생성
+ */
+fun TodoInfo.toLmsUrl(): String {
+    val currentSubjectId = subject?.id ?: subjectId
+    return when (type) {
+        TodoType.QUIZ -> "https://canvas.ssu.ac.kr/courses/$currentSubjectId/quizzes/$componentId"
+        TodoType.ASSIGNMENT -> "https://canvas.ssu.ac.kr/courses/$currentSubjectId/assignments/$todoId"
+        TodoType.COMMONS -> "https://canvas.ssu.ac.kr/courses/$currentSubjectId/modules/items/$moduleItemId"
+        else -> url.ifBlank { "https://canvas.ssu.ac.kr/courses/$currentSubjectId" }
+    }
+}
+
+/**
+ * LMS 외부 브라우저 이동
+ */
+fun openTodoLmsUrl(context: Context, todo: TodoInfo) {
+    val lmsUrl = todo.toLmsUrl()
+    runCatching {
+        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(lmsUrl)).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+        }
+        context.startActivity(intent)
+    }.onFailure {
+        Toast.makeText(context, "LMS 링크를 열 수 있는 앱이 없습니다.", Toast.LENGTH_SHORT).show()
+    }
+}
+
 @Composable
 fun TodoDetailTabContent(
     destination: TodoDetailTab,
@@ -271,6 +304,8 @@ fun TodoDetailTabContent(
     aiSummaryState: AiSummaryUiState?,
     modifier: Modifier = Modifier,
 ) {
+    val context = LocalContext.current
+
     Column(
         modifier = modifier.padding(16.dp),
     ) {
@@ -287,7 +322,10 @@ fun TodoDetailTabContent(
         ) {
             SButton_Small(
                 labelText = "LMS 바로가기",
-                textStyle = SSUType.Label3Medium
+                textStyle = SSUType.Label3Medium,
+                onClick = {
+                    openTodoLmsUrl(context, todo)
+                }
             )
         }
     }
@@ -299,17 +337,49 @@ fun previewSummaryScreen() {
     SummaryScreen()
 }
 
+/**
+ * 영상(초 단위) 재생 시간 포맷팅
+ */
+fun formatVideoDuration(secondsDouble: Double): String {
+    val totalSeconds = secondsDouble.toInt()
+    if (totalSeconds <= 0) return ""
+    val hours = totalSeconds / 3600
+    val minutes = (totalSeconds % 3600) / 60
+    val seconds = totalSeconds % 60
+
+    return buildString {
+        if (hours > 0) {
+            append("${hours}시간")
+        }
+        if (minutes > 0) {
+            if (isNotEmpty()) append(" ")
+            append("${minutes}분")
+        }
+        if (seconds > 0 || isEmpty()) {
+            if (isNotEmpty()) append(" ")
+            append("${seconds}초")
+        }
+    }
+}
+
 @Composable
 fun TodoOverView(
     todo: TodoInfo,
     aiSummaryState: AiSummaryUiState?,
     onHideClick: () -> Unit = {},
 ) {
-    val estimatedDurationText = (aiSummaryState as? AiSummaryUiState.Success)
-        ?.estimatedDurationMinutes
-        ?.takeIf { it > 0 }
-        ?.let { stringResource(R.string.ai_estimated_duration_minutes, it) }
-        ?: stringResource(R.string.ai_estimated_duration_value_unknown)
+    val estimatedDurationText = when {
+        todo.type == TodoType.COMMONS && todo.duration > 0 -> {
+            formatVideoDuration(todo.duration)
+        }
+        else -> {
+            (aiSummaryState as? AiSummaryUiState.Success)
+                ?.estimatedDurationMinutes
+                ?.takeIf { it > 0 }
+                ?.let { stringResource(R.string.ai_estimated_duration_minutes, it) }
+                ?: stringResource(R.string.ai_estimated_duration_value_unknown)
+        }
+    }
 
     Box(
         modifier = Modifier
