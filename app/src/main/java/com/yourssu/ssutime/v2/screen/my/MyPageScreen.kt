@@ -32,7 +32,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.ArrowBackIosNew
 import androidx.compose.material.icons.outlined.KeyboardArrowDown
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -40,7 +39,6 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
@@ -89,7 +87,6 @@ import org.koin.compose.viewmodel.koinViewModel
 @Composable
 fun MyPageScreen(
     viewModel: MyViewModel = koinViewModel(),
-    onPressBack: () -> Unit = {},
     onLogout: () -> Unit = {},
 ) {
     val context = LocalContext.current
@@ -280,19 +277,10 @@ fun MyPageScreen(
             .safeDrawingPadding()
             .verticalScroll(scrollState)
     ) {
-        Row {
-            IconButton(onClick = onPressBack) {
-                Image(
-                    imageVector = Icons.Outlined.ArrowBackIosNew,
-                    contentDescription = stringResource(R.string.my_back_content_description)
-                )
-            }
-        }
-
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 28.dp),
+                .padding(top = 16.dp, bottom = 28.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {

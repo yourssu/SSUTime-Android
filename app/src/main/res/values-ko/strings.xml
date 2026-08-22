@@ -151,4 +151,10 @@
     <string name="widget_late_submission">지각 제출</string>
     <string name="widget_late_short">지각</string>
     <string name="widget_more_todos">그 외 %1$d건의 할 일이 있어요</string>
+
+    <string name="tab_home">홈</string>
+    <string name="tab_calendar">캘린더</string>
+    <string name="tab_my">마이</string>
+    <string name="calendar_title">캘린더</string>
+    <string name="calendar_coming_soon">캘린더 기능을 준비하고 있어요</string>
 </resources>

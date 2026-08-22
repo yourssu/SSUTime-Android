@@ -152,4 +152,10 @@
     <string name="widget_late_submission">Late submission</string>
     <string name="widget_late_short">Late</string>
     <string name="widget_more_todos">%1$d more tasks</string>
+
+    <string name="tab_home">Home</string>
+    <string name="tab_calendar">Calendar</string>
+    <string name="tab_my">My</string>
+    <string name="calendar_title">Calendar</string>
+    <string name="calendar_coming_soon">Calendar feature is coming soon</string>
 </resources>

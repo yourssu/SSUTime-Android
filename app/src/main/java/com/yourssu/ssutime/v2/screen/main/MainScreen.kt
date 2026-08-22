@@ -20,7 +20,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -131,7 +130,6 @@ fun MainScreen(
     skipLoadFromMyPageBack: Boolean = false,
     onInitialLmsRefreshSkipConsumed: () -> Unit = {},
     onInitialLmsRefreshForceConsumed: () -> Unit = {},
-    onProfileClick: () -> Unit = {},
 ) {
     val context = LocalContext.current
     var showSubmittedBottomSheet by rememberSaveable { mutableStateOf(false) }
@@ -210,8 +208,7 @@ fun MainScreen(
         containerColor = WHITE,
         topBar = {
             SSUTimeTopBar(
-                modifier = Modifier.statusBarsPadding(),
-                onProfileClick = onProfileClick
+                modifier = Modifier.statusBarsPadding()
             )
         }
     ) { innerPadding ->
@@ -1089,7 +1086,6 @@ fun SubmittedItem(
 @Preview
 fun SSUTimeTopBar(
     modifier: Modifier = Modifier,
-    onProfileClick: () -> Unit = {}
 ) {
     Row(
         modifier = modifier
@@ -1101,17 +1097,6 @@ fun SSUTimeTopBar(
             modifier = Modifier.height(18.dp),
             painter = painterResource(R.drawable.logo_red),
             contentDescription = stringResource(R.string.app_name)
-        )
-
-        Spacer(Modifier.weight(1f))
-
-        Image(
-            modifier = Modifier
-                .height(IntrinsicSize.Max)
-                .clickable { onProfileClick() }
-            ,
-            painter = painterResource(R.drawable.ic_user),
-            contentDescription = stringResource(R.string.my_avatar_content_description)
         )
     }
 }
