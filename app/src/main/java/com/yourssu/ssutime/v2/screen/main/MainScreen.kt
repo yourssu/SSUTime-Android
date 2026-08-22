@@ -386,6 +386,8 @@ fun MainScreen(
                         }
                     }
 
+                    Spacer(Modifier.height(16.dp))
+
                     SButton(
                         modifier = Modifier.fillMaxWidth(),
                         labelText = stringResource(R.string.common_close),

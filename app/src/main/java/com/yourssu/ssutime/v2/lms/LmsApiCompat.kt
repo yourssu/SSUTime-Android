@@ -48,12 +48,12 @@ suspend fun getLmsTodoList(
     postHogDistinctId: String? = null,
 ): List<Subject> =
     suspendCancellableCoroutine { continuation ->
-        LmsApi.getTodoList(
+        LmsApi.getTodoListParallel(
             term = term,
             loadingState = loadingState,
             postHogDistinctId = postHogDistinctId,
         ) { result ->
-            if (!continuation.isActive) return@getTodoList
+            if (!continuation.isActive) return@getTodoListParallel
 
             if (result.success) {
                 continuation.resume(result.subjects)

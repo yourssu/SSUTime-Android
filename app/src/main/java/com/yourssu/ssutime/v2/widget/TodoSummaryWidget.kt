@@ -208,7 +208,10 @@ internal fun TodoSummaryContent(
         ) {
             when {
                 uiState.isRefreshing -> {
-                    TodoSummaryRefreshInProgressContent(size = size)
+                    TodoSummaryRefreshInProgressContent(
+                        size = size,
+                        progressMessage = uiState.refreshProgressMessage,
+                    )
                 }
                 uiState.refreshErrorMessage != null -> {
                     TodoSummaryRefreshErrorContent(
@@ -431,7 +434,10 @@ private fun TodoSummaryEmptyContent(size: TodoSummarySize) {
 
 @Composable
 @GlanceComposable
-private fun TodoSummaryRefreshInProgressContent(size: TodoSummarySize) {
+private fun TodoSummaryRefreshInProgressContent(
+    size: TodoSummarySize,
+    progressMessage: String?,
+) {
     val context = LocalContext.current
     Column(
         modifier = GlanceModifier
@@ -459,7 +465,7 @@ private fun TodoSummaryRefreshInProgressContent(size: TodoSummarySize) {
         )
         Spacer(modifier = GlanceModifier.height(4.dp))
         Text(
-            text = context.getString(R.string.widget_refreshing_description),
+            text = progressMessage ?: context.getString(R.string.widget_refreshing_description),
             modifier = GlanceModifier.fillMaxWidth(),
             maxLines = if (size == TodoSummarySize.Medium) 1 else 2,
             style = SSUType.G_Caption2Medium.copy(
@@ -769,6 +775,7 @@ internal data class TodoSummaryUiState(
     val hiddenCount: Int,
     val updatedAtText: String,
     val isRefreshing: Boolean,
+    val refreshProgressMessage: String?,
     val refreshErrorMessage: String?,
 )
 
@@ -805,6 +812,7 @@ internal fun TodoData.toTodoSummaryUiState(
         hiddenCount = (sortedTodos.size - size.visibleTodoCount).coerceAtLeast(0),
         updatedAtText = loadedAt.toSummaryUpdatedAtText(context),
         isRefreshing = isWidgetRefreshing,
+        refreshProgressMessage = widgetRefreshProgressMessage,
         refreshErrorMessage = widgetRefreshErrorMessage,
     )
 }

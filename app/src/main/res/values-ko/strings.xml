@@ -131,6 +131,10 @@
     <string name="widget_deadline_until">마감까지</string>
     <string name="widget_refreshing_title">새로고침 중</string>
     <string name="widget_refreshing_description">LMS에서 할 일을 불러오고 있어요.</string>
+    <string name="widget_refreshing_login">LMS 로그인 중</string>
+    <string name="widget_refreshing_terms">현재 학기 조회 중</string>
+    <string name="widget_refreshing_subjects">%1$s 과목 정보 조회 중</string>
+    <string name="widget_refreshing_saving">할 일 정보 저장 중</string>
     <string name="widget_refresh_failed_title">새로고침 실패</string>
     <string name="widget_no_todo">표시할 과제가 없어요</string>
     <string name="widget_refresh_from_app">앱에서 새로고침해 주세요</string>

@@ -52,6 +52,7 @@ import com.yourssu.ssutime.v2.analytics.SentryExceptionReporter
 import com.yourssu.ssutime.v2.getRemainingDays
 import com.yourssu.ssutime.v2.getStringSimpleDate
 import com.yourssu.ssutime.v2.screen.main.LmsRefreshRepository
+import com.yourssu.ssutime.v2.screen.main.LmsRefreshStage
 import com.yourssu.ssutime.v2.screen.main.RefreshSource
 import com.yourssu.ssutime.v2.screen.main.TodoRefreshResult
 import com.yourssu.ssutime.v2.screen.main.todoDataStore
@@ -74,6 +75,7 @@ private val WidgetRefreshSizeKey = ActionParameters.Key<String>("widget_size")
 private val widgetWhite = ColorProvider(day = Color.White, night = Color.White)
 private val widgetTextColor = ColorProvider(day = Color.White, night = Color.White)
 private val widgetErrorTextColor = ColorProvider(day = Color(0xFFFE4F4C), night = Color(0xFFFE4F4C))
+private val widgetRefreshDescriptionColor = ColorProvider(day = Color(0xFF4B515B), night = Color(0xFF4B515B))
 
 internal fun widgetRefreshAction(widgetSize: WidgetAnalyticsSize) = actionRunCallback<DDayWidgetRefreshAction>(
     actionParametersOf(WidgetRefreshSizeKey to widgetSize.value),
@@ -129,7 +131,7 @@ private fun DDayContent(
             val backgroundResId = uiState.backgroundResId
             when {
                 uiState.isRefreshing -> {
-                    DDayRefreshInProgressContent()
+                    DDayRefreshInProgressContent(uiState.refreshProgressMessage)
                 }
                 uiState.refreshErrorMessage != null -> {
                     DDayRefreshErrorContent(message = uiState.refreshErrorMessage)
@@ -261,37 +263,37 @@ private fun DDayEmptyContent() {
 
 @Composable
 @GlanceComposable
-private fun DDayRefreshInProgressContent() {
+private fun DDayRefreshInProgressContent(progressMessage: String?) {
     val context = LocalContext.current
     Column(
         modifier = GlanceModifier
             .fillMaxSize()
             .background(widgetWhite)
-            .padding(horizontal = 12.dp, vertical = 12.dp),
+            .padding(horizontal = 8.dp, vertical = 8.dp),
         verticalAlignment = Alignment.Vertical.CenterVertically,
         horizontalAlignment = Alignment.Horizontal.CenterHorizontally,
     ) {
         CircularProgressIndicator(
-            modifier = GlanceModifier.size(28.dp),
+            modifier = GlanceModifier.size(24.dp),
             color = widgetErrorTextColor,
         )
-        Spacer(modifier = GlanceModifier.height(8.dp))
+        Spacer(modifier = GlanceModifier.height(4.dp))
         Text(
             text = context.getString(R.string.widget_refreshing_title),
             modifier = GlanceModifier.fillMaxWidth(),
             maxLines = 1,
             style = SSUType.G_Caption1SemiBold.copy(
-                color = widgetTextColor,
+                color = widgetErrorTextColor,
                 textAlign = TextAlign.Center,
             ),
         )
-        Spacer(modifier = GlanceModifier.height(4.dp))
+        Spacer(modifier = GlanceModifier.height(2.dp))
         Text(
-            text = context.getString(R.string.widget_refreshing_description),
+            text = progressMessage ?: context.getString(R.string.widget_refreshing_description),
             modifier = GlanceModifier.fillMaxWidth(),
             maxLines = 2,
             style = SSUType.G_Caption2Medium.copy(
-                color = widgetTextColor,
+                color = widgetRefreshDescriptionColor,
                 textAlign = TextAlign.Center,
             ),
         )
@@ -350,6 +352,7 @@ private data class DDayWidgetUiState(
     val backgroundResId: Int?,
     val countdownTargetEpochMillis: Long?,
     val isRefreshing: Boolean,
+    val refreshProgressMessage: String? = null,
     val refreshErrorMessage: String?,
 )
 
@@ -390,6 +393,7 @@ private fun TodoData.toWidgetUiState(context: Context): DDayWidgetUiState {
             null
         },
         isRefreshing = isWidgetRefreshing,
+        refreshProgressMessage = widgetRefreshProgressMessage,
         refreshErrorMessage = widgetRefreshErrorMessage,
     )
 }
@@ -566,6 +570,10 @@ class DDayWidgetRefreshAction : ActionCallback, KoinComponent {
                 source = RefreshSource.WIDGET,
                 timeoutMillis = WIDGET_REFRESH_TIMEOUT_MILLIS,
                 forceLogin = true,
+                onRefreshStage = { stage ->
+                    context.markWidgetRefreshRunning(stage.toWidgetRefreshMessage(context))
+                    updateAllTodoWidgets(context)
+                },
             )) {
                 is TodoRefreshResult.Success -> {
                     refreshSucceeded = true
@@ -595,4 +603,14 @@ class DDayWidgetRefreshAction : ActionCallback, KoinComponent {
         )
         updateAllTodoWidgets(context)
     }
+}
+
+private fun LmsRefreshStage.toWidgetRefreshMessage(context: Context): String = when (this) {
+    LmsRefreshStage.LoggingIn -> context.getString(R.string.widget_refreshing_login)
+    LmsRefreshStage.LoadingTerms -> context.getString(R.string.widget_refreshing_terms)
+    is LmsRefreshStage.LoadingSubjects -> context.getString(
+        R.string.widget_refreshing_subjects,
+        semester,
+    )
+    LmsRefreshStage.SavingResult -> context.getString(R.string.widget_refreshing_saving)
 }
