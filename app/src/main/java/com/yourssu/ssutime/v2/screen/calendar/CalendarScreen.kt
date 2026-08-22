@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -46,6 +47,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.yourssu.data.TodoInfo
 import com.yourssu.data.TodoType
+import com.yourssu.data.todoUniqueKey
 import com.yourssu.ssutime.v2.component.SSUTimeTopBar
 import com.yourssu.ssutime.v2.screen.main.MainViewModel
 import com.yourssu.ssutime.v2.screen.notice.NoticeScreen
@@ -585,7 +587,7 @@ fun CalendarDateDetailBottomSheet(
         containerColor = WHITE,
         modifier = modifier
     ) {
-        Column(
+        LazyColumn(
             modifier = Modifier
                 .fillMaxWidth()
                 .safeDrawingPadding()
@@ -593,35 +595,38 @@ fun CalendarDateDetailBottomSheet(
                 .padding(bottom = 36.dp)
         ) {
             // 헤더: 날짜 (D-Day)
-            Text(
-                text = "${date.monthValue}월 ${date.dayOfMonth}일 ($dDayText)",
-                style = SSUType.H2SemiBold,
-                color = N700
-            )
+            item {
+                Text(
+                    text = "${date.monthValue}월 ${date.dayOfMonth}일 ($dDayText)",
+                    style = SSUType.H2SemiBold,
+                    color = N700
+                )
 
-            Spacer(modifier = Modifier.height(20.dp))
+                Spacer(modifier = Modifier.height(20.dp))
+            }
 
             if (todos.isEmpty()) {
-                Text(
-                    text = "마감 일정이 없습니다.",
-                    style = SSUType.Body1Medium,
-                    color = N400,
-                    modifier = Modifier.padding(vertical = 24.dp)
-                )
+                item {
+                    Text(
+                        text = "마감 일정이 없습니다.",
+                        style = SSUType.Body1Medium,
+                        color = N400,
+                        modifier = Modifier.padding(vertical = 24.dp)
+                    )
+                }
             } else {
-                Column(
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    todos.forEachIndexed { index, todo ->
-                        CalendarTodoDetailItem(todo = todo)
+                itemsIndexed(
+                    items = todos,
+                    key = { _, todo -> todo.todoUniqueKey() }
+                ) { index, todo ->
+                    CalendarTodoDetailItem(todo = todo)
 
-                        if (index < todos.lastIndex) {
-                            HorizontalDivider(
-                                color = N200,
-                                thickness = 0.5.dp,
-                                modifier = Modifier.padding(vertical = 4.dp)
-                            )
-                        }
+                    if (index < todos.lastIndex) {
+                        HorizontalDivider(
+                            color = N200,
+                            thickness = 0.5.dp,
+                            modifier = Modifier.padding(vertical = 16.dp)
+                        )
                     }
                 }
             }
