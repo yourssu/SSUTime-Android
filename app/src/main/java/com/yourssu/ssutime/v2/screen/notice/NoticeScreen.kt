@@ -16,8 +16,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -30,6 +28,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.InlineTextContent
+import androidx.compose.foundation.text.appendInlineContent
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material.icons.filled.KeyboardArrowDown
@@ -52,9 +52,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.Placeholder
+import androidx.compose.ui.text.PlaceholderVerticalAlign
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.yourssu.data.DiscussionAttachment
 import com.yourssu.data.DiscussionInfo
 import com.yourssu.data.SubjectInfo
@@ -73,6 +77,9 @@ import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+
+private const val INLINE_ATTACHMENT_ID = "inline_attachment"
+private const val INLINE_NEW_BADGE_ID = "inline_new_badge"
 
 /**
  * ISO-8601 형식의 날짜 문자열을 "yyyy.MM.dd. a h:mm" 형식으로 포맷팅
@@ -125,7 +132,7 @@ val MockSubjectInfos: List<SubjectInfo> = listOf(
         discussions = listOf(
             DiscussionInfo(
                 id = 1,
-                title = "제목",
+                title = "제목이 너무 길면 제목이 너무 길면 제목이 너무 길면 제목이 너",
                 message = "여러분께,\n내일 중간시험 관련해서 알려드립니다\n\n말씀 드린데로 수업시간에 다루었던 데이터와 케이스를 중심으로 개념, 해석 및 등이 출제될 예정입니다.\n\n복잡한 수식 관련 문제는 출제하지 않았지만 간단한 계산을 위해서는 계산기가 필요할 수 있습니다",
                 url = "https://smartid.ssu.ac.kr",
                 readState = "unread",
@@ -336,7 +343,7 @@ fun NoticeSubjectDropdown(
                 if (selectedUnreadCount > 0) {
                     Text(
                         text = "$selectedUnreadCount",
-                        style = SSUType.Caption1SemiBold,
+                        style = SSUType.H4Medium,
                         color = R400
                     )
                 }
@@ -390,7 +397,6 @@ fun NoticeSubjectDropdown(
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun NoticeAccordionItem(
     discussion: DiscussionInfo,
@@ -405,6 +411,60 @@ fun NoticeAccordionItem(
     val plainContent = remember(discussion.message) { parseHtmlToPlainText(discussion.message) }
     val isNew = discussion.readState.equals("unread", ignoreCase = true)
     val hasAttachment = discussion.attachments.isNotEmpty()
+
+    val annotatedTitle = remember(discussion.title, hasAttachment, isNew) {
+        buildAnnotatedString {
+            append(discussion.title)
+            if (hasAttachment) {
+                append("\u00A0")
+                appendInlineContent(INLINE_ATTACHMENT_ID, "[첨부]")
+            }
+            if (isNew) {
+                append("\u00A0")
+                appendInlineContent(INLINE_NEW_BADGE_ID, "[N]")
+            }
+        }
+    }
+
+    val inlineContentMap = remember(hasAttachment, isNew) {
+        mapOf(
+            INLINE_ATTACHMENT_ID to InlineTextContent(
+                Placeholder(
+                    width = 16.sp,
+                    height = 16.sp,
+                    placeholderVerticalAlign = PlaceholderVerticalAlign.Center
+                )
+            ) {
+                Icon(
+                    imageVector = Icons.Default.AttachFile,
+                    contentDescription = "첨부파일 있음",
+                    tint = N400,
+                    modifier = Modifier.size(16.dp)
+                )
+            },
+            INLINE_NEW_BADGE_ID to InlineTextContent(
+                Placeholder(
+                    width = 16.sp,
+                    height = 16.sp,
+                    placeholderVerticalAlign = PlaceholderVerticalAlign.Center
+                )
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(16.dp)
+                        .clip(CircleShape)
+                        .background(R400),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "N",
+                        style = SSUType.Caption2SemiBold,
+                        color = WHITE
+                    )
+                }
+            }
+        )
+    }
 
     Column(
         modifier = modifier.fillMaxWidth()
@@ -427,45 +487,13 @@ fun NoticeAccordionItem(
             Column(
                 modifier = Modifier.weight(1f)
             ) {
-                FlowRow(
-                    verticalArrangement = Arrangement.Center,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Text(
-                        text = discussion.title,
-                        style = SSUType.H4Medium,
-                        color = N700
-                    )
-
-                    if (hasAttachment) {
-                        Icon(
-                            imageVector = Icons.Default.AttachFile,
-                            contentDescription = "첨부파일 있음",
-                            tint = N400,
-                            modifier = Modifier
-                                .size(16.dp)
-                                .align(Alignment.CenterVertically)
-                        )
-                    }
-
-                    if (isNew) {
-                        Box(
-                            modifier = Modifier
-                                .size(16.dp)
-                                .clip(CircleShape)
-                                .background(R400)
-                                .align(Alignment.CenterVertically),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = "N",
-                                style = SSUType.Caption2SemiBold,
-                                color = WHITE
-                            )
-                        }
-                    }
-                }
+                Text(
+                    text = annotatedTitle,
+                    inlineContent = inlineContentMap,
+                    style = SSUType.H4Medium,
+                    color = N700,
+                    modifier = Modifier.fillMaxWidth()
+                )
 
                 if (formattedDate.isNotBlank()) {
                     Spacer(modifier = Modifier.height(4.dp))
