@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
@@ -33,6 +34,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.outlined.AttachFile
+import androidx.compose.material.icons.outlined.FileDownload
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
@@ -510,12 +513,12 @@ fun NoticeAccordionItem(
                 }
 
                 if (hasAttachment) {
-                    DiscussionAttachmentButtonGroup(
+                    DiscussionAttachmentSection(
                         attachments = discussion.attachments,
                         onOpenUrl = { url ->
                             openAttachmentUrl(context, url)
                         },
-                        modifier = Modifier.padding(top = 12.dp)
+                        modifier = Modifier.padding(top = 16.dp)
                     )
                 }
             }
@@ -524,36 +527,35 @@ fun NoticeAccordionItem(
 }
 
 /**
- * 다중 첨부파일 버튼 그룹 (언제든 삭제/교체 가능하도록 모듈화)
+ * 첨부파일 목록 섹션
  */
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun DiscussionAttachmentButtonGroup(
+fun DiscussionAttachmentSection(
     attachments: List<DiscussionAttachment>,
     onOpenUrl: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     if (attachments.isEmpty()) return
 
-    FlowRow(
-        modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+    Column(
+        modifier = modifier.fillMaxWidth()
     ) {
-        if (attachments.size == 1) {
-            val attachment = attachments.first()
-            val buttonText = if (attachment.name.isNotBlank()) "첨부파일: ${attachment.name}" else "첨부파일 보기"
-            DiscussionAttachmentButton(
-                title = buttonText,
-                onClick = {
-                    onOpenUrl(attachment.url)
-                }
-            )
-        } else {
+        Text(
+            text = "첨부파일",
+            style = SSUType.Caption1SemiBold,
+            color = N400
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
             attachments.forEachIndexed { index, attachment ->
-                val buttonText = if (attachment.name.isNotBlank()) attachment.name else "첨부파일 ${index + 1}"
-                DiscussionAttachmentButton(
-                    title = buttonText,
+                val fileName = attachment.name.takeIf { it.isNotBlank() } ?: "첨부파일 ${index + 1}"
+                DiscussionAttachmentItem(
+                    fileName = fileName,
                     onClick = {
                         onOpenUrl(attachment.url)
                     }
@@ -563,26 +565,50 @@ fun DiscussionAttachmentButtonGroup(
     }
 }
 
+/**
+ * 개별 첨부파일 카드 아이템
+ */
 @Composable
-fun DiscussionAttachmentButton(
-    title: String,
+fun DiscussionAttachmentItem(
+    fileName: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Box(
+    Row(
         modifier = modifier
-            .clip(RoundedCornerShape(6.dp))
-            .background(N600)
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(8.dp))
+            .border(1.dp, N200, RoundedCornerShape(8.dp))
+            .background(WHITE)
             .clickable(onClick = onClick)
-            .padding(horizontal = 10.dp, vertical = 8.dp),
-        contentAlignment = Alignment.Center
+            .padding(horizontal = 16.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
+        Icon(
+            imageVector = Icons.Outlined.AttachFile,
+            contentDescription = "첨부파일",
+            tint = N400,
+            modifier = Modifier.size(20.dp)
+        )
+
+        Spacer(modifier = Modifier.width(8.dp))
+
         Text(
-            text = title,
-            style = SSUType.Caption1SemiBold,
-            color = WHITE,
+            text = fileName,
+            style = SSUType.Label2Medium,
+            color = N500,
             maxLines = 1,
-            overflow = TextOverflow.Ellipsis
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f)
+        )
+
+        Spacer(modifier = Modifier.width(8.dp))
+
+        Icon(
+            imageVector = Icons.Outlined.FileDownload,
+            contentDescription = "다운로드",
+            tint = N400,
+            modifier = Modifier.size(20.dp)
         )
     }
 }
