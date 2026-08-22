@@ -1,5 +1,8 @@
 package com.yourssu.ssutime.desktop.core.lms
 
+import com.yourssu.data.DiscussionAttachment
+import com.yourssu.data.DiscussionInfo
+import com.yourssu.data.todoUniqueKey
 import com.yourssu.ssutime.desktop.core.model.AiSummary
 import com.yourssu.ssutime.desktop.core.model.AppProfile
 import com.yourssu.ssutime.desktop.core.model.AppSubject
@@ -27,6 +30,7 @@ import kotlin.time.Instant
 
 private const val AI_SUMMARY_POLL_ATTEMPTS = 8
 private const val AI_SUMMARY_POLL_INTERVAL_MILLIS = 2_000L
+private val TRAILING_COURSE_NUMBER = Regex("\\s*\\(\\d+\\)\\s*$")
 
 class LmsAppService(
     private val api: SsuTimeApi,
@@ -34,6 +38,7 @@ class LmsAppService(
     @OptIn(ExperimentalTime::class)
     suspend fun refreshTodos(
         loadingState: (Float) -> Unit = {},
+        previousData: AppTodoData = AppTodoData(),
     ): LmsRefreshSnapshot {
         val terms = getLmsTerms()
         val currentTerm = terms.currentTermAt(Clock.System.now())
@@ -43,20 +48,42 @@ class LmsAppService(
             loadingState = loadingState,
         )
 
+        val todoData = toAppTodoData(
+            subjects = subjects,
+            loadedAt = Clock.System.now().toString(),
+            previousData = previousData,
+        )
+
         return LmsRefreshSnapshot(
-            todoData = subjects.toAppTodoData(Clock.System.now().toString()),
-            subjects = subjects
-                .map { subject ->
-                    AppSubject(
-                        id = subject.id,
-                        name = subject.name,
-                        professor = subject.professor,
-                    )
-                }
-                .distinctBy(AppSubject::id),
+            todoData = todoData,
+            subjects = todoData.subjects,
             semester = currentTerm.toString(),
         )
     }
+
+    @OptIn(ExperimentalTime::class)
+    suspend fun loadTodosForTerm(
+        term: Term,
+        loadingState: (Float) -> Unit = {},
+        previousData: AppTodoData = AppTodoData(),
+    ): AppTodoData {
+        val subjects = getLmsTodoList(
+            term = term,
+            loadingState = loadingState,
+        )
+        return toAppTodoData(
+            subjects = subjects,
+            loadedAt = Clock.System.now().toString(),
+            previousData = previousData,
+        )
+    }
+
+    @OptIn(ExperimentalTime::class)
+    suspend fun loadTerms(): List<Term> =
+        getLmsTerms().sortedWith(
+            compareByDescending<Term> { it.start_at }
+                .thenByDescending { it.id }
+        )
 
     @OptIn(ExperimentalTime::class)
     suspend fun loadProfile(): AppProfile {
@@ -171,15 +198,52 @@ fun List<Term>.currentTermAt(now: Instant): Term? =
         now in startAt..endAt
     }
 
-private fun List<Subject>.toAppTodoData(loadedAt: String): AppTodoData {
-    val subjectById = associate { subject ->
-        subject.id to AppSubject(
+private fun String.withoutTrailingCourseNumber(): String =
+    replace(TRAILING_COURSE_NUMBER, "")
+
+private fun toAppTodoData(
+    subjects: List<Subject>,
+    loadedAt: String,
+    previousData: AppTodoData = AppTodoData(),
+): AppTodoData {
+    val locallyReadDiscussionIds = previousData.subjects
+        .flatMap { it.discussions }
+        .filter { it.readState.equals("read", ignoreCase = true) }
+        .map { it.id }
+        .toSet()
+
+    val subjectInfos = subjects.map { subject ->
+        AppSubject(
             id = subject.id,
-            name = subject.name,
+            name = subject.name.withoutTrailingCourseNumber(),
             professor = subject.professor,
+            discussions = subject.discussions.map { discussion ->
+                val isLocallyRead = discussion.id in locallyReadDiscussionIds
+                val initialReadState = if (isLocallyRead) "read" else discussion.read_state.ifBlank { "unread" }
+                DiscussionInfo(
+                    id = discussion.id,
+                    title = discussion.title,
+                    message = discussion.message.orEmpty(),
+                    url = discussion.url.orEmpty(),
+                    published = discussion.published,
+                    readState = initialReadState,
+                    createdAt = discussion.created_at.orEmpty(),
+                    author = discussion.user_name.orEmpty(),
+                    attachments = discussion.attachments.map { att ->
+                        DiscussionAttachment(
+                            id = att.id,
+                            name = att.display_name.ifBlank { att.file_name }.orEmpty(),
+                            url = att.url.orEmpty(),
+                        )
+                    },
+                )
+            },
         )
-    }
-    val todos = flatMap { subject ->
+    }.distinctBy { it.id }
+
+    val subjectById = subjectInfos.associateBy { it.id }
+
+    val allTodos = subjects.flatMap { subject ->
         subject.todoList.mapNotNull { todo ->
             val type = runCatching {
                 AppTodoType.valueOf(todo.component_type.uppercase())
@@ -191,11 +255,12 @@ private fun List<Subject>.toAppTodoData(loadedAt: String): AppTodoData {
                 type = type,
                 subject = subjectById[subject.id],
                 description = todo.description.orEmpty(),
+                url = todo.url.orEmpty(),
             )
         }
     }.sortedWith(appTodoComparator())
 
-    val submitted = flatMap { subject ->
+    val submitted = subjects.flatMap { subject ->
         subject.submissions
             .filter(Submission::isReportableSubmission)
             .map { submission ->
@@ -210,14 +275,20 @@ private fun List<Subject>.toAppTodoData(loadedAt: String): AppTodoData {
                     },
                     subject = subjectById[subject.id],
                     submittedAt = submission.submitted_at.orEmpty(),
+                    url = submission.url.orEmpty(),
                 )
             }
     }.sortedWith(appTodoComparator())
 
-    return AppTodoData(
-        todos = todos,
-//        submitted = submitted.filterRecentlySubmitted(),
+    val hiddenKeysSet = previousData.hiddenTodoKeys.toSet()
+    val (hidden, active) = allTodos.partition { it.todoUniqueKey() in hiddenKeysSet }
+
+    return previousData.copy(
+        todos = active,
         submitted = submitted,
+        subjects = subjectInfos,
+        hiddenTodos = hidden,
+        hiddenTodoKeys = previousData.hiddenTodoKeys,
         loadedAt = loadedAt,
     )
 }
@@ -234,14 +305,5 @@ private fun Submission.isReportableSubmission(): Boolean =
         workflow_state.equals("graded", ignoreCase = true) ||
         assignment_id == null ||
         assignment_id == -1
-
-@OptIn(ExperimentalTime::class)
-private fun List<AppTodo>.filterRecentlySubmitted(
-    now: Instant = Clock.System.now(),
-): List<AppTodo> = filter { todo ->
-    val submittedAt = runCatching { Instant.parse(todo.submittedAt) }.getOrNull()
-        ?: return@filter false
-    now - submittedAt <= kotlin.time.Duration.parse("24h")
-}
 
 private fun HttpStatusCode.isSuccess(): Boolean = value in 200..299

@@ -33,7 +33,7 @@
     <string name="todo_type_submitted_late">지각 제출</string>
 
     <string name="splash_logo_content_description">로고</string>
-    <string name="splash_tagline">과제 놓쳐서 학점을 말아먹었다고?ㅏ</string>
+    <string name="splash_tagline">과제 놓쳐서 학점을 말아먹었다고?</string>
 
     <string name="onboarding_notification_title">과제 알림을 받으려면\n알림을 허용해주세요</string>
     <string name="onboarding_notification_image_content_description">알림 권한 요청 예시</string>
@@ -68,7 +68,9 @@
     <string name="main_deadline_label">마감기한</string>
     <string name="main_due_until">%1$s까지</string>
     <string name="ai_summary_title">AI 요약</string>
-    <string name="ai_estimated_duration">예상 소요시간 %1$d분</string>
+    <string name="ai_estimated_duration">예상 소요시간</string>
+    <string name="ai_estimated_duration_minutes">%1$d분</string>
+    <string name="ai_estimated_duration_value_unknown">알 수 없음</string>
     <string name="ai_estimated_duration_unknown">예상 소요시간 알 수 없음</string>
     <string name="ai_summary_loading">AI 요약을 불러오는 중이에요.</string>
     <string name="ai_summary_analyzing">AI 분석을 진행 중이에요.</string>
@@ -97,6 +99,7 @@
     <string name="my_avatar_content_description">프로필 이미지</string>
     <string name="my_notification_settings">알림 설정</string>
     <string name="my_no_term_info">학기 정보 없음</string>
+    <string name="my_term_dropdown_content_description">학기 선택</string>
     <string name="my_notification_info_content_description">알림 안내</string>
     <string name="my_system_alert">시스템 알림</string>
     <string name="my_call_alert">전화 알림</string>
@@ -112,6 +115,12 @@
     <string name="my_notification_tooltip_call_title">전화 알림?</string>
     <string name="my_notification_tooltip_call_desc">과제 마감 당일 설정한 시간까지 완료하지 않았다면, 전화 알림을 드려요! * 진짜 전화는 아니니 놀라지 않으셔도 돼요!</string>
     <string name="my_logout_message">정말 로그아웃 하시겠어요?</string>
+    <string name="my_hidden_todos">숨긴 할 일</string>
+    <string name="todo_hide_from_list">목록에서 숨기기</string>
+    <string name="todo_hide_popup_title">과제를 숨길까요?</string>
+    <string name="todo_hide_popup_message">마이페이지의 [숨긴 과제]에서 복원할 수 있어요.</string>
+    <string name="hidden_todos_empty">숨긴 할 일이 없어요</string>
+    <string name="hidden_todos_restore">복원하기</string>
 
     <string name="call_alert_default_title">마감 직전 알림</string>
     <string name="call_alert_default_avatar">알림</string>
@@ -132,21 +141,20 @@
     <string name="deadline_title_today">오늘 마감, 아직 안 했죠?</string>
     <string name="deadline_title_upcoming">마감이 다가오고 있어요!</string>
 
-    <string name="widget_deadline_until">마감까지</string>
-    <string name="widget_refreshing_title">새로고침 중</string>
-    <string name="widget_refreshing_description">LMS에서 할 일을 불러오고 있어요.</string>
-    <string name="widget_refresh_failed_title">새로고침 실패</string>
-    <string name="widget_no_todo">표시할 과제가 없어요</string>
-    <string name="widget_refresh_from_app">앱에서 새로고침해 주세요</string>
-    <string name="widget_updated_before">업데이트 전</string>
-    <string name="widget_updated_at">업데이트 %1$s</string>
-    <string name="widget_updated_at_base">업데이트 %1$s 기준</string>
-    <string name="widget_no_subject">과목명 없음</string>
-    <string name="widget_refresh_failed_default">위젯 새로고침을 실행하지 못했어요.</string>
-    <string name="widget_refresh_error_lms_default">LMS 정보를 불러오지 못했어요.</string>
-    <string name="widget_refresh_error_timeout">새로고침 시간이 초과됐어요.</string>
-    <string name="widget_refresh_error_network">네트워크 연결을 확인해 주세요.</string>
-    <string name="widget_late_submission">지각 제출</string>
-    <string name="widget_late_short">지각</string>
-    <string name="widget_more_todos">그 외 %1$d건의 할 일이 있어요</string>
+    <string name="tab_home">홈</string>
+    <string name="tab_calendar">캘린더</string>
+    <string name="tab_my">마이</string>
+    <string name="calendar_title">캘린더</string>
+    <string name="calendar_empty_events">마감 일정이 없습니다.</string>
+    <string name="notice_title">공지사항</string>
+    <string name="notice_new">새로운 공지사항</string>
+    <string name="notice_empty">등록된 공지사항이 없습니다.</string>
+    <string name="notice_attachment">첨부파일</string>
+    <string name="notice_select_subject">과목 선택</string>
+    <string name="todo_detail_lms_link">LMS 바로가기</string>
+    <string name="todo_detail_back">뒤로가기</string>
+    <string name="todo_detail_description_tab">상세 설명</string>
+    <string name="todo_detail_ai_summary_tab">AI 요약</string>
+    <string name="todo_detail_ai_sparkle_desc">첨부된 파일 내용을 ai가 요약했어요.</string>
+    <string name="todo_detail_late_notice">마감이 지났지만 지각 제출이 가능한 과제에요!</string>
 </resources>

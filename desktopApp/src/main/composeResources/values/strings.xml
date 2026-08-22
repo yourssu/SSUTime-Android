@@ -69,7 +69,9 @@
     <string name="main_deadline_label">Deadline</string>
     <string name="main_due_until">Until %1$s</string>
     <string name="ai_summary_title">AI Summary</string>
-    <string name="ai_estimated_duration">Estimated time: %1$d min</string>
+    <string name="ai_estimated_duration">Estimated time</string>
+    <string name="ai_estimated_duration_minutes">%1$d min</string>
+    <string name="ai_estimated_duration_value_unknown">Unknown</string>
     <string name="ai_estimated_duration_unknown">Estimated time unknown</string>
     <string name="ai_summary_loading">Loading AI summary.</string>
     <string name="ai_summary_analyzing">AI analysis is in progress.</string>
@@ -98,6 +100,7 @@
     <string name="my_avatar_content_description">Avatar</string>
     <string name="my_notification_settings">Notification settings</string>
     <string name="my_no_term_info">No term information</string>
+    <string name="my_term_dropdown_content_description">Select term</string>
     <string name="my_notification_info_content_description">About notifications</string>
     <string name="my_system_alert">System notifications</string>
     <string name="my_call_alert">Call alerts</string>
@@ -113,6 +116,12 @@
     <string name="my_notification_tooltip_call_title">Call alert?</string>
     <string name="my_notification_tooltip_call_desc">If you have not completed an assignment by the time you set on its due date, we will send a call-style alert. * It is not a real phone call, so do not be surprised!</string>
     <string name="my_logout_message">Are you sure you want to log out?</string>
+    <string name="my_hidden_todos">Hidden Tasks</string>
+    <string name="todo_hide_from_list">Hide from list</string>
+    <string name="todo_hide_popup_title">Hide assignment?</string>
+    <string name="todo_hide_popup_message">You can restore it from [Hidden Tasks] in My Page.</string>
+    <string name="hidden_todos_empty">No hidden tasks</string>
+    <string name="hidden_todos_restore">Restore</string>
 
     <string name="call_alert_default_title">Deadline alert</string>
     <string name="call_alert_default_avatar">Alert</string>
@@ -133,21 +142,20 @@
     <string name="deadline_title_today">Due today, still not done?</string>
     <string name="deadline_title_upcoming">Deadlines are coming up!</string>
 
-    <string name="widget_deadline_until">Until deadline</string>
-    <string name="widget_refreshing_title">Refreshing</string>
-    <string name="widget_refreshing_description">Loading tasks from LMS.</string>
-    <string name="widget_refresh_failed_title">Refresh failed</string>
-    <string name="widget_no_todo">No tasks to show</string>
-    <string name="widget_refresh_from_app">Refresh in the app</string>
-    <string name="widget_updated_before">Not updated yet</string>
-    <string name="widget_updated_at">Updated %1$s</string>
-    <string name="widget_updated_at_base">Updated %1$s</string>
-    <string name="widget_no_subject">No course name</string>
-    <string name="widget_refresh_failed_default">Could not refresh the widget.</string>
-    <string name="widget_refresh_error_lms_default">Could not load LMS information.</string>
-    <string name="widget_refresh_error_timeout">Refresh timed out.</string>
-    <string name="widget_refresh_error_network">Check your network connection.</string>
-    <string name="widget_late_submission">Late submission</string>
-    <string name="widget_late_short">Late</string>
-    <string name="widget_more_todos">%1$d more tasks</string>
+    <string name="tab_home">Home</string>
+    <string name="tab_calendar">Calendar</string>
+    <string name="tab_my">My</string>
+    <string name="calendar_title">Calendar</string>
+    <string name="calendar_empty_events">No deadlines scheduled.</string>
+    <string name="notice_title">Notices</string>
+    <string name="notice_new">New notices</string>
+    <string name="notice_empty">No notices posted.</string>
+    <string name="notice_attachment">Attachment</string>
+    <string name="notice_select_subject">Select course</string>
+    <string name="todo_detail_lms_link">Open in LMS</string>
+    <string name="todo_detail_back">Back</string>
+    <string name="todo_detail_description_tab">Description</string>
+    <string name="todo_detail_ai_summary_tab">AI Summary</string>
+    <string name="todo_detail_ai_sparkle_desc">File content summarized by AI.</string>
+    <string name="todo_detail_late_notice">Late submission is available even though deadline passed!</string>
 </resources>

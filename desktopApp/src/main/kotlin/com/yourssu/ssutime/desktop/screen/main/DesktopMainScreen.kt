@@ -1,7 +1,5 @@
 package com.yourssu.ssutime.desktop.screen.main
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -10,7 +8,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -25,6 +22,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
@@ -50,25 +48,22 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.yourssu.data.DiscussionInfo
 import com.yourssu.ssutime.desktop.core.model.AppTodo
 import com.yourssu.ssutime.desktop.core.model.AppTodoData
 import com.yourssu.ssutime.desktop.core.model.AppTodoType
 import com.yourssu.ssutime.desktop.core.model.aiSummaryKey
-import com.yourssu.ssutime.desktop.core.model.canRequestAiSummary
 import com.yourssu.ssutime.desktop.core.model.dueDate
+import com.yourssu.ssutime.desktop.screen.calendar.DesktopCalendarPanel
+import com.yourssu.ssutime.desktop.screen.calendar.badgeBackgroundColor
+import com.yourssu.ssutime.desktop.screen.calendar.badgeTextColor
+import com.yourssu.ssutime.desktop.screen.notice.DesktopNoticeScreen
+import com.yourssu.ssutime.desktop.screen.todo.DesktopTodoDetailScreen
 import com.yourssu.ssutime.desktop.ui.component.SButton
 import com.yourssu.ssutime.desktop.ui.resources.Res
-import com.yourssu.ssutime.desktop.ui.resources.ai
-import com.yourssu.ssutime.desktop.ui.resources.ai_estimated_duration
-import com.yourssu.ssutime.desktop.ui.resources.ai_estimated_duration_unknown
-import com.yourssu.ssutime.desktop.ui.resources.ai_summary_analyzing
-import com.yourssu.ssutime.desktop.ui.resources.ai_summary_empty
-import com.yourssu.ssutime.desktop.ui.resources.ai_summary_error
-import com.yourssu.ssutime.desktop.ui.resources.ai_summary_loading
-import com.yourssu.ssutime.desktop.ui.resources.ai_summary_title
-import com.yourssu.ssutime.desktop.ui.resources.app_name
 import com.yourssu.ssutime.desktop.ui.resources.common_close
 import com.yourssu.ssutime.desktop.ui.resources.common_refresh
 import com.yourssu.ssutime.desktop.ui.resources.common_retry
@@ -78,17 +73,12 @@ import com.yourssu.ssutime.desktop.ui.resources.day3
 import com.yourssu.ssutime.desktop.ui.resources.day_red2
 import com.yourssu.ssutime.desktop.ui.resources.done
 import com.yourssu.ssutime.desktop.ui.resources.ic_user
-import com.yourssu.ssutime.desktop.ui.resources.icon_collapsed
-import com.yourssu.ssutime.desktop.ui.resources.icon_expand
 import com.yourssu.ssutime.desktop.ui.resources.late
 import com.yourssu.ssutime.desktop.ui.resources.logo_red
 import com.yourssu.ssutime.desktop.ui.resources.main_completed_auto_disappear
 import com.yourssu.ssutime.desktop.ui.resources.main_date_base
 import com.yourssu.ssutime.desktop.ui.resources.main_date_placeholder
-import com.yourssu.ssutime.desktop.ui.resources.main_deadline_label
-import com.yourssu.ssutime.desktop.ui.resources.main_due_until
 import com.yourssu.ssutime.desktop.ui.resources.main_empty_todos
-import com.yourssu.ssutime.desktop.ui.resources.main_expand_task_content_description
 import com.yourssu.ssutime.desktop.ui.resources.main_late_submission_available
 import com.yourssu.ssutime.desktop.ui.resources.main_relaxed_tasks_title
 import com.yourssu.ssutime.desktop.ui.resources.main_submitted_count
@@ -124,7 +114,6 @@ import com.yourssu.ssutime.desktop.ui.theme.SSUType
 import com.yourssu.ssutime.desktop.ui.theme.WHITE
 import com.yourssu.ssutime.desktop.ui.util.currentEpochMilliseconds
 import com.yourssu.ssutime.desktop.ui.util.formatMonthDay
-import com.yourssu.ssutime.desktop.ui.util.formatMonthDayWithTime
 import com.yourssu.ssutime.desktop.ui.util.formatUpdatedTime
 import com.yourssu.ssutime.desktop.ui.util.remainingDays
 import com.yourssu.ssutime.desktop.ui.util.remainingSeconds
@@ -157,13 +146,23 @@ fun DesktopMainScreen(
     onRefresh: () -> Unit,
     onProfileClick: () -> Unit,
     onExpandTodo: (AppTodo) -> Unit,
+    onHideTodo: (AppTodo) -> Unit = {},
+    onDiscussionExpanded: (DiscussionInfo) -> Unit = {},
+    onOpenUrl: (String) -> Unit = {},
     modifier: Modifier = Modifier,
     showBlockingLoading: Boolean = false,
-    onSubmittedClick: () -> Unit = {},
 ) {
     var showSubmitted by remember { mutableStateOf(false) }
+    var selectedTodo by remember { mutableStateOf<AppTodo?>(null) }
+    var showingNotice by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
     val scope = rememberCoroutineScope()
+
+    val unreadNoticeCount = remember(todoData.subjects) {
+        todoData.subjects.flatMap { it.discussions }.count {
+            it.readState.equals("unread", ignoreCase = true)
+        }
+    }
 
     Scaffold(
         modifier = modifier
@@ -181,19 +180,78 @@ fun DesktopMainScreen(
                 onRetry = onRefresh,
             )
         } else {
-            HomeList(
-                innerPadding = innerPadding,
-                todoData = todoData,
-                aiSummaryStates = aiSummaryStates,
-                isLoading = isLoading && !showBlockingLoading,
-                loadingProgress = loadingProgress,
-                onRefresh = onRefresh,
-                onSubmittedClick = {
-                    onSubmittedClick()
-                    showSubmitted = true
-                },
-                onExpandTodo = onExpandTodo,
-            )
+            Row(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding),
+            ) {
+                // Left Column: Main Todo List or Todo Detail Screen
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight(),
+                ) {
+                    if (selectedTodo != null) {
+                        DesktopTodoDetailScreen(
+                            todo = selectedTodo!!,
+                            aiSummaryState = aiSummaryStates[selectedTodo!!.aiSummaryKey()],
+                            onLoadAiSummary = onExpandTodo,
+                            onBack = { selectedTodo = null },
+                            onHideTodo = { todo ->
+                                selectedTodo = null
+                                onHideTodo(todo)
+                            },
+                            onOpenUrl = onOpenUrl,
+                        )
+                    } else {
+                        HomeTodoListColumn(
+                            todoData = todoData,
+                            isLoading = isLoading && !showBlockingLoading,
+                            loadingProgress = loadingProgress,
+                            onRefresh = onRefresh,
+                            onSubmittedClick = { showSubmitted = true },
+                            onTodoClick = { todo ->
+                                selectedTodo = todo
+                                onExpandTodo(todo)
+                            },
+                        )
+                    }
+                }
+
+                // Vertical Divider between columns
+                Box(
+                    modifier = Modifier
+                        .width(1.dp)
+                        .fillMaxHeight()
+                        .background(N200),
+                )
+
+                // Right Column: Calendar Panel or Notice Screen
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight(),
+                ) {
+                    if (showingNotice) {
+                        DesktopNoticeScreen(
+                            subjects = todoData.subjects,
+                            onBack = { showingNotice = false },
+                            onOpenUrl = onOpenUrl,
+                            onDiscussionExpanded = onDiscussionExpanded,
+                        )
+                    } else {
+                        DesktopCalendarPanel(
+                            todos = todoData.todos,
+                            noticeCount = unreadNoticeCount,
+                            onNoticeClick = { showingNotice = true },
+                            onTodoClick = { todo ->
+                                selectedTodo = todo
+                                onExpandTodo(todo)
+                            },
+                        )
+                    }
+                }
+            }
         }
 
         if (showSubmitted) {
@@ -232,25 +290,19 @@ fun DesktopMainScreen(
 }
 
 @Composable
-private fun HomeList(
-    innerPadding: PaddingValues,
+private fun HomeTodoListColumn(
     todoData: AppTodoData,
-    aiSummaryStates: Map<String, DesktopAiSummaryUiState>,
     isLoading: Boolean,
     loadingProgress: Float,
     onRefresh: () -> Unit,
     onSubmittedClick: () -> Unit,
-    onExpandTodo: (AppTodo) -> Unit,
+    onTodoClick: (AppTodo) -> Unit,
 ) {
     val density = LocalDensity.current
     val scrollState = rememberScrollState()
     var headerHeightPx by remember { mutableIntStateOf(0) }
 
-    BoxWithConstraints(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(innerPadding),
-    ) {
+    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         val headerHeight = with(density) { headerHeightPx.toDp() }
         val emptyStateMinHeight = maxOf(240.dp, maxHeight - headerHeight)
 
@@ -265,7 +317,7 @@ private fun HomeList(
                     .fillMaxWidth()
                     .onSizeChanged { headerHeightPx = it.height },
             ) {
-                Spacer(Modifier.height(32.dp))
+                Spacer(Modifier.height(16.dp))
                 Text(
                     text = stringResource(Res.string.main_completed_auto_disappear),
                     style = SSUType.H4SemiBold,
@@ -325,8 +377,7 @@ private fun HomeList(
                         )
                     }
                 }
-                Spacer(Modifier.height(18.dp))
-                Spacer(Modifier.height(12.dp))
+                Spacer(Modifier.height(16.dp))
             }
 
             TodoList(
@@ -335,10 +386,9 @@ private fun HomeList(
                     .padding(bottom = 32.dp),
                 todos = todoData.todos,
                 submittedSize = todoData.submitted.size,
-                aiSummaryStates = aiSummaryStates,
                 emptyStateMinHeight = emptyStateMinHeight,
                 onClickSubmitted = onSubmittedClick,
-                onExpandTodo = onExpandTodo,
+                onTodoClick = onTodoClick,
             )
         }
     }
@@ -346,13 +396,12 @@ private fun HomeList(
 
 @Composable
 private fun TodoList(
-    modifier: Modifier = Modifier,
     todos: List<AppTodo>,
     submittedSize: Int,
-    aiSummaryStates: Map<String, DesktopAiSummaryUiState>,
     emptyStateMinHeight: Dp,
     onClickSubmitted: () -> Unit,
-    onExpandTodo: (AppTodo) -> Unit,
+    onTodoClick: (AppTodo) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val sortedTodos = remember(todos) {
         todos.sortedWith(
@@ -382,16 +431,15 @@ private fun TodoList(
         immediate.forEach { todo ->
             key(todo.aiSummaryKey()) {
                 Spacer(Modifier.height(8.dp))
-                TodoItem(
+                TodoItemRow(
                     todo = todo,
-                    aiSummaryState = aiSummaryStates[todo.aiSummaryKey()],
-                    onExpand = onExpandTodo,
+                    onClick = { onTodoClick(todo) },
                 )
             }
         }
 
         if (immediate.isNotEmpty() && relaxed.isNotEmpty()) {
-            Spacer(Modifier.height(28.dp))
+            Spacer(Modifier.height(24.dp))
             Text(
                 text = stringResource(Res.string.main_relaxed_tasks_title),
                 style = SSUType.H5SemiBold,
@@ -401,10 +449,9 @@ private fun TodoList(
         relaxed.forEach { todo ->
             key(todo.aiSummaryKey()) {
                 Spacer(Modifier.height(8.dp))
-                TodoItem(
+                TodoItemRow(
                     todo = todo,
-                    aiSummaryState = aiSummaryStates[todo.aiSummaryKey()],
-                    onExpand = onExpandTodo,
+                    onClick = { onTodoClick(todo) },
                 )
             }
         }
@@ -460,12 +507,10 @@ private fun TodoListHeader(
 }
 
 @Composable
-private fun TodoItem(
+private fun TodoItemRow(
     todo: AppTodo,
-    aiSummaryState: DesktopAiSummaryUiState?,
-    onExpand: (AppTodo) -> Unit,
+    onClick: () -> Unit,
 ) {
-    var expanded by remember(todo.aiSummaryKey()) { mutableStateOf(false) }
     val now by produceState(initialValue = currentEpochMilliseconds()) {
         while (true) {
             value = currentEpochMilliseconds()
@@ -491,112 +536,71 @@ private fun TodoItem(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
-            .background(N100),
+            .background(N100)
+            .clickable(onClick = onClick),
     ) {
-        Column(Modifier.padding(horizontal = 12.dp, vertical = 18.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    modifier = Modifier
-                        .size(50.dp)
-                        .clip(RoundedCornerShape(14.dp))
-                        .background(WHITE),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    deadlineBackground?.let { background ->
-                        Image(
-                            painter = painterResource(background),
-                            contentDescription = null,
-                        )
-                    }
-                    if (!isLate) {
-                        Text(
-                            text = if (days > 0L) {
-                                "D-$days"
-                            } else {
-                                remainingTimeText(todo.dueDate, now)
-                            },
-                            style = if (days > 1L) {
-                                SSUType.H4ExtraBold
-                            } else {
-                                SSUType.H4ExtraBold.copy(color = WHITE)
-                            },
-                        )
-                    }
-                }
-                Spacer(Modifier.width(12.dp))
-                Column(Modifier.weight(1f)) {
-                    if (!isLate) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            TodoTypeBadge(todo.type)
-                            Spacer(Modifier.width(6.dp))
-                            Text(
-                                text = todo.subject?.name
-                                    ?: stringResource(Res.string.common_unknown_subject),
-                                style = SSUType.H5SemiBold,
-                                color = N500,
-                                maxLines = 1,
-                            )
-                        }
-                    } else {
-                        Text(
-                            text = stringResource(Res.string.main_late_submission_available),
-                            style = SSUType.H5SemiBold.copy(color = R500),
-                        )
-                    }
-                    Spacer(Modifier.height(4.dp))
-                    Text(
-                        text = todo.title,
-                        style = SSUType.H4SemiBold,
-                        maxLines = 1,
+        Row(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(WHITE),
+                contentAlignment = Alignment.Center,
+            ) {
+                deadlineBackground?.let { background ->
+                    Image(
+                        painter = painterResource(background),
+                        contentDescription = null,
                     )
                 }
-                Spacer(Modifier.width(8.dp))
-                Box(
-                    modifier = Modifier
-                        .size(24.dp)
-                        .clickable {
-                            expanded = !expanded
-                            if (expanded) onExpand(todo)
+                if (!isLate) {
+                    Text(
+                        text = if (days > 0L) {
+                            "D-$days"
+                        } else {
+                            remainingTimeText(todo.dueDate, now)
                         },
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Image(
-                        painter = painterResource(
-                            if (expanded) {
-                                Res.drawable.icon_expand
-                            } else {
-                                Res.drawable.icon_collapsed
-                            },
-                        ),
-                        contentDescription = stringResource(
-                            Res.string.main_expand_task_content_description,
-                        ),
+                        style = if (days > 1L) {
+                            SSUType.H4ExtraBold
+                        } else {
+                            SSUType.H4ExtraBold.copy(color = WHITE)
+                        },
                     )
                 }
             }
 
-            AnimatedVisibility(expanded) {
-                Column {
-                    Row(Modifier.padding(top = 12.dp)) {
+            Spacer(Modifier.width(12.dp))
+
+            Column(Modifier.weight(1f)) {
+                if (!isLate) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        TodoTypeBadge(todo.type)
+                        Spacer(Modifier.width(6.dp))
                         Text(
-                            text = stringResource(Res.string.main_deadline_label),
+                            text = todo.subject?.name
+                                ?: stringResource(Res.string.common_unknown_subject),
                             style = SSUType.H5SemiBold,
-                        )
-                        Spacer(Modifier.weight(1f))
-                        Text(
-                            text = stringResource(
-                                Res.string.main_due_until,
-                                runCatching {
-                                    formatMonthDayWithTime(todo.dueDate)
-                                }.getOrDefault(todo.dueDate),
-                            ),
-                            style = SSUType.H5SemiBold,
+                            color = N500,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
                         )
                     }
-                    if (todo.canRequestAiSummary) {
-                        AiSummaryBlock(aiSummaryState)
-                    }
+                } else {
+                    Text(
+                        text = stringResource(Res.string.main_late_submission_available),
+                        style = SSUType.H5SemiBold.copy(color = R500),
+                    )
                 }
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = todo.title,
+                    style = SSUType.H4SemiBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
             }
         }
     }
@@ -604,25 +608,13 @@ private fun TodoItem(
 
 @Composable
 private fun TodoTypeBadge(type: AppTodoType) {
-    val background = when (type) {
-        AppTodoType.COMMONS -> Color(0xFFF7DBF7)
-        AppTodoType.QUIZ -> Color(0xFFFFD7C2)
-        AppTodoType.ASSIGNMENT -> Color(0xFFD8E5F7)
-        else -> Color(0xFFF7DBF7)
-    }
-    val foreground = when (type) {
-        AppTodoType.COMMONS -> Color(0xFFFF39D0)
-        AppTodoType.QUIZ -> Color(0xFFFF5F0B)
-        AppTodoType.ASSIGNMENT -> Color(0xFF007BFF)
-        else -> Color(0xFFFF39D0)
-    }
     Text(
         text = type.localizedLabel(),
         style = SSUType.Caption1SemiBold,
-        color = foreground,
+        color = type.badgeTextColor(),
         modifier = Modifier
             .clip(RoundedCornerShape(6.dp))
-            .background(background)
+            .background(type.badgeBackgroundColor())
             .padding(horizontal = 6.dp, vertical = 3.dp),
     )
 }
@@ -637,58 +629,6 @@ private fun AppTodoType.localizedLabel(): String = stringResource(
         AppTodoType.SUBMITTED_LATE -> Res.string.todo_type_submitted_late
     },
 )
-
-@Composable
-private fun AiSummaryBlock(state: DesktopAiSummaryUiState?) {
-    val estimatedDuration = (state as? DesktopAiSummaryUiState.Success)
-        ?.estimatedDurationMinutes
-        ?.takeIf { it > 0 }
-        ?.let { stringResource(Res.string.ai_estimated_duration, it) }
-        ?: stringResource(Res.string.ai_estimated_duration_unknown)
-
-    Column(
-        modifier = Modifier
-            .padding(top = 14.dp)
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(14.dp))
-            .background(WHITE)
-            .padding(14.dp),
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(
-                painter = painterResource(Res.drawable.ai),
-                contentDescription = null,
-                tint = Color.Black,
-            )
-            Spacer(Modifier.width(8.dp))
-            Text(
-                text = stringResource(Res.string.ai_summary_title),
-                style = SSUType.H5SemiBold,
-            )
-            Spacer(Modifier.weight(1f))
-            Text(
-                text = estimatedDuration,
-                style = SSUType.Caption1SemiBold,
-                color = N500,
-            )
-        }
-        Spacer(Modifier.height(12.dp))
-        Crossfade(targetState = state) { current ->
-            Text(
-                text = when (current) {
-                    is DesktopAiSummaryUiState.Success -> current.summary
-                    DesktopAiSummaryUiState.Loading -> stringResource(Res.string.ai_summary_loading)
-                    DesktopAiSummaryUiState.Analyzing -> stringResource(Res.string.ai_summary_analyzing)
-                    DesktopAiSummaryUiState.Empty -> stringResource(Res.string.ai_summary_empty)
-                    DesktopAiSummaryUiState.Error -> stringResource(Res.string.ai_summary_error)
-                    null -> stringResource(Res.string.ai_summary_loading)
-                },
-                style = SSUType.Body1Medium,
-                color = N500,
-            )
-        }
-    }
-}
 
 @Composable
 private fun SubmittedSheet(
@@ -802,31 +742,34 @@ private fun SubmittedItem(todo: AppTodo) {
 }
 
 @Composable
-private fun SsuTimeTopBar(onProfileClick: () -> Unit) {
+private fun SsuTimeTopBar(
+    onProfileClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     Row(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
-            .padding(16.dp),
+            .padding(horizontal = 20.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Image(
             painter = painterResource(Res.drawable.logo_red),
-            contentDescription = stringResource(Res.string.app_name),
-            modifier = Modifier.height(18.dp),
+            contentDescription = "SSUTime",
+            modifier = Modifier.height(28.dp),
         )
         Spacer(Modifier.weight(1f))
         Box(
             modifier = Modifier
-                .size(24.dp)
+                .size(32.dp)
+                .clip(CircleShape)
                 .clickable(onClick = onProfileClick),
             contentAlignment = Alignment.Center,
         ) {
-            Image(
+            Icon(
                 painter = painterResource(Res.drawable.ic_user),
-                contentDescription = stringResource(
-                    Res.string.my_avatar_content_description,
-                ),
-                modifier = Modifier.size(20.dp),
+                contentDescription = stringResource(Res.string.my_avatar_content_description),
+                tint = Color.Unspecified,
+                modifier = Modifier.size(24.dp),
             )
         }
     }
@@ -839,37 +782,37 @@ private fun NetworkErrorContent(
     modifier: Modifier = Modifier,
 ) {
     Column(
-        modifier = modifier.fillMaxSize(),
+        modifier = modifier
+            .fillMaxSize()
+            .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
         Text(
             text = stringResource(Res.string.network_error_title),
             style = SSUType.H3Medium,
+            textAlign = TextAlign.Center,
         )
+        Spacer(Modifier.height(8.dp))
         Text(
             text = stringResource(Res.string.network_error_description),
             style = SSUType.Body2Regular,
             textAlign = TextAlign.Center,
+            color = N500,
         )
-        Spacer(Modifier.height(10.dp))
-        Text(
-            text = stringResource(Res.string.network_error_cause, errorCause),
-            style = SSUType.Body1Medium,
-            color = R400,
-        )
-        Spacer(Modifier.height(20.dp))
-        Box(
-            modifier = Modifier
-                .clip(RoundedCornerShape(8.dp))
-                .clickable(onClick = onRetry)
-                .background(N200)
-                .padding(horizontal = 24.dp, vertical = 8.dp),
-        ) {
+        if (errorCause.isNotBlank()) {
+            Spacer(Modifier.height(10.dp))
             Text(
-                text = stringResource(Res.string.common_retry),
-                style = SSUType.Label2Medium,
+                text = stringResource(Res.string.network_error_cause, errorCause),
+                style = SSUType.Body1Medium,
+                color = R400,
+                textAlign = TextAlign.Center,
             )
         }
+        Spacer(Modifier.height(20.dp))
+        SButton(
+            labelText = stringResource(Res.string.common_retry),
+            onClick = onRetry,
+        )
     }
 }

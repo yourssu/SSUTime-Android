@@ -1,3 +1,5 @@
+@file:OptIn(kotlin.time.ExperimentalTime::class)
+
 package com.yourssu.ssutime.desktop
 
 import androidx.compose.foundation.layout.Box
@@ -20,6 +22,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
+import com.yourssu.data.DiscussionInfo
+import com.yourssu.data.todoUniqueKey
 import com.yourssu.ssutime.desktop.core.lms.LmsAppService
 import com.yourssu.ssutime.desktop.core.login.LmsApiAuthenticator
 import com.yourssu.ssutime.desktop.core.login.LoginService
@@ -29,6 +33,7 @@ import com.yourssu.ssutime.desktop.core.model.AppTodo
 import com.yourssu.ssutime.desktop.core.model.AppTodoData
 import com.yourssu.ssutime.desktop.core.model.aiSummaries
 import com.yourssu.ssutime.desktop.core.model.aiSummaryKey
+import com.yourssu.ssutime.desktop.core.model.dueDate
 import com.yourssu.ssutime.desktop.core.network.SsuTimeApi
 import com.yourssu.ssutime.desktop.core.network.SsuTimeAuthApi
 import com.yourssu.ssutime.desktop.core.network.createSsuTimeHttpClient
@@ -36,6 +41,7 @@ import com.yourssu.ssutime.desktop.lms.isLmsLoggedIn
 import com.yourssu.ssutime.desktop.screen.login.DesktopLoginScreen
 import com.yourssu.ssutime.desktop.screen.main.DesktopAiSummaryUiState
 import com.yourssu.ssutime.desktop.screen.main.DesktopMainScreen
+import com.yourssu.ssutime.desktop.screen.my.DesktopHiddenTodosScreen
 import com.yourssu.ssutime.desktop.screen.my.DesktopMyPageScreen
 import com.yourssu.ssutime.desktop.screen.onboarding.DesktopOnBoardingScreen
 import com.yourssu.ssutime.desktop.screen.splash.DesktopSplashScreen
@@ -45,6 +51,7 @@ import com.yourssu.ssutime.desktop.ui.resources.desktop_open_link_error
 import com.yourssu.ssutime.desktop.ui.resources.login_unknown_error
 import com.yourssu.ssutime.desktop.ui.theme.R500
 import com.yourssu.ssutime.desktop.ui.theme.ssuTypography
+import io.github.chlwhdtn03.data.Lms.Term
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -64,6 +71,7 @@ private enum class DesktopRoute {
     ONBOARDING,
     MAIN,
     MY,
+    HIDDEN_TODOS,
 }
 
 fun main() {
@@ -110,14 +118,14 @@ fun main() {
                 },
                 visible = isWindowVisible,
                 state = rememberWindowState(
-                    width = 480.dp,
+                    width = 960.dp,
                     height = 760.dp,
                 ),
                 title = "SSUTime",
                 icon = painterResource(Res.drawable.checkbox),
             ) {
                 LaunchedEffect(window, isWindowVisible, windowActivationRequest) {
-                    window.minimumSize = Dimension(360, 640)
+                    window.minimumSize = Dimension(720, 560)
                     if (isWindowVisible) {
                         window.extendedState = Frame.NORMAL
                         window.toFront()
@@ -161,6 +169,8 @@ private fun DesktopApp(
     var session by remember { mutableStateOf<LoginSession?>(null) }
     var todoData by remember { mutableStateOf(storedState.todoData) }
     var profile by remember { mutableStateOf<AppProfile?>(storedState.profile) }
+    var terms by remember { mutableStateOf<List<Term>>(emptyList()) }
+    var selectedTerm by remember { mutableStateOf<Term?>(null) }
     val aiSummaryStates = remember { mutableStateMapOf<String, DesktopAiSummaryUiState>() }
     var loginMessage by remember { mutableStateOf("") }
     var mainError by remember { mutableStateOf<String?>(null) }
@@ -196,9 +206,10 @@ private fun DesktopApp(
             mainError = null
             try {
                 ensureLmsSession()
-                val snapshot = lmsService.refreshTodos { progress ->
-                    loadingProgress = progress
-                }
+                val snapshot = lmsService.refreshTodos(
+                    loadingState = { progress -> loadingProgress = progress },
+                    previousData = todoData,
+                )
                 todoData = snapshot.todoData.copy(
                     aiSummaryCache = todoData.aiSummaries,
                     sentDeadlineReminderKeys = todoData.sentDeadlineReminderKeys,
@@ -229,6 +240,7 @@ private fun DesktopApp(
             try {
                 ensureLmsSession()
                 profile = lmsService.loadProfile()
+                terms = lmsService.loadTerms()
                 saveCache(nextProfile = profile)
             } catch (cancellation: CancellationException) {
                 throw cancellation
@@ -238,6 +250,84 @@ private fun DesktopApp(
                 isProfileLoading = false
             }
         }
+    }
+
+    fun selectTerm(term: Term) {
+        selectedTerm = term
+        scope.launch {
+            isRefreshing = true
+            loadingProgress = 0f
+            mainError = null
+            try {
+                ensureLmsSession()
+                val nextData = lmsService.loadTodosForTerm(
+                    term = term,
+                    loadingState = { progress -> loadingProgress = progress },
+                    previousData = todoData,
+                )
+                todoData = nextData.copy(
+                    aiSummaryCache = todoData.aiSummaries,
+                    sentDeadlineReminderKeys = todoData.sentDeadlineReminderKeys,
+                )
+                loadingProgress = 1f
+                saveCache(nextTodoData = todoData)
+            } catch (cancellation: CancellationException) {
+                throw cancellation
+            } catch (exception: Exception) {
+                mainError = exception.displayMessage()
+            } finally {
+                isRefreshing = false
+            }
+        }
+    }
+
+    fun hideTodo(todo: AppTodo) {
+        val targetKey = todo.todoUniqueKey()
+        val nextHiddenKeys = (todoData.hiddenTodoKeys + targetKey).distinct()
+        val nextTodos = todoData.todos.filterNot { it.todoUniqueKey() == targetKey }
+        val nextHiddenTodos = (todoData.hiddenTodos + todo).distinctBy { it.todoUniqueKey() }
+
+        todoData = todoData.copy(
+            todos = nextTodos,
+            hiddenTodos = nextHiddenTodos,
+            hiddenTodoKeys = nextHiddenKeys,
+        )
+        saveCache(nextTodoData = todoData)
+    }
+
+    fun restoreTodo(todo: AppTodo) {
+        val targetKey = todo.todoUniqueKey()
+        val nextHiddenKeys = todoData.hiddenTodoKeys.filterNot { it == targetKey }
+        val nextHiddenTodos = todoData.hiddenTodos.filterNot { it.todoUniqueKey() == targetKey }
+        val nextTodos = (todoData.todos + todo)
+            .distinctBy { it.todoUniqueKey() }
+            .sortedWith(
+                compareBy<AppTodo> { it.dueDate }
+                    .thenBy { it.subject?.name.orEmpty() }
+                    .thenBy(AppTodo::title),
+            )
+
+        todoData = todoData.copy(
+            todos = nextTodos,
+            hiddenTodos = nextHiddenTodos,
+            hiddenTodoKeys = nextHiddenKeys,
+        )
+        saveCache(nextTodoData = todoData)
+    }
+
+    fun markDiscussionAsRead(discussion: DiscussionInfo) {
+        val updatedSubjects = todoData.subjects.map { subject ->
+            val updatedDiscussions = subject.discussions.map { item ->
+                if (item.id == discussion.id) {
+                    item.copy(readState = "read")
+                } else {
+                    item
+                }
+            }
+            subject.copy(discussions = updatedDiscussions)
+        }
+        todoData = todoData.copy(subjects = updatedSubjects)
+        saveCache(nextTodoData = todoData)
     }
 
     fun finishLogin(
@@ -349,6 +439,8 @@ private fun DesktopApp(
             session = null
             todoData = AppTodoData()
             profile = null
+            terms = emptyList()
+            selectedTerm = null
             aiSummaryStates.clear()
             idState.edit { replace(0, length, "") }
             passwordState.edit { replace(0, length, "") }
@@ -411,41 +503,61 @@ private fun DesktopApp(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.TopCenter,
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .widthIn(max = 480.dp),
-        ) {
-            when (route) {
-                DesktopRoute.SPLASH -> DesktopSplashScreen()
+        when (route) {
+            DesktopRoute.SPLASH -> {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .widthIn(max = 480.dp),
+                ) {
+                    DesktopSplashScreen()
+                }
+            }
 
-                DesktopRoute.LOGIN -> DesktopLoginScreen(
-                    idState = idState,
-                    passwordState = passwordState,
-                    autoLoginState = autoLoginState,
-                    message = loginMessage,
-                    messageColor = R500,
-                    isLoading = isLoggingIn,
-                    loginEnabled = !isLoggingIn,
-                    onLoginClick = {
-                        login(
-                            id = idState.text.toString(),
-                            password = passwordState.text.toString(),
-                            autoLogin = autoLoginState.value,
-                        )
-                    },
-                )
+            DesktopRoute.LOGIN -> {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .widthIn(max = 480.dp),
+                ) {
+                    DesktopLoginScreen(
+                        idState = idState,
+                        passwordState = passwordState,
+                        autoLoginState = autoLoginState,
+                        message = loginMessage,
+                        messageColor = R500,
+                        isLoading = isLoggingIn,
+                        loginEnabled = !isLoggingIn,
+                        onLoginClick = {
+                            login(
+                                id = idState.text.toString(),
+                                password = passwordState.text.toString(),
+                                autoLogin = autoLoginState.value,
+                            )
+                        },
+                    )
+                }
+            }
 
-                DesktopRoute.ONBOARDING -> DesktopOnBoardingScreen(
-                    onConfirmClick = {
-                        storedState = store.update(
-                            storedState.copy(onboardingCompleted = true),
-                        )
-                        route = DesktopRoute.MAIN
-                    },
-                )
+            DesktopRoute.ONBOARDING -> {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .widthIn(max = 480.dp),
+                ) {
+                    DesktopOnBoardingScreen(
+                        onConfirmClick = {
+                            storedState = store.update(
+                                storedState.copy(onboardingCompleted = true),
+                            )
+                            route = DesktopRoute.MAIN
+                        },
+                    )
+                }
+            }
 
-                DesktopRoute.MAIN -> DesktopMainScreen(
+            DesktopRoute.MAIN -> {
+                DesktopMainScreen(
                     todoData = todoData,
                     aiSummaryStates = aiSummaryStates,
                     isLoading = isRefreshing,
@@ -458,26 +570,58 @@ private fun DesktopApp(
                         loadProfile()
                     },
                     onExpandTodo = ::loadAiSummary,
-                )
-
-                DesktopRoute.MY -> DesktopMyPageScreen(
-                    profile = profile,
-                    isLoading = isProfileLoading,
-                    errorMessage = profileError,
-                    onBack = { route = DesktopRoute.MAIN },
+                    onHideTodo = ::hideTodo,
+                    onDiscussionExpanded = ::markDiscussionAsRead,
                     onOpenUrl = { url ->
                         runCatching { openDesktopUrl(url) }
-                            .onFailure { profileError = openLinkError }
-                    },
-                    onLogout = ::logout,
-                    showSystemNotificationSetting = DesktopDeadlineNotifier.isSupported(),
-                    systemNotificationsEnabled = storedState.systemNotificationsEnabled,
-                    onSystemNotificationsChanged = { enabled ->
-                        storedState = store.update(
-                            storedState.copy(systemNotificationsEnabled = enabled),
-                        )
+                            .onFailure { mainError = openLinkError }
                     },
                 )
+            }
+
+            DesktopRoute.MY -> {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .widthIn(max = 560.dp),
+                ) {
+                    DesktopMyPageScreen(
+                        profile = profile,
+                        isLoading = isProfileLoading,
+                        errorMessage = profileError,
+                        terms = terms,
+                        selectedTerm = selectedTerm,
+                        onTermSelected = ::selectTerm,
+                        onNavigateToHiddenTodos = { route = DesktopRoute.HIDDEN_TODOS },
+                        onBack = { route = DesktopRoute.MAIN },
+                        onOpenUrl = { url ->
+                            runCatching { openDesktopUrl(url) }
+                                .onFailure { profileError = openLinkError }
+                        },
+                        onLogout = ::logout,
+                        showSystemNotificationSetting = DesktopDeadlineNotifier.isSupported(),
+                        systemNotificationsEnabled = storedState.systemNotificationsEnabled,
+                        onSystemNotificationsChanged = { enabled ->
+                            storedState = store.update(
+                                storedState.copy(systemNotificationsEnabled = enabled),
+                            )
+                        },
+                    )
+                }
+            }
+
+            DesktopRoute.HIDDEN_TODOS -> {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .widthIn(max = 560.dp),
+                ) {
+                    DesktopHiddenTodosScreen(
+                        hiddenTodos = todoData.hiddenTodos,
+                        onBack = { route = DesktopRoute.MY },
+                        onRestoreClick = ::restoreTodo,
+                    )
+                }
             }
         }
     }

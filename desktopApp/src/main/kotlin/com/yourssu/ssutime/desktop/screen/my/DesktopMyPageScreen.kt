@@ -1,9 +1,13 @@
+@file:OptIn(kotlin.time.ExperimentalTime::class)
+
 package com.yourssu.ssutime.desktop.screen.my
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -19,6 +23,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -50,9 +56,12 @@ import com.yourssu.ssutime.desktop.ui.resources.common_confirm
 import com.yourssu.ssutime.desktop.ui.resources.common_loading
 import com.yourssu.ssutime.desktop.ui.resources.ic_alret
 import com.yourssu.ssutime.desktop.ui.resources.ic_arrow_back
+import com.yourssu.ssutime.desktop.ui.resources.icon_collapsed
+import com.yourssu.ssutime.desktop.ui.resources.icon_expand
 import com.yourssu.ssutime.desktop.ui.resources.my_avatar_content_description
 import com.yourssu.ssutime.desktop.ui.resources.my_back_content_description
 import com.yourssu.ssutime.desktop.ui.resources.my_contact
+import com.yourssu.ssutime.desktop.ui.resources.my_hidden_todos
 import com.yourssu.ssutime.desktop.ui.resources.my_logout
 import com.yourssu.ssutime.desktop.ui.resources.my_logout_message
 import com.yourssu.ssutime.desktop.ui.resources.my_no_term_info
@@ -63,13 +72,16 @@ import com.yourssu.ssutime.desktop.ui.resources.my_notification_tooltip_system_t
 import com.yourssu.ssutime.desktop.ui.resources.my_privacy_policy
 import com.yourssu.ssutime.desktop.ui.resources.my_system_alert
 import com.yourssu.ssutime.desktop.ui.resources.my_terms
+import com.yourssu.ssutime.desktop.ui.theme.BLACK
 import com.yourssu.ssutime.desktop.ui.theme.N100
 import com.yourssu.ssutime.desktop.ui.theme.N200
+import com.yourssu.ssutime.desktop.ui.theme.N300
 import com.yourssu.ssutime.desktop.ui.theme.N400
 import com.yourssu.ssutime.desktop.ui.theme.N500
 import com.yourssu.ssutime.desktop.ui.theme.R400
 import com.yourssu.ssutime.desktop.ui.theme.SSUType
 import com.yourssu.ssutime.desktop.ui.theme.WHITE
+import io.github.chlwhdtn03.data.Lms.Term
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
@@ -84,6 +96,10 @@ fun DesktopMyPageScreen(
     profile: AppProfile?,
     isLoading: Boolean,
     errorMessage: String?,
+    terms: List<Term> = emptyList(),
+    selectedTerm: Term? = null,
+    onTermSelected: (Term) -> Unit = {},
+    onNavigateToHiddenTodos: () -> Unit = {},
     onBack: () -> Unit,
     onOpenUrl: (String) -> Unit,
     onLogout: () -> Unit,
@@ -112,11 +128,11 @@ fun DesktopMyPageScreen(
         modifier = modifier
             .fillMaxSize()
             .background(WHITE)
-            .padding(horizontal = 16.dp)
+            .padding(horizontal = 24.dp)
             .safeDrawingPadding()
             .verticalScroll(rememberScrollState()),
     ) {
-        Row {
+        Row(modifier = Modifier.padding(top = 8.dp)) {
             IconButton(onClick = onBack) {
                 Icon(
                     painter = painterResource(Res.drawable.ic_arrow_back),
@@ -130,7 +146,7 @@ fun DesktopMyPageScreen(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 28.dp),
+                .padding(vertical = 24.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
@@ -157,19 +173,29 @@ fun DesktopMyPageScreen(
                 text = profile?.department.orEmpty(),
                 style = SSUType.H4SemiBold,
             )
-            Text(
-                text = profile?.termName
-                    ?.takeIf(String::isNotBlank)
-                    ?: if (isLoading) {
-                        ""
-                    } else {
-                        stringResource(Res.string.my_no_term_info)
-                    },
-                style = SSUType.Caption1SemiBold,
-            )
+
+            if (terms.isNotEmpty()) {
+                TermDropdown(
+                    terms = terms,
+                    selectedTerm = selectedTerm,
+                    fallbackTermName = profile?.termName.orEmpty(),
+                    onTermSelected = onTermSelected,
+                )
+            } else {
+                Text(
+                    text = profile?.termName
+                        ?.takeIf(String::isNotBlank)
+                        ?: if (isLoading) {
+                            ""
+                        } else {
+                            stringResource(Res.string.my_no_term_info)
+                        },
+                    style = SSUType.Caption1SemiBold,
+                )
+            }
         }
 
-        Spacer(Modifier.height(28.dp))
+        Spacer(Modifier.height(20.dp))
 
         Column(
             modifier = Modifier.fillMaxWidth(),
@@ -221,6 +247,10 @@ fun DesktopMyPageScreen(
             }
 
             OptionButton(
+                text = stringResource(Res.string.my_hidden_todos),
+                onClick = onNavigateToHiddenTodos,
+            )
+            OptionButton(
                 text = stringResource(Res.string.my_contact),
                 onClick = { onOpenUrl(CONTACT_URL) },
             )
@@ -234,12 +264,70 @@ fun DesktopMyPageScreen(
             )
         }
 
-        Spacer(Modifier.height(28.dp))
+        Spacer(Modifier.height(24.dp))
         OptionButton(
             text = stringResource(Res.string.my_logout),
             onClick = { showLogoutDialog = true },
         )
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(16.dp))
+    }
+}
+
+@Composable
+private fun TermDropdown(
+    terms: List<Term>,
+    selectedTerm: Term?,
+    fallbackTermName: String,
+    onTermSelected: (Term) -> Unit,
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    Box {
+        Row(
+            modifier = Modifier
+                .clip(RoundedCornerShape(8.dp))
+                .border(width = 0.5.dp, shape = RoundedCornerShape(8.dp), color = N300)
+                .background(WHITE)
+                .clickable(enabled = terms.isNotEmpty()) { expanded = true }
+                .padding(start = 12.dp, top = 6.dp, bottom = 6.dp, end = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = selectedTerm?.name?.takeIf(String::isNotBlank)
+                    ?: fallbackTermName.takeIf(String::isNotBlank)
+                    ?: stringResource(Res.string.my_no_term_info),
+                style = SSUType.Caption1SemiBold,
+            )
+            Spacer(Modifier.width(4.dp))
+            Icon(
+                painter = painterResource(if (expanded) Res.drawable.icon_expand else Res.drawable.icon_collapsed),
+                contentDescription = null,
+                tint = N400,
+                modifier = Modifier.size(16.dp),
+            )
+        }
+
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+            modifier = Modifier.background(WHITE),
+        ) {
+            terms.forEach { term ->
+                DropdownMenuItem(
+                    text = {
+                        Text(
+                            text = term.name.orEmpty(),
+                            style = SSUType.Label3Medium,
+                            color = BLACK,
+                        )
+                    },
+                    onClick = {
+                        onTermSelected(term)
+                        expanded = false
+                    },
+                )
+            }
+        }
     }
 }
 
