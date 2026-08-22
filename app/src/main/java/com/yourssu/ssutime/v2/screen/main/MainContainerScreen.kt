@@ -1,5 +1,6 @@
 package com.yourssu.ssutime.v2.screen.main
 
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
@@ -36,6 +37,7 @@ fun MainContainerScreen(
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         containerColor = WHITE,
         bottomBar = {
             SSUTimeBottomBar(
