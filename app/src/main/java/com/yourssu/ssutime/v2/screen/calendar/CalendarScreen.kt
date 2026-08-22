@@ -25,6 +25,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.SheetState
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -241,6 +242,7 @@ fun CalendarScreenContent(
             date = date,
             today = today,
             todos = selectedDayTodos,
+            sheetState = sheetState,
             onDismissRequest = { selectedDate = null }
         )
     }
@@ -570,6 +572,7 @@ fun CalendarDateDetailBottomSheet(
     todos: List<TodoInfo>,
     onDismissRequest: () -> Unit,
     modifier: Modifier = Modifier,
+    sheetState: SheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
 ) {
     val dDayDays = ChronoUnit.DAYS.between(today, date)
     val dDayText = when {
@@ -579,6 +582,7 @@ fun CalendarDateDetailBottomSheet(
     }
 
     ModalBottomSheet(
+        sheetState = sheetState,
         onDismissRequest = onDismissRequest,
         containerColor = WHITE,
         modifier = modifier
