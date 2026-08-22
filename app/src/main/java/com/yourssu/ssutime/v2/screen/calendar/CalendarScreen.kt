@@ -22,8 +22,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -49,6 +53,7 @@ import com.yourssu.ssutime.v2.ui.theme.N100
 import com.yourssu.ssutime.v2.ui.theme.N200
 import com.yourssu.ssutime.v2.ui.theme.N400
 import com.yourssu.ssutime.v2.ui.theme.N500
+import com.yourssu.ssutime.v2.ui.theme.N600
 import com.yourssu.ssutime.v2.ui.theme.N700
 import com.yourssu.ssutime.v2.ui.theme.R400
 import com.yourssu.ssutime.v2.ui.theme.R500
@@ -57,6 +62,7 @@ import com.yourssu.ssutime.v2.ui.theme.WHITE
 import org.koin.compose.viewmodel.koinViewModel
 import java.time.LocalDate
 import java.time.YearMonth
+import java.time.temporal.ChronoUnit
 
 /**
  * TodoType별 뱃지 배경색 매핑 (MainScreen 기준)
@@ -86,6 +92,15 @@ fun TodoInfo.toLocalDate(): LocalDate? {
     return instant.atZone(TODO_DEADLINE_ZONE_ID).toLocalDate()
 }
 
+/**
+ * TodoInfo의 마감 시각 텍스트 포맷 (예: "23시 59분까지")
+ */
+fun TodoInfo.toDueTimeText(): String {
+    val instant = due_date.toTodoDeadlineInstantOrNull() ?: return ""
+    val zdt = instant.atZone(TODO_DEADLINE_ZONE_ID)
+    return "${zdt.hour}시 ${zdt.minute}분까지"
+}
+
 @Composable
 fun CalendarScreen(
     modifier: Modifier = Modifier,
@@ -104,6 +119,7 @@ fun CalendarScreen(
     )
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CalendarScreenContent(
     modifier: Modifier = Modifier,
@@ -113,6 +129,8 @@ fun CalendarScreenContent(
 ) {
     var currentYearMonth by remember { mutableStateOf(YearMonth.now(TODO_DEADLINE_ZONE_ID)) }
     val today = remember { LocalDate.now(TODO_DEADLINE_ZONE_ID) }
+    var selectedDate by remember { mutableStateOf<LocalDate?>(null) }
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     // 날짜별 할일 매핑 (todos 리스트가 변경될 때마다 재계산)
     val eventsByDate = remember(todos) {
@@ -178,10 +196,24 @@ fun CalendarScreenContent(
                 CalendarMonthGrid(
                     yearMonth = currentYearMonth,
                     today = today,
-                    eventsByDate = eventsByDate
+                    eventsByDate = eventsByDate,
+                    onDayClick = { date ->
+                        selectedDate = date
+                    }
                 )
             }
         }
+    }
+
+    // 날짜 클릭 시 바텀시트 표시
+    selectedDate?.let { date ->
+        val selectedDayTodos = eventsByDate[date] ?: emptyList()
+        CalendarDateDetailBottomSheet(
+            date = date,
+            today = today,
+            todos = selectedDayTodos,
+            onDismissRequest = { selectedDate = null }
+        )
     }
 }
 
@@ -353,6 +385,7 @@ fun CalendarMonthGrid(
     yearMonth: YearMonth,
     today: LocalDate?,
     eventsByDate: Map<LocalDate, List<TodoInfo>>,
+    onDayClick: (LocalDate) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val firstDayOfMonth = yearMonth.atDay(1)
@@ -386,6 +419,7 @@ fun CalendarMonthGrid(
                             day = dayNumber,
                             isToday = isToday,
                             events = events,
+                            onClick = { onDayClick(date) },
                             modifier = Modifier.weight(1f)
                         )
                     } else {
@@ -408,10 +442,13 @@ fun CalendarDayCell(
     day: Int,
     isToday: Boolean,
     events: List<TodoInfo>,
+    onClick: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     Column(
         modifier = modifier
+            .clip(RoundedCornerShape(6.dp))
+            .clickable(onClick = onClick)
             .padding(horizontal = 2.dp)
             .heightIn(min = 55.dp),
         horizontalAlignment = Alignment.CenterHorizontally
@@ -501,6 +538,146 @@ fun CalendarEventChip(
             overflow = TextOverflow.Ellipsis,
             textAlign = TextAlign.Left,
         )
+    }
+}
+
+/**
+ * 날짜 클릭 시 노출되는 마감일정 상세 바텀시트
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun CalendarDateDetailBottomSheet(
+    date: LocalDate,
+    today: LocalDate,
+    todos: List<TodoInfo>,
+    onDismissRequest: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val dDayDays = ChronoUnit.DAYS.between(today, date)
+    val dDayText = when {
+        dDayDays == 0L -> "D-Day"
+        dDayDays > 0L -> "D-$dDayDays"
+        else -> "D+${-dDayDays}"
+    }
+
+    ModalBottomSheet(
+        onDismissRequest = onDismissRequest,
+        containerColor = WHITE,
+        modifier = modifier
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp)
+                .padding(bottom = 36.dp)
+        ) {
+            // 헤더: 날짜 (D-Day)
+            Text(
+                text = "${date.monthValue}월 ${date.dayOfMonth}일 ($dDayText)",
+                style = SSUType.H2SemiBold,
+                color = N700
+            )
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            if (todos.isEmpty()) {
+                Text(
+                    text = "마감 일정이 없습니다.",
+                    style = SSUType.Body1Medium,
+                    color = N400,
+                    modifier = Modifier.padding(vertical = 24.dp)
+                )
+            } else {
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    todos.forEachIndexed { index, todo ->
+                        CalendarTodoDetailItem(todo = todo)
+
+                        if (index < todos.lastIndex) {
+                            HorizontalDivider(
+                                color = N200,
+                                thickness = 0.5.dp,
+                                modifier = Modifier.padding(vertical = 4.dp)
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * 바텀시트 내 개별 할일 아이템
+ */
+@Composable
+fun CalendarTodoDetailItem(
+    todo: TodoInfo,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier.fillMaxWidth()
+    ) {
+        // 상단: 타입 뱃지 + 과목명
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(4.dp))
+                    .background(todo.type.badgeBackgroundColor())
+                    .padding(horizontal = 6.dp, vertical = 2.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = todo.type.kor,
+                    style = SSUType.Caption1SemiBold,
+                    color = todo.type.badgeTextColor()
+                )
+            }
+
+            Text(
+                text = todo.subject?.name ?: "",
+                style = SSUType.Caption1Medium,
+                color = N500
+            )
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // 중간: 할일 제목
+        Text(
+            text = todo.title,
+            style = SSUType.H4Medium,
+            color = N600
+        )
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // 하단: 마감 기한 박스
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(6.dp))
+                .background(N100)
+                .padding(horizontal = 12.dp, vertical = 10.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "마감 기한",
+                style = SSUType.Label3Medium,
+                color = N500
+            )
+
+            Text(
+                text = todo.toDueTimeText(),
+                style = SSUType.Label3Medium,
+                color = N500
+            )
+        }
     }
 }
 
