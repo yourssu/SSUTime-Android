@@ -148,25 +148,23 @@ fun MainScreen(
         if (skipLoadFromMyPageBack) {
             return@LaunchedEffect
         }
-        if (!viewModel.shouldRunInitialLoad(homeEntryVersion)) {
-            return@LaunchedEffect
-        }
 
         if (context.isNetworkConnected()) {
-            val todoData = viewModel.loadTodos(
+            viewModel.startInitialLoad(
+                homeEntryVersion = homeEntryVersion,
                 forceRefresh = forceInitialLmsRefresh,
                 forceLogin = forceInitialLmsRefresh,
                 allowRefresh = !skipInitialLmsRefresh,
                 showBlockingLoading = !skipInitialLmsRefresh,
                 source = RefreshSource.APP_START,
+                onSuccess = { todoData ->
+                    Analytics.viewHome(
+                        taskCount = todoData.todos.size,
+                        urgentCount = todoData.todos.urgentTodoCount(),
+                        entrySource = homeEntrySource,
+                    )
+                }
             )
-            if (!viewModel.showNetworkError.value && todoData != null) {
-                Analytics.viewHome(
-                    taskCount = todoData.todos.size,
-                    urgentCount = todoData.todos.urgentTodoCount(),
-                    entrySource = homeEntrySource,
-                )
-            }
         } else {
             viewModel.showNetworkErrorScreen()
         }

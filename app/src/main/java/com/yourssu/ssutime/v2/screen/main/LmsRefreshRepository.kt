@@ -259,11 +259,36 @@ class LmsRefreshRepository(
         loginIfNeeded(source, loginData, forceLogin)
 
         onRefreshStage(LmsRefreshStage.LoadingTerms)
-        val terms = getLmsTerms()
-        val currentTerm = terms.currentTermAt(Clock.System.now())
-            ?: throw IllegalStateException("현재 진행 중인 학기 정보를 찾지 못했어요.")
+        var terms: List<Term>
+        var currentTerm: Term?
+        try {
+            terms = getLmsTerms()
+            currentTerm = terms.currentTermAt(Clock.System.now())
+        } catch (e: Exception) {
+            if (loginData.hasAutoLoginCredentials) {
+                Log.i(TAG, "LMS 세션 만료 의심으로 재로그인 후 재시도합니다.")
+                loginIfNeeded(source, loginData, forceLogin = true)
+                terms = getLmsTerms()
+                currentTerm = terms.currentTermAt(Clock.System.now())
+            } else {
+                throw e
+            }
+        }
+        if (currentTerm == null) {
+            throw IllegalStateException("현재 진행 중인 학기 정보를 찾지 못했어요.")
+        }
         onRefreshStage(LmsRefreshStage.LoadingSubjects(currentTerm.name.orEmpty()))
-        val subjects = fetchSubjects(currentTerm, loginData, loadingState)
+        val subjects = try {
+            fetchSubjects(currentTerm, loginData, loadingState)
+        } catch (e: Exception) {
+            if (loginData.hasAutoLoginCredentials) {
+                Log.i(TAG, "과목 조회 실패로 재로그인 후 재시도합니다.")
+                loginIfNeeded(source, loginData, forceLogin = true)
+                fetchSubjects(currentTerm, loginData, loadingState)
+            } else {
+                throw e
+            }
+        }
         val subjectInfos = buildSubjectInfos(subjects)
         val completedAt = Instant.now()
         val summary = buildRefreshSummary(
@@ -658,9 +683,6 @@ sealed interface TodoRefreshResult {
         val reason: String,
     ) : TodoRefreshResult
 }
-
-private val LoginData.hasAutoLoginCredentials: Boolean
-    get() = isAutoLogin && id.isNotBlank() && pw.isNotBlank()
 
 private val TodoInfo.isReportableSubmission: Boolean
     get() = type == TodoType.SUBMITTED || type == TodoType.SUBMITTED_LATE
