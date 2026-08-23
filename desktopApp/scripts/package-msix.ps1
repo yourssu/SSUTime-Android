@@ -53,6 +53,27 @@ function Find-MakeAppx {
     return $candidates[0].FullName
 }
 
+function Find-MakePri {
+    $command = Get-Command "makepri.exe" -ErrorAction SilentlyContinue
+    if ($null -ne $command) {
+        return $command.Source
+    }
+
+    $windowsKitsRoot = Join-Path "${env:ProgramFiles(x86)}" "Windows Kits\10\bin"
+    $candidates = @(
+        Get-ChildItem `
+            -Path (Join-Path $windowsKitsRoot "*\x64\makepri.exe") `
+            -File `
+            -ErrorAction SilentlyContinue |
+            Sort-Object FullName -Descending
+    )
+    if ($candidates.Count -eq 0) {
+        throw "makepri.exe was not found. Install the Windows SDK before packaging."
+    }
+
+    return $candidates[0].FullName
+}
+
 function Write-SquarePng {
     param(
         [Parameter(Mandatory = $true)]
@@ -98,7 +119,7 @@ function Write-SquarePng {
     }
 }
 
-if (-not $IsWindows) {
+if ([System.Environment]::OSVersion.Platform -ne [System.PlatformID]::Win32NT) {
     throw "Store MSIX packaging must run on Windows."
 }
 
@@ -180,6 +201,18 @@ $manifest = $manifest.Replace("@PACKAGE_VERSION@", $storeVersion)
 $utf8WithoutBom = [System.Text.UTF8Encoding]::new($false)
 [System.IO.File]::WriteAllText($manifestOutputPath, $manifest, $utf8WithoutBom)
 
+$priConfigTemplatePath = Join-Path $desktopAppDirectory "src\main\msix\priconfig.xml"
+$priConfigOutputPath = Join-Path $stagingDirectory "priconfig.xml"
+Copy-Item -LiteralPath $priConfigTemplatePath -Destination $priConfigOutputPath
+
+$makePri = Find-MakePri
+$priOutputPath = Join-Path $stagingDirectory "resources.pri"
+& $makePri new /pr $stagingDirectory /cf $priConfigOutputPath /mn $manifestOutputPath /of $priOutputPath /o
+if ($LASTEXITCODE -ne 0) {
+    throw "MakePri failed to index package resources."
+}
+Remove-Item -LiteralPath $priConfigOutputPath -Force
+
 $makeAppx = Find-MakeAppx
 New-Item -ItemType Directory -Path $msixBuildDirectory -Force | Out-Null
 
@@ -191,6 +224,11 @@ if ($LASTEXITCODE -ne 0) {
 & $makeAppx unpack /o /p $outputPath /d $verificationDirectory
 if ($LASTEXITCODE -ne 0) {
     throw "MakeAppx failed to validate the generated MSIX package."
+}
+
+$verifiedPriPath = Join-Path $verificationDirectory "resources.pri"
+if (-not (Test-Path -LiteralPath $verifiedPriPath -PathType Leaf)) {
+    throw "The package resource index file (resources.pri) is missing from the MSIX package."
 }
 
 [xml]$packagedManifest = Get-Content `
