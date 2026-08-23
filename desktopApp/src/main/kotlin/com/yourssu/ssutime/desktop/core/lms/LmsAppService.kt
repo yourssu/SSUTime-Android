@@ -39,14 +39,36 @@ class LmsAppService(
     suspend fun refreshTodos(
         loadingState: (Float) -> Unit = {},
         previousData: AppTodoData = AppTodoData(),
+        onRequireReLogin: (suspend () -> Unit)? = null,
     ): LmsRefreshSnapshot {
-        val terms = getLmsTerms()
+        val terms = try {
+            getLmsTerms()
+        } catch (e: Exception) {
+            if (onRequireReLogin != null) {
+                onRequireReLogin()
+                getLmsTerms()
+            } else {
+                throw e
+            }
+        }
         val currentTerm = terms.currentTermAt(Clock.System.now())
             ?: throw IllegalStateException("현재 진행 중인 학기 정보를 찾지 못했어요.")
-        val subjects = getLmsTodoList(
-            term = currentTerm,
-            loadingState = loadingState,
-        )
+        val subjects = try {
+            getLmsTodoList(
+                term = currentTerm,
+                loadingState = loadingState,
+            )
+        } catch (e: Exception) {
+            if (onRequireReLogin != null) {
+                onRequireReLogin()
+                getLmsTodoList(
+                    term = currentTerm,
+                    loadingState = loadingState,
+                )
+            } else {
+                throw e
+            }
+        }
 
         val todoData = toAppTodoData(
             subjects = subjects,
@@ -66,11 +88,24 @@ class LmsAppService(
         term: Term,
         loadingState: (Float) -> Unit = {},
         previousData: AppTodoData = AppTodoData(),
+        onRequireReLogin: (suspend () -> Unit)? = null,
     ): AppTodoData {
-        val subjects = getLmsTodoList(
-            term = term,
-            loadingState = loadingState,
-        )
+        val subjects = try {
+            getLmsTodoList(
+                term = term,
+                loadingState = loadingState,
+            )
+        } catch (e: Exception) {
+            if (onRequireReLogin != null) {
+                onRequireReLogin()
+                getLmsTodoList(
+                    term = term,
+                    loadingState = loadingState,
+                )
+            } else {
+                throw e
+            }
+        }
         return toAppTodoData(
             subjects = subjects,
             loadedAt = Clock.System.now().toString(),
@@ -79,38 +114,95 @@ class LmsAppService(
     }
 
     @OptIn(ExperimentalTime::class)
-    suspend fun loadTerms(): List<Term> =
-        getLmsTerms().sortedWith(
+    suspend fun loadTerms(
+        onRequireReLogin: (suspend () -> Unit)? = null,
+    ): List<Term> {
+        val terms = try {
+            getLmsTerms()
+        } catch (e: Exception) {
+            if (onRequireReLogin != null) {
+                onRequireReLogin()
+                getLmsTerms()
+            } else {
+                throw e
+            }
+        }
+        return terms.sortedWith(
             compareByDescending<Term> { it.start_at }
                 .thenByDescending { it.id }
         )
+    }
 
     @OptIn(ExperimentalTime::class)
-    suspend fun loadProfile(): AppProfile {
-        val info = getLmsLoginInfo()
-        val term = getLmsTerms().currentTermAt(Clock.System.now())
-        return AppProfile(
-            name = info.user_name,
-            department = info.dept_name,
-            userId = info.user_login,
-            email = info.user_email,
-            termName = term?.name.orEmpty(),
-        )
+    suspend fun loadProfile(
+        onRequireReLogin: (suspend () -> Unit)? = null,
+    ): AppProfile {
+        return try {
+            val info = getLmsLoginInfo()
+            val term = getLmsTerms().currentTermAt(Clock.System.now())
+            AppProfile(
+                name = info.user_name,
+                department = info.dept_name,
+                userId = info.user_login,
+                email = info.user_email,
+                termName = term?.name.orEmpty(),
+            )
+        } catch (e: Exception) {
+            if (onRequireReLogin != null) {
+                onRequireReLogin()
+                val info = getLmsLoginInfo()
+                val term = getLmsTerms().currentTermAt(Clock.System.now())
+                AppProfile(
+                    name = info.user_name,
+                    department = info.dept_name,
+                    userId = info.user_login,
+                    email = info.user_email,
+                    termName = term?.name.orEmpty(),
+                )
+            } else {
+                throw e
+            }
+        }
     }
 
     suspend fun reportSnapshot(
         accessToken: String,
         snapshot: LmsRefreshSnapshot,
+        onRefreshToken: (suspend () -> String?)? = null,
     ) {
-        if (accessToken.isBlank()) return
+        var currentToken = accessToken
+        if (currentToken.isBlank()) {
+            currentToken = onRefreshToken?.invoke().orEmpty()
+            if (currentToken.isBlank()) return
+        }
+
+        var tokenRefreshed = false
+        suspend fun refreshTokenIfNeeded(status: HttpStatusCode): Boolean {
+            if (status.isAuthFailure() && !tokenRefreshed && onRefreshToken != null) {
+                val nextToken = onRefreshToken()
+                if (!nextToken.isNullOrBlank()) {
+                    currentToken = nextToken
+                    tokenRefreshed = true
+                    return true
+                }
+            }
+            return false
+        }
 
         snapshot.subjects.forEach { subject ->
             runCatching {
-                val status = api.addEnrollment(
-                    accessToken = accessToken,
+                var status = api.addEnrollment(
+                    accessToken = currentToken,
                     subject = subject,
                     semester = snapshot.semester,
                 )
+                if (refreshTokenIfNeeded(status)) {
+                    status = api.addEnrollment(
+                        accessToken = currentToken,
+                        subject = subject,
+                        semester = snapshot.semester,
+                    )
+                }
                 check(status.isSuccess() || status == HttpStatusCode.Conflict) {
                     "수강 정보 등록 실패 (${status.value})"
                 }
@@ -119,7 +211,10 @@ class LmsAppService(
 
         (snapshot.todoData.todos + snapshot.todoData.submitted).forEach { todo ->
             runCatching {
-                val status = api.reportTodo(accessToken, todo)
+                var status = api.reportTodo(currentToken, todo)
+                if (refreshTokenIfNeeded(status)) {
+                    status = api.reportTodo(currentToken, todo)
+                }
                 check(status.isSuccess()) {
                     "할 일 등록 실패 (${status.value})"
                 }
@@ -130,6 +225,7 @@ class LmsAppService(
     suspend fun loadAiSummary(
         accessToken: String,
         todo: AppTodo,
+        onRequireReLogin: (suspend () -> Unit)? = null,
     ): AiSummary? {
         if (!todo.canRequestAiSummary || accessToken.isBlank()) {
             return null
@@ -142,7 +238,16 @@ class LmsAppService(
             return cached
         }
 
-        val session = getLmsCookies()
+        val session = try {
+            getLmsCookies()
+        } catch (e: Exception) {
+            if (onRequireReLogin != null) {
+                onRequireReLogin()
+                getLmsCookies()
+            } else {
+                throw e
+            }
+        }
         val cookies = session.cookies
             .filter { cookie ->
                 cookie.name.isNotBlank() &&
@@ -307,3 +412,7 @@ private fun Submission.isReportableSubmission(): Boolean =
         assignment_id == -1
 
 private fun HttpStatusCode.isSuccess(): Boolean = value in 200..299
+
+private fun HttpStatusCode.isAuthFailure(): Boolean =
+    this == HttpStatusCode.Unauthorized || this == HttpStatusCode.Forbidden
+

@@ -191,24 +191,34 @@ private fun DesktopApp(
         )
     }
 
-    suspend fun ensureLmsSession() {
-        if (isLmsLoggedIn()) return
+    suspend fun reLogin(): LoginSession {
         val credentials = store.credentials(storedState)
             ?: throw IllegalStateException("LMS 로그인이 필요해요.")
-        authenticator.login(credentials.userId, credentials.password)
+        val nextSession = loginService.login(credentials.userId, credentials.password)
+        session = nextSession
+        return nextSession
+    }
+
+    suspend fun ensureLmsSession(force: Boolean = false) {
+        val credentials = store.credentials(storedState)
+            ?: throw IllegalStateException("LMS 로그인이 필요해요.")
+        if (force || !isLmsLoggedIn() || session == null) {
+            reLogin()
+        }
     }
 
     fun refreshTodos() {
-        if (isRefreshing || session == null) return
+        if (isRefreshing) return
         scope.launch {
             isRefreshing = true
             loadingProgress = 0f
             mainError = null
             try {
-                ensureLmsSession()
+                ensureLmsSession(force = false)
                 val snapshot = lmsService.refreshTodos(
                     loadingState = { progress -> loadingProgress = progress },
                     previousData = todoData,
+                    onRequireReLogin = { ensureLmsSession(force = true) },
                 )
                 todoData = snapshot.todoData.copy(
                     aiSummaryCache = todoData.aiSummaries,
@@ -217,9 +227,13 @@ private fun DesktopApp(
                 loadingProgress = 1f
                 saveCache(nextTodoData = todoData)
                 launch {
+                    val currentAccessToken = session?.accessToken.orEmpty()
                     lmsService.reportSnapshot(
-                        accessToken = session!!.accessToken,
+                        accessToken = currentAccessToken,
                         snapshot = snapshot,
+                        onRefreshToken = {
+                            runCatching { reLogin().accessToken }.getOrNull()
+                        },
                     )
                 }
             } catch (cancellation: CancellationException) {
@@ -238,9 +252,13 @@ private fun DesktopApp(
             isProfileLoading = true
             profileError = null
             try {
-                ensureLmsSession()
-                profile = lmsService.loadProfile()
-                terms = lmsService.loadTerms()
+                ensureLmsSession(force = false)
+                profile = lmsService.loadProfile(
+                    onRequireReLogin = { ensureLmsSession(force = true) },
+                )
+                terms = lmsService.loadTerms(
+                    onRequireReLogin = { ensureLmsSession(force = true) },
+                )
                 saveCache(nextProfile = profile)
             } catch (cancellation: CancellationException) {
                 throw cancellation
@@ -259,11 +277,12 @@ private fun DesktopApp(
             loadingProgress = 0f
             mainError = null
             try {
-                ensureLmsSession()
+                ensureLmsSession(force = false)
                 val nextData = lmsService.loadTodosForTerm(
                     term = term,
                     loadingState = { progress -> loadingProgress = progress },
                     previousData = todoData,
+                    onRequireReLogin = { ensureLmsSession(force = true) },
                 )
                 todoData = nextData.copy(
                     aiSummaryCache = todoData.aiSummaries,
@@ -406,11 +425,13 @@ private fun DesktopApp(
         scope.launch {
             aiSummaryStates[key] = DesktopAiSummaryUiState.Loading
             try {
-                ensureLmsSession()
+                ensureLmsSession(force = false)
                 aiSummaryStates[key] = DesktopAiSummaryUiState.Analyzing
+                val currentAccessToken = session?.accessToken ?: currentSession.accessToken
                 val summary = lmsService.loadAiSummary(
-                    accessToken = currentSession.accessToken,
+                    accessToken = currentAccessToken,
                     todo = todo,
+                    onRequireReLogin = { ensureLmsSession(force = true) },
                 )
                 if (summary == null) {
                     aiSummaryStates[key] = DesktopAiSummaryUiState.Empty
