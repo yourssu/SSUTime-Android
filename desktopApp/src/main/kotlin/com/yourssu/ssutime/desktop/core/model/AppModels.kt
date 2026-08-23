@@ -36,3 +36,36 @@ val AppTodo.canRequestAiSummary: Boolean
         description.isNotBlank() &&
         (subject?.id ?: subjectId) > 0 &&
         todoId > 0
+
+fun AppTodo.toLmsUrl(): String {
+    val currentSubjectId = subject?.id ?: subjectId
+    return when (type) {
+        AppTodoType.QUIZ -> "https://canvas.ssu.ac.kr/courses/$currentSubjectId/quizzes/$componentId"
+        AppTodoType.ASSIGNMENT -> "https://canvas.ssu.ac.kr/courses/$currentSubjectId/assignments/$todoId"
+        AppTodoType.COMMONS -> "https://canvas.ssu.ac.kr/courses/$currentSubjectId/modules/items/$moduleItemId"
+        else -> url.ifBlank { "https://canvas.ssu.ac.kr/courses/$currentSubjectId" }
+    }
+}
+
+fun formatVideoDuration(secondsDouble: Double): String {
+    val totalSeconds = secondsDouble.toInt()
+    if (totalSeconds <= 0) return ""
+    val hours = totalSeconds / 3600
+    val minutes = (totalSeconds % 3600) / 60
+    val seconds = totalSeconds % 60
+
+    return buildString {
+        if (hours > 0) {
+            append("${hours}시간")
+        }
+        if (minutes > 0) {
+            if (isNotEmpty()) append(" ")
+            append("${minutes}분")
+        }
+        if (seconds > 0 || isEmpty()) {
+            if (isNotEmpty()) append(" ")
+            append("${seconds}초")
+        }
+    }
+}
+

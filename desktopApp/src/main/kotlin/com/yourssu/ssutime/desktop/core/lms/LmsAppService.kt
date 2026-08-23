@@ -361,6 +361,9 @@ private fun toAppTodoData(
                 subject = subjectById[subject.id],
                 description = todo.description.orEmpty(),
                 url = todo.url.orEmpty(),
+                duration = todo.durationOfVideo ?: -1.0,
+                componentId = todo.component_id ?: -1,
+                moduleItemId = todo.moduleItemId ?: -1,
             )
         }
     }.sortedWith(appTodoComparator())

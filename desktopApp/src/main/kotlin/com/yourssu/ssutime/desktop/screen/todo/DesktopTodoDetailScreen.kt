@@ -41,9 +41,12 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.yourssu.ssutime.desktop.core.model.AppTodo
+import com.yourssu.ssutime.desktop.core.model.AppTodoType
 import com.yourssu.ssutime.desktop.core.model.aiSummaryKey
 import com.yourssu.ssutime.desktop.core.model.canRequestAiSummary
 import com.yourssu.ssutime.desktop.core.model.dueDate
+import com.yourssu.ssutime.desktop.core.model.formatVideoDuration
+import com.yourssu.ssutime.desktop.core.model.toLmsUrl
 import com.yourssu.ssutime.desktop.screen.main.DesktopAiSummaryUiState
 import com.yourssu.ssutime.desktop.ui.component.SButton
 import com.yourssu.ssutime.desktop.ui.resources.Res
@@ -149,10 +152,7 @@ fun DesktopTodoDetailScreen(
             todo = todo,
             aiSummaryState = aiSummaryState,
             onOpenUrl = {
-                val targetUrl = todo.url.ifBlank {
-                    todo.subject?.id?.let { "https://smartid.ssu.ac.kr" } ?: "https://smartid.ssu.ac.kr"
-                }
-                onOpenUrl(targetUrl)
+                onOpenUrl(todo.toLmsUrl())
             },
         )
     }
@@ -176,11 +176,18 @@ private fun TodoDetailOverview(
     aiSummaryState: DesktopAiSummaryUiState?,
     onHideClick: () -> Unit,
 ) {
-    val estimatedDurationText = (aiSummaryState as? DesktopAiSummaryUiState.Success)
-        ?.estimatedDurationMinutes
-        ?.takeIf { it > 0 }
-        ?.let { stringResource(Res.string.ai_estimated_duration, it) }
-        ?: stringResource(Res.string.ai_estimated_duration_unknown)
+    val estimatedDurationText = when {
+        todo.type == AppTodoType.COMMONS && todo.duration > 0 -> {
+            formatVideoDuration(todo.duration)
+        }
+        else -> {
+            (aiSummaryState as? DesktopAiSummaryUiState.Success)
+                ?.estimatedDurationMinutes
+                ?.takeIf { it > 0 }
+                ?.let { stringResource(Res.string.ai_estimated_duration, it) }
+                ?: stringResource(Res.string.ai_estimated_duration_unknown)
+        }
+    }
 
     val seconds = runCatching { remainingSeconds(todo.dueDate) }.getOrDefault(0L)
     val isDeadlinePassed = seconds == 0L
@@ -231,13 +238,13 @@ private fun TodoDetailOverview(
                         )
                     }
 
-                    if (todo.canRequestAiSummary) {
+                    if (todo.canRequestAiSummary || (todo.type == AppTodoType.COMMONS && todo.duration > 0)) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Text(
-                                text = stringResource(Res.string.ai_estimated_duration),
+                                text = if (todo.type == AppTodoType.COMMONS) "영상 길이" else stringResource(Res.string.ai_estimated_duration),
                                 style = SSUType.Caption1SemiBold,
                                 color = N500,
                             )
