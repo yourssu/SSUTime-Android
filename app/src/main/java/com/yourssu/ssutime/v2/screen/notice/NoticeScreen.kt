@@ -16,8 +16,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -25,14 +23,19 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.InlineTextContent
+import androidx.compose.foundation.text.appendInlineContent
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.outlined.AttachFile
+import androidx.compose.material.icons.outlined.FileDownload
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
@@ -49,9 +52,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.Placeholder
+import androidx.compose.ui.text.PlaceholderVerticalAlign
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.yourssu.data.DiscussionAttachment
 import com.yourssu.data.DiscussionInfo
 import com.yourssu.data.SubjectInfo
@@ -70,6 +77,9 @@ import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+
+private const val INLINE_ATTACHMENT_ID = "inline_attachment"
+private const val INLINE_NEW_BADGE_ID = "inline_new_badge"
 
 /**
  * ISO-8601 형식의 날짜 문자열을 "yyyy.MM.dd. a h:mm" 형식으로 포맷팅
@@ -122,7 +132,7 @@ val MockSubjectInfos: List<SubjectInfo> = listOf(
         discussions = listOf(
             DiscussionInfo(
                 id = 1,
-                title = "제목",
+                title = "제목이 너무 길면 제목이 너무 길면 제목이 너무 길면 제목이 너",
                 message = "여러분께,\n내일 중간시험 관련해서 알려드립니다\n\n말씀 드린데로 수업시간에 다루었던 데이터와 케이스를 중심으로 개념, 해석 및 등이 출제될 예정입니다.\n\n복잡한 수식 관련 문제는 출제하지 않았지만 간단한 계산을 위해서는 계산기가 필요할 수 있습니다",
                 url = "https://smartid.ssu.ac.kr",
                 readState = "unread",
@@ -333,7 +343,7 @@ fun NoticeSubjectDropdown(
                 if (selectedUnreadCount > 0) {
                     Text(
                         text = "$selectedUnreadCount",
-                        style = SSUType.Caption1SemiBold,
+                        style = SSUType.H4Medium,
                         color = R400
                     )
                 }
@@ -387,7 +397,6 @@ fun NoticeSubjectDropdown(
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun NoticeAccordionItem(
     discussion: DiscussionInfo,
@@ -402,6 +411,60 @@ fun NoticeAccordionItem(
     val plainContent = remember(discussion.message) { parseHtmlToPlainText(discussion.message) }
     val isNew = discussion.readState.equals("unread", ignoreCase = true)
     val hasAttachment = discussion.attachments.isNotEmpty()
+
+    val annotatedTitle = remember(discussion.title, hasAttachment, isNew) {
+        buildAnnotatedString {
+            append(discussion.title)
+            if (hasAttachment) {
+                append("\u00A0")
+                appendInlineContent(INLINE_ATTACHMENT_ID, "[첨부]")
+            }
+            if (isNew) {
+                append("\u00A0")
+                appendInlineContent(INLINE_NEW_BADGE_ID, "[N]")
+            }
+        }
+    }
+
+    val inlineContentMap = remember(hasAttachment, isNew) {
+        mapOf(
+            INLINE_ATTACHMENT_ID to InlineTextContent(
+                Placeholder(
+                    width = 16.sp,
+                    height = 16.sp,
+                    placeholderVerticalAlign = PlaceholderVerticalAlign.Center
+                )
+            ) {
+                Icon(
+                    imageVector = Icons.Default.AttachFile,
+                    contentDescription = "첨부파일 있음",
+                    tint = N400,
+                    modifier = Modifier.size(16.dp)
+                )
+            },
+            INLINE_NEW_BADGE_ID to InlineTextContent(
+                Placeholder(
+                    width = 16.sp,
+                    height = 16.sp,
+                    placeholderVerticalAlign = PlaceholderVerticalAlign.Center
+                )
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(16.dp)
+                        .clip(CircleShape)
+                        .background(R400),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "N",
+                        style = SSUType.Caption2SemiBold,
+                        color = WHITE
+                    )
+                }
+            }
+        )
+    }
 
     Column(
         modifier = modifier.fillMaxWidth()
@@ -424,45 +487,13 @@ fun NoticeAccordionItem(
             Column(
                 modifier = Modifier.weight(1f)
             ) {
-                FlowRow(
-                    verticalArrangement = Arrangement.Center,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Text(
-                        text = discussion.title,
-                        style = SSUType.H4Medium,
-                        color = N700
-                    )
-
-                    if (hasAttachment) {
-                        Icon(
-                            imageVector = Icons.Default.AttachFile,
-                            contentDescription = "첨부파일 있음",
-                            tint = N400,
-                            modifier = Modifier
-                                .size(16.dp)
-                                .align(Alignment.CenterVertically)
-                        )
-                    }
-
-                    if (isNew) {
-                        Box(
-                            modifier = Modifier
-                                .size(16.dp)
-                                .clip(CircleShape)
-                                .background(R400)
-                                .align(Alignment.CenterVertically),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = "N",
-                                style = SSUType.Caption2SemiBold,
-                                color = WHITE
-                            )
-                        }
-                    }
-                }
+                Text(
+                    text = annotatedTitle,
+                    inlineContent = inlineContentMap,
+                    style = SSUType.H4Medium,
+                    color = N700,
+                    modifier = Modifier.fillMaxWidth()
+                )
 
                 if (formattedDate.isNotBlank()) {
                     Spacer(modifier = Modifier.height(4.dp))
@@ -510,12 +541,12 @@ fun NoticeAccordionItem(
                 }
 
                 if (hasAttachment) {
-                    DiscussionAttachmentButtonGroup(
+                    DiscussionAttachmentSection(
                         attachments = discussion.attachments,
                         onOpenUrl = { url ->
                             openAttachmentUrl(context, url)
                         },
-                        modifier = Modifier.padding(top = 12.dp)
+                        modifier = Modifier.padding(top = 16.dp)
                     )
                 }
             }
@@ -524,36 +555,35 @@ fun NoticeAccordionItem(
 }
 
 /**
- * 다중 첨부파일 버튼 그룹 (언제든 삭제/교체 가능하도록 모듈화)
+ * 첨부파일 목록 섹션
  */
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun DiscussionAttachmentButtonGroup(
+fun DiscussionAttachmentSection(
     attachments: List<DiscussionAttachment>,
     onOpenUrl: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     if (attachments.isEmpty()) return
 
-    FlowRow(
-        modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+    Column(
+        modifier = modifier.fillMaxWidth()
     ) {
-        if (attachments.size == 1) {
-            val attachment = attachments.first()
-            val buttonText = if (attachment.name.isNotBlank()) "첨부파일: ${attachment.name}" else "첨부파일 보기"
-            DiscussionAttachmentButton(
-                title = buttonText,
-                onClick = {
-                    onOpenUrl(attachment.url)
-                }
-            )
-        } else {
+        Text(
+            text = "첨부파일",
+            style = SSUType.Caption1SemiBold,
+            color = N400
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
             attachments.forEachIndexed { index, attachment ->
-                val buttonText = if (attachment.name.isNotBlank()) attachment.name else "첨부파일 ${index + 1}"
-                DiscussionAttachmentButton(
-                    title = buttonText,
+                val fileName = attachment.name.takeIf { it.isNotBlank() } ?: "첨부파일 ${index + 1}"
+                DiscussionAttachmentItem(
+                    fileName = fileName,
                     onClick = {
                         onOpenUrl(attachment.url)
                     }
@@ -563,26 +593,50 @@ fun DiscussionAttachmentButtonGroup(
     }
 }
 
+/**
+ * 개별 첨부파일 카드 아이템
+ */
 @Composable
-fun DiscussionAttachmentButton(
-    title: String,
+fun DiscussionAttachmentItem(
+    fileName: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Box(
+    Row(
         modifier = modifier
-            .clip(RoundedCornerShape(6.dp))
-            .background(N600)
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(8.dp))
+            .border(1.dp, N200, RoundedCornerShape(8.dp))
+            .background(WHITE)
             .clickable(onClick = onClick)
-            .padding(horizontal = 10.dp, vertical = 8.dp),
-        contentAlignment = Alignment.Center
+            .padding(horizontal = 16.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
+        Icon(
+            imageVector = Icons.Outlined.AttachFile,
+            contentDescription = "첨부파일",
+            tint = N400,
+            modifier = Modifier.size(20.dp)
+        )
+
+        Spacer(modifier = Modifier.width(8.dp))
+
         Text(
-            text = title,
-            style = SSUType.Caption1SemiBold,
-            color = WHITE,
+            text = fileName,
+            style = SSUType.Label2Medium,
+            color = N500,
             maxLines = 1,
-            overflow = TextOverflow.Ellipsis
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f)
+        )
+
+        Spacer(modifier = Modifier.width(8.dp))
+
+        Icon(
+            imageVector = Icons.Outlined.FileDownload,
+            contentDescription = "다운로드",
+            tint = N400,
+            modifier = Modifier.size(20.dp)
         )
     }
 }

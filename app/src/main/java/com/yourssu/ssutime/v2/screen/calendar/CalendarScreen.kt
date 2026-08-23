@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -29,9 +30,12 @@ import androidx.compose.material3.SheetState
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.Saver
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -46,8 +50,10 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.yourssu.data.TodoInfo
 import com.yourssu.data.TodoType
+import com.yourssu.data.todoUniqueKey
 import com.yourssu.ssutime.v2.component.SSUTimeTopBar
 import com.yourssu.ssutime.v2.screen.main.MainViewModel
+import com.yourssu.ssutime.v2.screen.main.todo.TodoDetailScreen
 import com.yourssu.ssutime.v2.screen.notice.NoticeScreen
 import com.yourssu.ssutime.v2.todo.TODO_DEADLINE_ZONE_ID
 import com.yourssu.ssutime.v2.todo.toTodoDeadlineInstantOrNull
@@ -61,6 +67,7 @@ import com.yourssu.ssutime.v2.ui.theme.R400
 import com.yourssu.ssutime.v2.ui.theme.R500
 import com.yourssu.ssutime.v2.ui.theme.SSUType
 import com.yourssu.ssutime.v2.ui.theme.WHITE
+import kotlinx.serialization.json.Json
 import org.koin.compose.viewmodel.koinViewModel
 import java.time.LocalDate
 import java.time.YearMonth
@@ -68,6 +75,17 @@ import java.time.temporal.ChronoUnit
 
 private const val CALENDAR_MAIN_ROUTE = "calendar_main"
 private const val CALENDAR_NOTICE_ROUTE = "calendar_notice"
+private const val CALENDAR_TODO_DETAIL_ROUTE = "calendar_todo_detail"
+
+private val YearMonthSaver = Saver<YearMonth, String>(
+    save = { it.toString() },
+    restore = { runCatching { YearMonth.parse(it) }.getOrNull() ?: YearMonth.now(TODO_DEADLINE_ZONE_ID) }
+)
+
+private val LocalDateNullableSaver = Saver<LocalDate?, String>(
+    save = { it?.toString() ?: "" },
+    restore = { it.takeIf { s -> s.isNotBlank() }?.let { s -> runCatching { LocalDate.parse(s) }.getOrNull() } }
+)
 
 /**
  * TodoType별 뱃지 배경색 매핑 (MainScreen 기준)
@@ -117,6 +135,7 @@ fun CalendarScreen(
     val subjects = viewModel.subjects.toList()
     val unreadNoticeCount = viewModel.unreadNoticeCount
     val calendarNavController = rememberNavController()
+    var currentTodoJson by rememberSaveable { mutableStateOf<String?>(null) }
 
     NavHost(
         navController = calendarNavController,
@@ -131,6 +150,10 @@ fun CalendarScreen(
                 onNoticeClick = {
                     onNoticeClick()
                     calendarNavController.navigate(CALENDAR_NOTICE_ROUTE)
+                },
+                onTodoClick = { todo ->
+                    currentTodoJson = Json.encodeToString(todo)
+                    calendarNavController.navigate(CALENDAR_TODO_DETAIL_ROUTE)
                 },
             )
         }
@@ -147,6 +170,35 @@ fun CalendarScreen(
                 },
             )
         }
+
+        composable(route = CALENDAR_TODO_DETAIL_ROUTE) {
+            val currentTodoInfo = remember(currentTodoJson) {
+                currentTodoJson?.let { todoJson ->
+                    runCatching {
+                        Json.decodeFromString<TodoInfo>(todoJson)
+                    }.getOrNull()
+                }
+            }
+
+            if (currentTodoInfo != null) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(WHITE)
+                ) {
+                    SSUTimeTopBar()
+                    TodoDetailScreen(
+                        modifier = Modifier.fillMaxSize(),
+                        onPreviousClick = calendarNavController::popBackStack,
+                        todo = currentTodoInfo,
+                    )
+                }
+            } else {
+                LaunchedEffect(Unit) {
+                    calendarNavController.popBackStack()
+                }
+            }
+        }
     }
 }
 
@@ -157,10 +209,15 @@ fun CalendarScreenContent(
     todos: List<TodoInfo> = emptyList(),
     noticeCount: Int = 4,
     onNoticeClick: () -> Unit = {},
+    onTodoClick: (TodoInfo) -> Unit = {},
 ) {
-    var currentYearMonth by remember { mutableStateOf(YearMonth.now(TODO_DEADLINE_ZONE_ID)) }
+    var currentYearMonth by rememberSaveable(stateSaver = YearMonthSaver) {
+        mutableStateOf(YearMonth.now(TODO_DEADLINE_ZONE_ID))
+    }
     val today = remember { LocalDate.now(TODO_DEADLINE_ZONE_ID) }
-    var selectedDate by remember { mutableStateOf<LocalDate?>(null) }
+    var selectedDate by rememberSaveable(stateSaver = LocalDateNullableSaver) {
+        mutableStateOf<LocalDate?>(null)
+    }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     // 날짜별 할일 매핑 (todos 리스트가 변경될 때마다 재계산)
@@ -243,7 +300,11 @@ fun CalendarScreenContent(
             today = today,
             todos = selectedDayTodos,
             sheetState = sheetState,
-            onDismissRequest = { selectedDate = null }
+            onDismissRequest = { selectedDate = null },
+            onTodoClick = { todo ->
+                selectedDate = null
+                onTodoClick(todo)
+            },
         )
     }
 }
@@ -570,6 +631,7 @@ fun CalendarDateDetailBottomSheet(
     todos: List<TodoInfo>,
     onDismissRequest: () -> Unit,
     modifier: Modifier = Modifier,
+    onTodoClick: (TodoInfo) -> Unit = {},
     sheetState: SheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
 ) {
     val dDayDays = ChronoUnit.DAYS.between(today, date)
@@ -585,7 +647,7 @@ fun CalendarDateDetailBottomSheet(
         containerColor = WHITE,
         modifier = modifier
     ) {
-        Column(
+        LazyColumn(
             modifier = Modifier
                 .fillMaxWidth()
                 .safeDrawingPadding()
@@ -593,35 +655,41 @@ fun CalendarDateDetailBottomSheet(
                 .padding(bottom = 36.dp)
         ) {
             // 헤더: 날짜 (D-Day)
-            Text(
-                text = "${date.monthValue}월 ${date.dayOfMonth}일 ($dDayText)",
-                style = SSUType.H2SemiBold,
-                color = N700
-            )
+            item {
+                Text(
+                    text = "${date.monthValue}월 ${date.dayOfMonth}일 ($dDayText)",
+                    style = SSUType.H2SemiBold,
+                    color = N700
+                )
 
-            Spacer(modifier = Modifier.height(20.dp))
+                Spacer(modifier = Modifier.height(20.dp))
+            }
 
             if (todos.isEmpty()) {
-                Text(
-                    text = "마감 일정이 없습니다.",
-                    style = SSUType.Body1Medium,
-                    color = N400,
-                    modifier = Modifier.padding(vertical = 24.dp)
-                )
+                item {
+                    Text(
+                        text = "마감 일정이 없습니다.",
+                        style = SSUType.Body1Medium,
+                        color = N400,
+                        modifier = Modifier.padding(vertical = 24.dp)
+                    )
+                }
             } else {
-                Column(
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    todos.forEachIndexed { index, todo ->
-                        CalendarTodoDetailItem(todo = todo)
+                itemsIndexed(
+                    items = todos,
+                    key = { _, todo -> todo.todoUniqueKey() }
+                ) { index, todo ->
+                    CalendarTodoDetailItem(
+                        todo = todo,
+                        onClick = { onTodoClick(todo) },
+                    )
 
-                        if (index < todos.lastIndex) {
-                            HorizontalDivider(
-                                color = N200,
-                                thickness = 0.5.dp,
-                                modifier = Modifier.padding(vertical = 4.dp)
-                            )
-                        }
+                    if (index < todos.lastIndex) {
+                        HorizontalDivider(
+                            color = N200,
+                            thickness = 0.5.dp,
+                            modifier = Modifier.padding(vertical = 16.dp)
+                        )
                     }
                 }
             }
@@ -636,9 +704,13 @@ fun CalendarDateDetailBottomSheet(
 fun CalendarTodoDetailItem(
     todo: TodoInfo,
     modifier: Modifier = Modifier,
+    onClick: () -> Unit = {},
 ) {
     Column(
-        modifier = modifier.fillMaxWidth()
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(8.dp))
+            .clickable(onClick = onClick)
     ) {
         // 상단: 타입 뱃지 + 과목명
         Row(
