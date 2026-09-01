@@ -1,5 +1,7 @@
 package com.yourssu.ssutime.v2.screen.calendar
 
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -140,6 +142,10 @@ fun CalendarScreen(
     NavHost(
         navController = calendarNavController,
         startDestination = CALENDAR_MAIN_ROUTE,
+        enterTransition = { EnterTransition.None },
+        exitTransition = { ExitTransition.None },
+        popEnterTransition = { EnterTransition.None },
+        popExitTransition = { ExitTransition.None },
         modifier = modifier.fillMaxSize(),
     ) {
         composable(route = CALENDAR_MAIN_ROUTE) {
