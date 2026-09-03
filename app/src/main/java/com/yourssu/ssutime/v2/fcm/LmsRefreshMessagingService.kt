@@ -7,6 +7,7 @@ import com.yourssu.data.SubjectInfo
 import com.yourssu.data.TodoInfo
 import com.yourssu.data.TodoType
 import com.yourssu.data.network.FcmRequest
+import com.yourssu.data.todoUniqueKey
 import com.yourssu.ssutime.v2.accessToken
 import com.yourssu.ssutime.v2.analytics.SentryExceptionReporter
 import com.yourssu.ssutime.v2.network.ApiRepository
@@ -117,9 +118,9 @@ class LmsRefreshMessagingService : FirebaseMessagingService(), KoinComponent {
             return
         }
 
-        val todo = runBlocking {
-            mainRepository.getTodoData().todos.selectMostUrgentTodo()
-        } ?: message.toFallbackTodoInfo()
+        val todoData = runBlocking { mainRepository.getTodoData() }
+        val todo = todoData.todos.selectMostUrgentTodo()
+            ?: message.toFallbackTodoInfo()?.takeIf { it.todoUniqueKey() !in todoData.hiddenTodoKeys }
 
         if (todo == null) {
             Log.i(TAG, "전화 알림을 표시할 Todo가 없습니다. data=${message.data}")

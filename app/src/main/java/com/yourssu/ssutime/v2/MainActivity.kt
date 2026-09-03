@@ -8,6 +8,8 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.ActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.mutableIntStateOf
@@ -27,7 +29,7 @@ import com.yourssu.data.TodoInfo
 import com.yourssu.data.TodoType
 import com.yourssu.ssutime.v2.analytics.Analytics
 import com.yourssu.ssutime.v2.screen.login.LoginScreen
-import com.yourssu.ssutime.v2.screen.main.MainScreen
+import com.yourssu.ssutime.v2.screen.main.MainContainerScreen
 import com.yourssu.ssutime.v2.screen.main.TermSelectionStore
 import com.yourssu.ssutime.v2.screen.my.MyPageScreen
 import com.yourssu.ssutime.v2.screen.onboarding.OnBoardingScreen
@@ -92,6 +94,10 @@ class MainActivity : ComponentActivity() {
                 NavHost(
                     navController = navController,
                     startDestination = Screens.SPLASH.name,
+                    enterTransition = { EnterTransition.None },
+                    exitTransition = { ExitTransition.None },
+                    popEnterTransition = { EnterTransition.None },
+                    popExitTransition = { ExitTransition.None },
                     modifier = Modifier
                         .fillMaxSize()
                         .background(WHITE)
@@ -143,7 +149,7 @@ class MainActivity : ComponentActivity() {
                             backStackEntry.savedStateHandle.remove<Boolean>(
                                 SKIP_MAIN_LOAD_FROM_MY_PAGE_BACK_KEY
                             ) == true
-                        MainScreen(
+                        MainContainerScreen(
                             skipInitialLmsRefresh = skipInitialLmsRefresh.value,
                             forceInitialLmsRefresh = forceInitialLmsRefresh.value,
                             homeEntrySource = homeEntrySource.value,
@@ -155,19 +161,17 @@ class MainActivity : ComponentActivity() {
                             onInitialLmsRefreshForceConsumed = {
                                 forceInitialLmsRefresh.value = false
                             },
-                            onProfileClick = {
-                                navController.navigate(Screens.MY.name)
-                            })
+                            onLogout = {
+                                navController.navigate(Screens.LOGIN.name) {
+                                    popUpTo(0) { inclusive = true }
+                                    launchSingleTop = true
+                                }
+                            }
+                        )
                     }
 
                     composable(route = Screens.MY.name) {
                         MyPageScreen(
-                            onPressBack = {
-                                navController.previousBackStackEntry
-                                    ?.savedStateHandle
-                                    ?.set(SKIP_MAIN_LOAD_FROM_MY_PAGE_BACK_KEY, true)
-                                navController.popBackStack()
-                            },
                             onLogout = {
                                 navController.navigate(Screens.LOGIN.name) {
                                     popUpTo(0) { inclusive = true }

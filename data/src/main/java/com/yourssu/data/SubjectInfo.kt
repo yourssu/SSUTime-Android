@@ -7,6 +7,7 @@ data class SubjectInfo(
     val id: Int,
     val name: String,
     val professor: String,
+    val discussions: List<DiscussionInfo> = emptyList(),
 ) {
     override fun equals(other: Any?): Boolean {
         if(other is SubjectInfo) {
@@ -15,3 +16,4 @@ data class SubjectInfo(
         return false
     }
 }
+

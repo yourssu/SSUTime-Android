@@ -1,6 +1,8 @@
 package com.yourssu.ssutime.v2.screen.main
 
 import android.util.Log
+import com.yourssu.data.DiscussionAttachment
+import com.yourssu.data.DiscussionInfo
 import com.yourssu.data.LoginData
 import com.yourssu.data.SubjectInfo
 import com.yourssu.data.TodoData
@@ -10,6 +12,7 @@ import com.yourssu.data.network.LmsSessionCookieRequest
 import com.yourssu.data.network.LmsSessionRequest
 import com.yourssu.data.network.toAddEnrollmentRequest
 import com.yourssu.data.network.toTodoReportRequest
+import com.yourssu.data.todoUniqueKey
 import com.yourssu.ssutime.v2.accessToken
 import com.yourssu.ssutime.v2.analytics.Analytics
 import com.yourssu.ssutime.v2.analytics.SentryExceptionReporter
@@ -175,7 +178,7 @@ class LmsRefreshRepository(
         buildTodoData(
             subjects = subjects,
             subjectInfos = buildSubjectInfos(subjects),
-            previousData = TodoData(),
+            previousData = mainRepository.getTodoData(),
             loadedAt = Instant.now().toString(),
         )
     }
@@ -257,11 +260,36 @@ class LmsRefreshRepository(
         loginIfNeeded(source, loginData, forceLogin)
 
         onRefreshStage(LmsRefreshStage.LoadingTerms)
-        val terms = getLmsTerms()
-        val currentTerm = terms.currentTermAt(Clock.System.now())
-            ?: throw IllegalStateException("현재 진행 중인 학기 정보를 찾지 못했어요.")
+        var terms: List<Term>
+        var currentTerm: Term?
+        try {
+            terms = getLmsTerms()
+            currentTerm = terms.currentTermAt(Clock.System.now())
+        } catch (e: Exception) {
+            if (loginData.hasAutoLoginCredentials) {
+                Log.i(TAG, "LMS 세션 만료 의심으로 재로그인 후 재시도합니다.")
+                loginIfNeeded(source, loginData, forceLogin = true)
+                terms = getLmsTerms()
+                currentTerm = terms.currentTermAt(Clock.System.now())
+            } else {
+                throw e
+            }
+        }
+        if (currentTerm == null) {
+            throw IllegalStateException("현재 진행 중인 학기 정보를 찾지 못했어요.")
+        }
         onRefreshStage(LmsRefreshStage.LoadingSubjects(currentTerm.name.orEmpty()))
-        val subjects = fetchSubjects(currentTerm, loginData, loadingState)
+        val subjects = try {
+            fetchSubjects(currentTerm, loginData, loadingState)
+        } catch (e: Exception) {
+            if (loginData.hasAutoLoginCredentials) {
+                Log.i(TAG, "과목 조회 실패로 재로그인 후 재시도합니다.")
+                loginIfNeeded(source, loginData, forceLogin = true)
+                fetchSubjects(currentTerm, loginData, loadingState)
+            } else {
+                throw e
+            }
+        }
         val subjectInfos = buildSubjectInfos(subjects)
         val completedAt = Instant.now()
         val summary = buildRefreshSummary(
@@ -507,13 +535,16 @@ class LmsRefreshRepository(
         val newTodos = subjects.flatMap { subject ->
             subject.todoList.map { todo ->
                 TodoInfo(
-                    todo.assignment_id ?: -1,
-                    todo.title,
-                    todo.due_date,
-                    TodoType.valueOf(todo.component_type.uppercase()),
-                    subjectInfoById[subject.id],
+                    todoId = todo.assignment_id ?: -1,
+                    title = todo.title,
+                    due_date = todo.due_date,
+                    type = TodoType.valueOf(todo.component_type.uppercase()),
+                    subject = subjectInfoById[subject.id],
                     description = todo.description.orEmpty(),
                     url = todo.url.orEmpty(),
+                    duration = todo.durationOfVideo ?: -1.0,
+                    componentId = todo.component_id ?: -1,
+                    moduleItemId = todo.moduleItemId ?: -1,
                 )
             }
         }.sortedByDeadlineThenName()
@@ -529,27 +560,67 @@ class LmsRefreshRepository(
                 .filter { it.isReportableSubmission() }
                 .map { todo ->
                     TodoInfo(
-                        todo.assignment_id ?: -1,
-                        todo.name,
-                        todo.cached_due_date ?: "",
-                        if (todo.late == true) TodoType.SUBMITTED_LATE else TodoType.SUBMITTED,
-                        subjectInfoById[subject.id],
+                        todoId = todo.assignment_id ?: -1,
+                        title = todo.name,
+                        due_date = todo.cached_due_date ?: "",
+                        type = if (todo.late == true) TodoType.SUBMITTED_LATE else TodoType.SUBMITTED,
+                        subject = subjectInfoById[subject.id],
                         submittedAt = todo.submitted_at.orEmpty(),
                         url = todo.url.orEmpty(),
                     )
                 }
         }
         val newSubmitted = reportedSubmitted.sortedByDeadlineThenName()
+        val locallyReadDiscussionIds = previousData.subjects
+            .flatMap { it.discussions }
+            .filter { it.readState.equals("read", ignoreCase = true) }
+            .map { it.id }
+            .toSet()
+
+        val hiddenKeysSet = previousData.hiddenTodoKeys.toSet()
+        val (hiddenNewTodos, activeNewTodos) = newTodos.partition { it.todoUniqueKey() in hiddenKeysSet }
 
         return previousData.copy(
-            todos = newTodos,
+            todos = activeNewTodos,
             submitted = newSubmitted,
+            subjects = buildSubjectInfos(subjects, locallyReadDiscussionIds),
+            hiddenTodos = hiddenNewTodos,
             loadedAt = loadedAt,
         )
     }
 
-    private fun buildSubjectInfos(subjects: List<Subject>): List<SubjectInfo> = subjects
-        .map { SubjectInfo(it.id, it.name.withoutTrailingCourseNumber(), it.professor) }
+    private fun buildSubjectInfos(
+        subjects: List<Subject>,
+        locallyReadDiscussionIds: Set<Int> = emptySet(),
+    ): List<SubjectInfo> = subjects
+        .map { subject ->
+            SubjectInfo(
+                id = subject.id,
+                name = subject.name.withoutTrailingCourseNumber(),
+                professor = subject.professor,
+                discussions = subject.discussions.map { discussion ->
+                    val isLocallyRead = discussion.id in locallyReadDiscussionIds
+                    val initialReadState = if (isLocallyRead) "read" else "unread"
+                    DiscussionInfo(
+                        id = discussion.id,
+                        title = discussion.title,
+                        message = discussion.message.orEmpty(),
+                        url = discussion.url.orEmpty(),
+                        published = discussion.published,
+                        readState = initialReadState,
+                        createdAt = discussion.created_at.orEmpty(),
+                        author = discussion.user_name.orEmpty(),
+                        attachments = discussion.attachments.map { att ->
+                            DiscussionAttachment(
+                                id = att.id,
+                                name = att.display_name.ifBlank { att.file_name }.orEmpty(),
+                                url = att.url.orEmpty(),
+                            )
+                        }
+                    )
+                }
+            )
+        }
         .distinctBy { it.id }
 
     private suspend fun markBackgroundRefreshStarted(startedAt: Instant, requestId: String?) {
@@ -620,9 +691,6 @@ sealed interface TodoRefreshResult {
         val reason: String,
     ) : TodoRefreshResult
 }
-
-private val LoginData.hasAutoLoginCredentials: Boolean
-    get() = isAutoLogin && id.isNotBlank() && pw.isNotBlank()
 
 private val TodoInfo.isReportableSubmission: Boolean
     get() = type == TodoType.SUBMITTED || type == TodoType.SUBMITTED_LATE

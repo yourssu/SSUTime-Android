@@ -31,7 +31,7 @@ object Analytics {
             captureDeepLinks = false,
             captureScreenViews = false,
         ).apply {
-            debug = BuildConfig.DEBUG
+            debug = BuildConfig.DEBUG_MODE
         }
         PostHogAndroid.setup(context, config)
     }

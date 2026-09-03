@@ -1,5 +1,6 @@
 package com.yourssu.ssutime.v2.component
 
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
@@ -43,10 +44,47 @@ fun SButton(
     }
 }
 
+@Composable
+fun SButton_Small(
+    modifier: Modifier = Modifier,
+    labelText: String,
+    onClick: () -> Unit = {},
+    enable: Boolean = true,
+    textStyle: TextStyle = SSUType.Label2Medium
+) {
+    Button(
+        colors = ButtonDefaults.buttonColors(
+            disabledContentColor = WHITE,
+            disabledContainerColor = N300,
+            containerColor = R500
+        ),
+        enabled = enable,
+        modifier = modifier,
+        contentPadding = PaddingValues(vertical = 0.dp, horizontal = 12.dp),
+        onClick = onClick,
+        shape = RoundedCornerShape(8.dp)
+    ) {
+        Text(
+            modifier = Modifier
+                .padding(0.dp),
+            text = labelText,
+            style = textStyle.copy(color = WHITE)
+        )
+    }
+}
+
 @Preview
 @Composable
 fun previewEnableButton() {
     SButton(
+        labelText = "로그인"
+    )
+}
+
+@Preview
+@Composable
+fun previewEnableButton_Small() {
+    SButton_Small(
         labelText = "로그인"
     )
 }
