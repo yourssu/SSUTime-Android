@@ -444,7 +444,7 @@ fun TodoOverView(
                         .background(R100)
                         .padding(14.dp),
                     textAlign = TextAlign.Center,
-                    text = "마감이 지났지만 지각 제출이 가능한 과제에요!",
+                    text = "마감이 지났지만 지각 제출이 가능한 과제예요!",
                     style = SSUType.Caption1SemiBold.copy(color = R400)
                 )
             }

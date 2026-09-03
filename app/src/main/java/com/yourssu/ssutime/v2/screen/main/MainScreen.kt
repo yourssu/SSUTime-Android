@@ -34,8 +34,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
@@ -94,13 +92,10 @@ import com.yourssu.ssutime.v2.component.SCheckBox
 import com.yourssu.ssutime.v2.component.SSUTimeTopBar
 import com.yourssu.ssutime.v2.getRemainingDays
 import com.yourssu.ssutime.v2.getRemainingTimeText
-import com.yourssu.ssutime.v2.getStringDate
 import com.yourssu.ssutime.v2.getStringSimpleDate
 import com.yourssu.ssutime.v2.screen.main.todo.TodoDetailScreen
 import com.yourssu.ssutime.v2.todo.localizedLabel
 import com.yourssu.ssutime.v2.todo.toTodoDeadlineInstant
-import com.yourssu.ssutime.v2.ui.theme.G100
-import com.yourssu.ssutime.v2.ui.theme.G400
 import com.yourssu.ssutime.v2.ui.theme.N100
 import com.yourssu.ssutime.v2.ui.theme.N200
 import com.yourssu.ssutime.v2.ui.theme.N300
@@ -120,6 +115,7 @@ import java.time.temporal.ChronoUnit
 
 private const val MAIN_LIST_ROUTE = "main_list"
 private const val TODO_DETAIL_ROUTE = "todo_detail"
+private const val SUBMITTED_LIST_ROUTE = "submitted_list"
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -135,7 +131,6 @@ fun MainScreen(
     onInitialLmsRefreshForceConsumed: () -> Unit = {},
 ) {
     val context = LocalContext.current
-    var showSubmittedBottomSheet by rememberSaveable { mutableStateOf(false) }
     var showWidgetHelperDialog by rememberSaveable { mutableStateOf(false) }
     val mainContentNavController = rememberNavController()
     var currentTodoJson by rememberSaveable { mutableStateOf<String?>(null) }
@@ -179,9 +174,6 @@ fun MainScreen(
         }
     }
 
-    val sheetState = rememberModalBottomSheetState(
-        skipPartiallyExpanded = true,
-    )
     fun refreshTodos(
         showBlockingLoading: Boolean,
         source: RefreshSource,
@@ -265,7 +257,7 @@ fun MainScreen(
                             )
                         },
                         onClickSubmitted = {
-                            showSubmittedBottomSheet = true
+                            mainContentNavController.navigate(SUBMITTED_LIST_ROUTE)
                         },
                         onClickWidgetBadge = {
                             Analytics.widgetBannerClick()
@@ -300,6 +292,15 @@ fun MainScreen(
                             mainContentNavController.popBackStack()
                         }
                     }
+                }
+
+                composable(SUBMITTED_LIST_ROUTE) {
+                    SubmittedScreen(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(innerPadding),
+                        submitted = viewModel.submitted,
+                    )
                 }
             }
         }
@@ -358,89 +359,6 @@ fun MainScreen(
 
                 }
             )
-        }
-
-        if (showSubmittedBottomSheet) {
-            ModalBottomSheet(
-                modifier = Modifier
-                    .fillMaxWidth(),
-                containerColor = WHITE,
-                onDismissRequest = { showSubmittedBottomSheet = false },
-                sheetState = sheetState
-
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .safeDrawingPadding()
-                        .padding(16.dp)
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = stringResource(R.string.main_submitted_title),
-                            style = SSUType.H3SemiBold
-                        )
-                        Spacer(Modifier.width(6.dp))
-                        Text(
-                            text = viewModel.submitted.size.toString(),
-                            style = SSUType.H3SemiBold.copy(color = R400)
-                        )
-                        Spacer(Modifier.weight(1f))
-                        Text( //TODO
-                            text = if(viewModel.loadedAt.value.isNotEmpty()) {
-                                stringResource(R.string.main_date_base, getStringDate(viewModel.loadedAt.value))
-                            } else {
-                                stringResource(R.string.main_date_placeholder)
-                            },
-                            style = SSUType.Caption1SemiBold
-                        )
-                    }
-
-                    Spacer(Modifier.height(16.dp))
-
-                    if(viewModel.submitted.isNotEmpty()) {
-                        LazyColumn(
-                            verticalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            items(
-                                items = viewModel.submitted,
-                                key = { item -> item.todoId }
-                            ) {
-                                SubmittedItem(it)
-                            }
-                        }
-                    } else {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                modifier = Modifier
-                                    .padding(vertical = 50.dp),
-                                text = stringResource(R.string.main_submitted_empty),
-                                style = SSUType.H3Medium
-                            )
-                        }
-                    }
-
-                    Spacer(Modifier.height(16.dp))
-
-                    SButton(
-                        modifier = Modifier.fillMaxWidth(),
-                        labelText = stringResource(R.string.common_close),
-                        onClick = {
-                            coroutine.launch {
-                                sheetState.hide()
-                                showSubmittedBottomSheet = false
-                            }
-                        }
-                    )
-
-                }
-            }
         }
 
         if (showInitialLmsLoading) {
@@ -1026,60 +944,6 @@ fun TodoItem(
                     )
                 }
                 Spacer(Modifier.weight(1f))
-            }
-        }
-    }
-}
-
-@Composable
-fun SubmittedItem(
-    todoInfo: TodoInfo
-) {
-//    Log.d("리컴포지션", "${todoInfo.todoId} 리컴포지션 발생")
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .background(N100)
-    ) {
-        Column(
-            modifier = Modifier
-                .padding(18.dp),
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(
-                            modifier = Modifier.fillMaxWidth(0.8f),
-                            maxLines = 1,
-                            text = todoInfo.subject?.name ?: stringResource(R.string.common_unknown_subject),
-                            style = SSUType.Caption1SemiBold
-                        )
-                    }
-
-                    Spacer(Modifier.height(4.dp))
-
-                    Text(
-                        modifier = Modifier.fillMaxWidth(0.8f),
-                        maxLines = 1,
-                        text = todoInfo.title,
-                        style = SSUType.H5SemiBold
-                    )
-                }
-                Spacer(Modifier.weight(1f))
-
-                Text(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(6.dp))
-                        .background(if (todoInfo.type == TodoType.SUBMITTED_LATE) R100 else G100)
-                        .padding(6.dp),
-                    text = todoInfo.type.localizedLabel(),
-                    style = SSUType.Caption2Medium.copy(color = if(todoInfo.type == TodoType.SUBMITTED_LATE) R400 else G400)
-                )
             }
         }
     }
