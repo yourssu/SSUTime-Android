@@ -52,6 +52,7 @@
     <string name="main_submitted_title">Submitted assignments</string>
     <string name="main_submitted_empty">No submitted assignments yet</string>
     <string name="main_submitted_count">Submitted %1$d</string>
+    <string name="main_submitted_sort_latest">Latest</string>
     <string name="main_date_base">%1$s</string>
     <string name="main_date_placeholder">No date</string>
     <string name="main_widget_badge_title">Add the SSUTime widget</string>

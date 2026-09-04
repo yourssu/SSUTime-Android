@@ -51,6 +51,7 @@
     <string name="main_submitted_title">제출한 과제</string>
     <string name="main_submitted_empty">아직 제출한 과제가 없어요</string>
     <string name="main_submitted_count">제출 완료 %1$d</string>
+    <string name="main_submitted_sort_latest">최신순</string>
     <string name="main_date_base">%1$s 기준</string>
     <string name="main_date_placeholder">00월 00일 기준</string>
     <string name="main_widget_badge_title">슈타임 위젯 등록하기</string>
