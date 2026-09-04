@@ -6,9 +6,13 @@ import io.github.chlwhdtn03.data.Lms.LmsSession
 import io.github.chlwhdtn03.data.Lms.Subject
 import io.github.chlwhdtn03.data.Lms.Term
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.time.ExperimentalTime
+
+private val lmsLoginMutex = Mutex()
 
 suspend fun loginLms(id: String, password: String): Boolean =
     suspendCancellableCoroutine { continuation ->
@@ -23,6 +27,18 @@ suspend fun loginLms(id: String, password: String): Boolean =
                 )
             }
         }
+    }
+
+/**
+ * LMS 로그인을 단일화하여 동시 호출 시 중복 로그인을 방지하고 세션을 보장합니다.
+ * @param force 이미 로그인이 되어 있더라도 강제로 재로그인할지 여부
+ */
+suspend fun ensureLmsLoggedIn(id: String, password: String, force: Boolean = false): Boolean =
+    lmsLoginMutex.withLock {
+        if (!force && LmsApi.isLoggined) {
+            return true
+        }
+        return loginLms(id, password)
     }
 
 @OptIn(ExperimentalTime::class)

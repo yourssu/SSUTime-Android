@@ -11,7 +11,6 @@ import com.yourssu.ssutime.v2.network.ApiRepository
 import com.yourssu.ssutime.v2.screen.login.LoginRepository
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -23,7 +22,6 @@ class SplashViewModel(
 
     init {
         viewModelScope.launch {
-            delay(SPLASH_DELAY_MILLIS)
             val loginData = loginRepository.getLoginData()
             destination.value = if (loginData.hasAutoLoginCredentials) {
                 refreshAccessToken(loginData)
@@ -63,4 +61,3 @@ enum class SplashDestination {
 }
 
 private const val TAG = "SplashViewModel"
-private const val SPLASH_DELAY_MILLIS = 100L

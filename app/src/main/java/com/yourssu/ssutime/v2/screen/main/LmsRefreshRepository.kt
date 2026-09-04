@@ -16,10 +16,10 @@ import com.yourssu.data.todoUniqueKey
 import com.yourssu.ssutime.v2.accessToken
 import com.yourssu.ssutime.v2.analytics.Analytics
 import com.yourssu.ssutime.v2.analytics.SentryExceptionReporter
+import com.yourssu.ssutime.v2.lms.ensureLmsLoggedIn
 import com.yourssu.ssutime.v2.lms.getLmsCookies
 import com.yourssu.ssutime.v2.lms.getLmsTerms
 import com.yourssu.ssutime.v2.lms.getLmsTodoList
-import com.yourssu.ssutime.v2.lms.loginLms
 import com.yourssu.ssutime.v2.network.ApiRepository
 import com.yourssu.ssutime.v2.screen.login.LoginRepository
 import com.yourssu.ssutime.v2.todo.sortedByDeadlineThenName
@@ -491,11 +491,9 @@ class LmsRefreshRepository(
         loginData: LoginData,
         forceLogin: Boolean,
     ) {
-        if (
-            loginData.hasAutoLoginCredentials &&
-            (forceLogin || source == RefreshSource.FCM || !LmsApi.isLoggined)
-        ) {
-            val isLoggedIn = loginWithRetryIfNeeded(source, loginData)
+        if (loginData.hasAutoLoginCredentials) {
+            val force = forceLogin || source == RefreshSource.FCM
+            val isLoggedIn = loginWithRetryIfNeeded(source, loginData, force = force)
             if (!isLoggedIn) {
                 throw IllegalStateException("LMS 로그인에 실패했어요.")
             }
@@ -507,12 +505,16 @@ class LmsRefreshRepository(
         }
     }
 
-    private suspend fun loginWithRetryIfNeeded(source: RefreshSource, loginData: LoginData): Boolean {
+    private suspend fun loginWithRetryIfNeeded(
+        source: RefreshSource,
+        loginData: LoginData,
+        force: Boolean = false,
+    ): Boolean {
         var attempt = 0
 
         while (true) {
             try {
-                return loginLms(loginData.id, loginData.pw)
+                return ensureLmsLoggedIn(loginData.id, loginData.pw, force = force || attempt > 0)
             } catch (e: Exception) {
                 val shouldRetry = source == RefreshSource.FCM &&
                     e.message == LMS_API_TOKEN_ERROR_MESSAGE &&

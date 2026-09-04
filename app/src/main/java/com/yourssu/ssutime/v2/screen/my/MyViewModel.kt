@@ -13,9 +13,9 @@ import com.yourssu.data.UiState
 import com.yourssu.ssutime.v2.accessToken
 import com.yourssu.ssutime.v2.analytics.Analytics
 import com.yourssu.ssutime.v2.analytics.SentryExceptionReporter
+import com.yourssu.ssutime.v2.lms.ensureLmsLoggedIn
 import com.yourssu.ssutime.v2.lms.getLmsLoginInfo
 import com.yourssu.ssutime.v2.lms.getLmsTerms
-import com.yourssu.ssutime.v2.lms.loginLms
 import com.yourssu.ssutime.v2.notification.showCallAlert
 import com.yourssu.ssutime.v2.screen.login.LoginRepository
 import com.yourssu.ssutime.v2.screen.main.MainRepository
@@ -71,9 +71,9 @@ class MyViewModel(
     fun loadLmsData() {
         viewModelScope.launch {
             val loginData = loginRepository.getLoginData()
-            if (!LmsApi.isLoggined && loginData.hasAutoLoginCredentials) {
+            if (loginData.hasAutoLoginCredentials) {
                 runCatching {
-                    loginLms(loginData.id, loginData.pw)
+                    ensureLmsLoggedIn(loginData.id, loginData.pw)
                 }
             }
 
@@ -102,7 +102,7 @@ class MyViewModel(
             // 세션 만료 등으로 실패했고 자동 로그인 정보가 있는 경우 강제 재로그인 후 1회 재시도
             if (!loadSuccess && loginData.hasAutoLoginCredentials) {
                 runCatching {
-                    if (loginLms(loginData.id, loginData.pw)) {
+                    if (ensureLmsLoggedIn(loginData.id, loginData.pw, force = true)) {
                         loginInfo.value = getLmsLoginInfo()
                         val loadedTerms = getLmsTerms()
                             .sortedWith(
