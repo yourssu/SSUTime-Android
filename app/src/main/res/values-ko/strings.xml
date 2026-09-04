@@ -38,6 +38,12 @@
     <string name="onboarding_tip_quiz">LearningX [퀴즈]</string>
     <string name="onboarding_tip_lecture">LearningX [강의]</string>
     <string name="onboarding_tip_cyber_excluded">숭실 사이버 강의는 포함되지 않아요</string>
+    <string name="cyber_connect_title">숭실 사이버 대학 연결하기</string>
+    <string name="cyber_connect_login">로그인</string>
+    <string name="cyber_login_title">로그인만 하면\n숭사대 마감일을 볼 수 있어요</string>
+    <string name="cyber_login_id_placeholder">숭실 사이버 대학에서 발급받은 학번을 입력하세요</string>
+    <string name="cyber_login_pw_placeholder">숭실 사이버 대학 비밀번호 입력하세요</string>
+    <string name="cyber_login_find_id">학번 찾기</string>
 
     <string name="network_error_title">인터넷 연결이 불안정해요</string>
     <string name="network_error_description">Wi-Fi나 셀룰러 데이터 연결 상태를\n확인하고 다시 시도해주세요.</string>
@@ -45,10 +51,11 @@
 
     <string name="main_completed_auto_disappear">완료하면 자동으로 사라져요</string>
     <string name="main_todo_count">%1$d건의 할 일이 있어요</string>
+    <string name="main_todo_count_highlight">%1$d건</string>
     <string name="main_updated_at">업데이트 %1$s 기준</string>
     <string name="main_updated_at_base">%1$s 기준</string>
     <string name="main_update_info_none">업데이트 정보 없음</string>
-    <string name="main_submitted_title">제출한 과제</string>
+    <string name="main_submitted_title">제출 완료된 할 일</string>
     <string name="main_submitted_empty">아직 제출한 과제가 없어요</string>
     <string name="main_submitted_count">제출 완료 %1$d</string>
     <string name="main_submitted_sort_latest">최신순</string>
@@ -99,6 +106,7 @@
     <string name="my_back_content_description">뒤로가기</string>
     <string name="my_avatar_content_description">프로필 이미지</string>
     <string name="my_notification_settings">알림 설정</string>
+    <string name="my_settings">설정</string>
     <string name="my_no_term_info">학기 정보 없음</string>
     <string name="my_term_dropdown_content_description">학기 선택</string>
     <string name="my_notification_info_content_description">알림 안내</string>

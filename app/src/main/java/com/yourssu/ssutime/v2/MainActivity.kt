@@ -10,11 +10,32 @@ import androidx.activity.result.ActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -28,6 +49,7 @@ import com.yourssu.data.SubjectInfo
 import com.yourssu.data.TodoInfo
 import com.yourssu.data.TodoType
 import com.yourssu.ssutime.v2.analytics.Analytics
+import com.yourssu.ssutime.v2.screen.cyber.CyberLoginScreen
 import com.yourssu.ssutime.v2.screen.login.LoginScreen
 import com.yourssu.ssutime.v2.screen.main.MainContainerScreen
 import com.yourssu.ssutime.v2.screen.main.TermSelectionStore
@@ -35,7 +57,10 @@ import com.yourssu.ssutime.v2.screen.my.MyPageScreen
 import com.yourssu.ssutime.v2.screen.onboarding.OnBoardingScreen
 import com.yourssu.ssutime.v2.screen.splash.Screens
 import com.yourssu.ssutime.v2.screen.splash.SplashScreen
+import com.yourssu.ssutime.v2.ui.theme.N500
+import com.yourssu.ssutime.v2.ui.theme.R400
 import com.yourssu.ssutime.v2.ui.theme.SSUTimeTheme
+import com.yourssu.ssutime.v2.ui.theme.SSUType
 import com.yourssu.ssutime.v2.ui.theme.WHITE
 import org.koin.android.ext.android.inject
 
@@ -166,7 +191,10 @@ class MainActivity : ComponentActivity() {
                                     popUpTo(0) { inclusive = true }
                                     launchSingleTop = true
                                 }
-                            }
+                            },
+                            onNavigateToCyberLogin = {
+                                navController.navigate(Screens.CYBER_LOGIN.name)
+                            },
                         )
                     }
 
@@ -177,7 +205,17 @@ class MainActivity : ComponentActivity() {
                                     popUpTo(0) { inclusive = true }
                                     launchSingleTop = true
                                 }
-                            }
+                            },
+                            onNavigateToCyberLogin = {
+                                navController.navigate(Screens.CYBER_LOGIN.name)
+                            },
+                        )
+                    }
+
+                    composable(route = Screens.CYBER_LOGIN.name) {
+                        CyberLoginScreen(
+                            onBackClick = { navController.popBackStack() },
+                            onLoginClick = { _, _ -> /* UI only for now */ },
                         )
                     }
                 }
@@ -299,3 +337,45 @@ private fun String?.toTodoTypeOrNull(): TodoType? =
     TodoType.values().firstOrNull { type ->
         equals(type.name, ignoreCase = true) || this == type.kor
     }
+
+
+
+@Composable
+@Preview
+fun SSUCyberAccountHelperBadge(
+    onClickBadge: () -> Unit = {}
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(10.dp))
+            .border(1.dp, Color(0xFFFFD2D2), RoundedCornerShape(10.dp))
+            .clickable { onClickBadge() }
+            .background(Color(0xFFFFF0F0))
+            .padding(16.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Row(
+            modifier = Modifier
+                .weight(1f),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+
+            Spacer(Modifier.width(10.dp))
+
+            Column {
+                Text(
+                    text = stringResource(R.string.cyber_connect_title),
+                    style = SSUType.H4SemiBold,
+                    color = R400
+                )
+            }
+        }
+
+        Image(
+            imageVector = Icons.AutoMirrored.Default.KeyboardArrowRight,
+            contentDescription = stringResource(R.string.common_close),
+            colorFilter = ColorFilter.tint(N500)
+        )
+    }
+}

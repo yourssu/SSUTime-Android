@@ -76,7 +76,7 @@ fun SubmittedScreen(
             ) {
                 items(
                     items = submitted,
-                    key = { item -> item.todoId }
+                    key = { item -> "${item.todoId}-${item.url}-${item.title}" }
                 ) {
                     SubmittedItem(it)
                 }

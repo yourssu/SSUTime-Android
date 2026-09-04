@@ -71,7 +71,10 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -504,8 +507,24 @@ fun MainFragment(
                         color = N500
                     )
                     Spacer(Modifier.height(5.dp))
+                    val fullTodoCountText = stringResource(R.string.main_todo_count, todos.size)
+                    val highlightTodoCountText = stringResource(R.string.main_todo_count_highlight, todos.size)
+                    val todoCountAnnotatedString = remember(fullTodoCountText, highlightTodoCountText) {
+                        buildAnnotatedString {
+                            val startIndex = fullTodoCountText.indexOf(highlightTodoCountText)
+                            if (startIndex >= 0) {
+                                append(fullTodoCountText.substring(0, startIndex))
+                                withStyle(style = SpanStyle(color = R400)) {
+                                    append(highlightTodoCountText)
+                                }
+                                append(fullTodoCountText.substring(startIndex + highlightTodoCountText.length))
+                            } else {
+                                append(fullTodoCountText)
+                            }
+                        }
+                    }
                     Text(
-                        text = stringResource(R.string.main_todo_count, todos.size),
+                        text = todoCountAnnotatedString,
                         style = SSUType.H1SemiBold
                     )
                     Spacer(Modifier.height(5.dp))
@@ -792,6 +811,7 @@ fun TodoList(
                 )
             }
         }
+        Spacer(Modifier.height(80.dp))
     }
 }
 

@@ -74,6 +74,7 @@ import com.yourssu.data.AlertData
 import com.yourssu.data.UiState
 import com.yourssu.ssutime.v2.BuildConfig
 import com.yourssu.ssutime.v2.R
+import com.yourssu.ssutime.v2.SSUCyberAccountHelperBadge
 import com.yourssu.ssutime.v2.analytics.Analytics
 import com.yourssu.ssutime.v2.ui.theme.BLACK
 import com.yourssu.ssutime.v2.ui.theme.N100
@@ -95,6 +96,7 @@ const val HIDDEN_TODOS_ROUTE = "hidden_todos"
 fun MyPageScreen(
     viewModel: MyViewModel = koinViewModel(),
     onLogout: () -> Unit = {},
+    onNavigateToCyberLogin: () -> Unit = {},
 ) {
     val myNavController = rememberNavController()
 
@@ -110,6 +112,7 @@ fun MyPageScreen(
             MyPageContent(
                 viewModel = viewModel,
                 onLogout = onLogout,
+                onNavigateToCyberLogin = onNavigateToCyberLogin,
                 onNavigateToHiddenTodos = {
                     myNavController.navigate(HIDDEN_TODOS_ROUTE)
                 },
@@ -130,6 +133,7 @@ fun MyPageContent(
     viewModel: MyViewModel = koinViewModel(),
     onLogout: () -> Unit = {},
     onNavigateToHiddenTodos: () -> Unit = {},
+    onNavigateToCyberLogin: () -> Unit = {},
 ) {
     val context = LocalContext.current
     val loginInfo = viewModel.loginInfo.value
@@ -360,7 +364,9 @@ fun MyPageContent(
             }
         }
 
-        Spacer(Modifier.height(28.dp))
+        SSUCyberAccountHelperBadge { onNavigateToCyberLogin() }
+
+        Spacer(Modifier.height(18.dp))
 
         Column(
             modifier = Modifier
@@ -444,6 +450,14 @@ fun MyPageContent(
                         }
                     }
                 }
+            )
+
+            Spacer(Modifier.width(5.dp))
+
+            Text(
+                text = stringResource(R.string.my_settings),
+                style = SSUType.H5SemiBold,
+                color = N500,
             )
 
             OptionButton(
