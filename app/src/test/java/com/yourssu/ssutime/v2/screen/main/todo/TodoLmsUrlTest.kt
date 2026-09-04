@@ -81,4 +81,25 @@ class TodoLmsUrlTest {
         assertEquals("", formatVideoDuration(0.0))
         assertEquals("", formatVideoDuration(-1.0))
     }
+
+    @Test
+    fun `parseHtmlToAnnotatedString handles blank string`() {
+        assertEquals("", parseHtmlToAnnotatedString("").text)
+        assertEquals("", parseHtmlToAnnotatedString("   ").text)
+    }
+
+    @Test
+    fun `parseHtmlToAnnotatedString falls back safely without crashing on JVM unit test`() {
+        val html = "<p>과제 설명입니다. <b>중요</b> 안내</p>"
+        val result = parseHtmlToAnnotatedString(html)
+        // On JVM unit tests without android.jar framework mocks, runCatching catches the stub exception and returns the string safely
+        assertEquals(html, result.text)
+    }
+
+    @Test
+    fun `parseHtmlToAnnotatedString handles plain text without html`() {
+        val plain = "일반 텍스트입니다."
+        val result = parseHtmlToAnnotatedString(plain)
+        assertEquals(plain, result.text)
+    }
 }
