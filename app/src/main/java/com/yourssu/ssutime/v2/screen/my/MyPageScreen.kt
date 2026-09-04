@@ -710,16 +710,16 @@ fun ComboOption(
                 onDismissRequest = { expanded = false }
             ) {
                 DropdownMenuItem(
-                    text = { Text(stringResource(R.string.call_alert_time_1h), style = SSUType.Label3Medium, color = BLACK) },
-                    onClick = { onValueChanged(1); expanded = false }
-                )
-                DropdownMenuItem(
-                    text = { Text(stringResource(R.string.call_alert_time_2h), style = SSUType.Label3Medium, color = BLACK) },
-                    onClick = { onValueChanged(2); expanded = false }
+                    text = { Text(stringResource(R.string.call_alert_time_3h), style = SSUType.Label3Medium, color = BLACK) },
+                    onClick = { onValueChanged(3); expanded = false }
                 )
                 DropdownMenuItem(
                     text = { Text(stringResource(R.string.call_alert_time_6h), style = SSUType.Label3Medium, color = BLACK) },
                     onClick = { onValueChanged(6); expanded = false }
+                )
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.call_alert_time_12h), style = SSUType.Label3Medium, color = BLACK) },
+                    onClick = { onValueChanged(12); expanded = false }
                 )
             }
         }

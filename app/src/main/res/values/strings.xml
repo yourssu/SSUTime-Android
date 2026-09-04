@@ -86,11 +86,15 @@
     <string name="call_alert_setup_description">You can receive a call-style alert from your professor based on the time you set.\n(It does not make a real phone call!)</string>
     <string name="call_alert_option_1h">1 hour before the deadline</string>
     <string name="call_alert_option_2h">2 hours before the deadline</string>
+    <string name="call_alert_option_3h">3 hours before the deadline</string>
     <string name="call_alert_option_6h">6 hours before the deadline</string>
+    <string name="call_alert_option_12h">12 hours before the deadline</string>
     <string name="call_alert_disable">Do not receive call alerts</string>
     <string name="call_alert_time_1h">1 hour before</string>
     <string name="call_alert_time_2h">2 hours before</string>
+    <string name="call_alert_time_3h">3 hours before</string>
     <string name="call_alert_time_6h">6 hours before</string>
+    <string name="call_alert_time_12h">12 hours before</string>
     <string name="call_alert_time_dropdown_content_description">Open call alert time options</string>
 
     <string name="my_back_content_description">Back</string>

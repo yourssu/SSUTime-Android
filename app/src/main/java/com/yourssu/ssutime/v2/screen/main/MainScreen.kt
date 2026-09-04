@@ -983,9 +983,9 @@ fun CallingAlertBody(
 ) {
 
     val radioOptions = listOf(
-        stringResource(R.string.call_alert_option_1h),
-        stringResource(R.string.call_alert_option_2h),
+        stringResource(R.string.call_alert_option_3h),
         stringResource(R.string.call_alert_option_6h),
+        stringResource(R.string.call_alert_option_12h),
     )
     val (selectedOption, onOptionSelected) = remember { mutableStateOf("") }
 
@@ -1052,9 +1052,9 @@ fun CallingAlertBody(
                     if(enableCallingAlert.value)
                         -1L
                     else when (radioOptions.indexOf(selectedOption)) {
-                        0 -> 60L
-                        1 -> 120L
-                        else -> 360L
+                        0 -> 180L
+                        1 -> 360L
+                        else -> 720L
                     }
                 )
             },

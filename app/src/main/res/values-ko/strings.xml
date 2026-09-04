@@ -85,11 +85,15 @@
     <string name="call_alert_setup_description">설정한 시간 기준으로 교수님한테 전화 알림을 받을 수 있어요\n(진짜 전화 연결이 되는 것은 아니에요!)</string>
     <string name="call_alert_option_1h">마감 당일 1시간 전</string>
     <string name="call_alert_option_2h">마감 당일 2시간 전</string>
+    <string name="call_alert_option_3h">마감 당일 3시간 전</string>
     <string name="call_alert_option_6h">마감 당일 6시간 전</string>
+    <string name="call_alert_option_12h">마감 당일 12시간 전</string>
     <string name="call_alert_disable">전화 알림 받지 않기</string>
     <string name="call_alert_time_1h">1시간 전</string>
     <string name="call_alert_time_2h">2시간 전</string>
+    <string name="call_alert_time_3h">3시간 전</string>
     <string name="call_alert_time_6h">6시간 전</string>
+    <string name="call_alert_time_12h">12시간 전</string>
     <string name="call_alert_time_dropdown_content_description">전화알림 시간 펼치기</string>
 
     <string name="my_back_content_description">뒤로가기</string>

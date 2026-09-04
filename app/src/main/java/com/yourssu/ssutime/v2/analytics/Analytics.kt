@@ -237,7 +237,9 @@ object Analytics {
     fun selectedTimeFromMinutes(minutes: Long): String? = when (minutes) {
         60L -> "1h"
         120L -> "2h"
+        180L -> "3h"
         360L -> "6h"
+        720L -> "12h"
         else -> null
     }
 
