@@ -148,6 +148,8 @@ fun MyPageContent(
     val coroutine = rememberCoroutineScope()
     val alertState by viewModel.uiState.collectAsStateWithLifecycle()
     var alertData by remember { mutableStateOf<AlertData>(AlertData(valid = false, false, false, -1)) }
+    val labsData by viewModel.labsData.collectAsStateWithLifecycle()
+
     var pendingNotificationSettingsRequest by remember {
         mutableStateOf<NotificationSettingsRequest?>(null)
     }
@@ -488,6 +490,54 @@ fun MyPageContent(
 
         Spacer(Modifier.height(28.dp))
 
+        Row(
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "실험실",
+                style = SSUType.H5SemiBold,
+                color = N500,
+            )
+
+            Spacer(Modifier.width(5.dp))
+
+            TooltipBox(
+                positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
+                    TooltipAnchorPosition.Below
+                ),
+                tooltip = {
+                    Card(
+                        elevation = CardDefaults.cardElevation(
+                            defaultElevation = 6.dp
+                        )
+                    ) {
+                        LabsTooltip()
+                    }
+                },
+                state = tooltipState
+            ) {
+                Icon(
+                    modifier = Modifier.clickable {
+                        coroutine.launch { tooltipState.show() }
+                    },
+                    painter = painterResource(R.drawable.ic_alret),
+                    tint = N400,
+                    contentDescription = "about labs"
+                )
+            }
+        }
+
+        ToggleOption(
+            text = "제출한 첨부파일 확인하기",
+            value = labsData.isEnableSubmittedFile,
+            onValueChanged = { enabled ->
+                viewModel.updateLabsData(labsData.copy(isEnableSubmittedFile = enabled))
+            },
+            childOption = null
+        )
+
+        Spacer(Modifier.height(28.dp))
+
         OptionButton(
             text = stringResource(R.string.my_logout)
         ) {
@@ -821,6 +871,27 @@ fun NotificationTooltip() {
         )
         Text(
             text = stringResource(R.string.my_notification_tooltip_call_desc),
+            style = SSUType.Body2Medium
+        )
+    }
+}
+
+@Composable
+@Preview
+fun LabsTooltip() {
+    Column(
+        Modifier
+            .width(300.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .background(WHITE)
+            .padding(16.dp)
+    ) {
+        Text(
+            text = "실험실?",
+            style = SSUType.Caption1SemiBold
+        )
+        Text(
+            text = "실험적 기능들을 사용해보실 수 있어요. 예고 없이 추가되거나 사라질 수 있고 사용빈도가 높은 기능은 정식으로 추가될 수 있어요.",
             style = SSUType.Body2Medium
         )
     }

@@ -298,11 +298,13 @@ fun MainScreen(
                 }
 
                 composable(SUBMITTED_LIST_ROUTE) {
+                    val isEnableSubmittedFile by viewModel.isEnableSubmittedFile
                     SubmittedScreen(
                         modifier = Modifier
                             .fillMaxSize()
                             .padding(innerPadding),
                         submitted = viewModel.submitted,
+                        isEnableSubmittedFile = isEnableSubmittedFile,
                     )
                 }
             }

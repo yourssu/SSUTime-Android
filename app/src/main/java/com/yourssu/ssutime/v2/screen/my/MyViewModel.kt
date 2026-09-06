@@ -8,6 +8,7 @@ import androidx.core.net.toUri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.yourssu.data.AlertData
+import com.yourssu.data.LabsData
 import com.yourssu.data.TodoInfo
 import com.yourssu.data.UiState
 import com.yourssu.ssutime.v2.accessToken
@@ -58,6 +59,19 @@ class MyViewModel(
             started = SharingStarted.WhileSubscribed(5_000),
             initialValue = emptyList(),
         )
+
+    val labsData: StateFlow<LabsData> = mainRepository.labsData
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5_000),
+            initialValue = LabsData(),
+        )
+
+    fun updateLabsData(labsData: LabsData) {
+        viewModelScope.launch {
+            mainRepository.updateLabsData(labsData)
+        }
+    }
 
     init {
         viewModelScope.launch {
@@ -153,6 +167,7 @@ class MyViewModel(
         viewModelScope.launch {
             termSelectionStore.clear()
             mainRepository.clearTodoData()
+            mainRepository.clearLabsData()
             loginRepository.logout()
             accessToken = ""
             Analytics.resetUser()

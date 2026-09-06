@@ -1,6 +1,7 @@
 package com.yourssu.ssutime.v2.screen.main
 
 import android.util.Log
+import com.yourssu.data.AttachmentInfo
 import com.yourssu.data.DiscussionAttachment
 import com.yourssu.data.DiscussionInfo
 import com.yourssu.data.LoginData
@@ -547,6 +548,23 @@ class LmsRefreshRepository(
                     duration = todo.durationOfVideo ?: -1.0,
                     componentId = todo.component_id ?: -1,
                     moduleItemId = todo.moduleItemId ?: -1,
+                    attachments = todo.attachments?.map {
+                        AttachmentInfo(
+                            id = it.id,
+                            uuid = it.uuid,
+                            folder_id = it.folder_id,
+                            display_name = it.display_name,
+                            file_name = it.file_name,
+                            content_type = it.content_type,
+                            size = it.size,
+                            url = it.url,
+                            thumbnail_url = it.thumbnail_url,
+                            created_at = it.created_at,
+                            updated_at = it.modified_at,
+                            modified_at = it.modified_at,
+                            mime_class = it.mime_class
+                        )
+                    } ?: emptyList(),
                 )
             }
         }.sortedByDeadlineThenName()
@@ -569,6 +587,23 @@ class LmsRefreshRepository(
                         subject = subjectInfoById[subject.id],
                         submittedAt = todo.submitted_at.orEmpty(),
                         url = todo.url.orEmpty(),
+                        attachments = todo.attachments?.map {
+                            AttachmentInfo(
+                                id = it.id,
+                                uuid = it.uuid,
+                                folder_id = it.folder_id,
+                                display_name = it.display_name,
+                                file_name = it.file_name,
+                                content_type = it.content_type,
+                                size = it.size,
+                                url = it.url,
+                                thumbnail_url = it.thumbnail_url,
+                                created_at = it.created_at,
+                                updated_at = it.updated_at,
+                                modified_at = it.modified_at,
+                                mime_class = it.mime_class
+                            )
+                        } ?: emptyList(),
                     )
                 }
         }
