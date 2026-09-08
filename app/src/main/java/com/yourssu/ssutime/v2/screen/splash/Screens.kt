@@ -4,5 +4,5 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 enum class Screens {
-    SPLASH, LOGIN, ONBORADING, MAIN, MY
+    SPLASH, LOGIN, ONBORADING, MAIN, MY, CYBER_LOGIN
 }

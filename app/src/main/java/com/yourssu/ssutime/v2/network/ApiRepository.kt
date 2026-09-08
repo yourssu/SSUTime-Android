@@ -12,6 +12,7 @@ import com.yourssu.data.network.TodoReportWithAnalysisRequest
 import com.yourssu.data.network.TokenRequest
 import com.yourssu.data.network.TokenResponse
 import com.yourssu.data.network.UserTodoStatusResponse
+import com.yourssu.ssutime.v2.BuildConfig
 import com.yourssu.ssutime.v2.accessToken
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
@@ -30,7 +31,12 @@ import io.ktor.http.contentType
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.json.Json
 
-class ApiRepository {
+private const val BASE_URL_DEV = "https://ssutimev2-api-dev.yourssu.com"
+private const val BASE_URL_PROD = "https://ssutimev2-api.yourssu.com"
+
+class ApiRepository(
+    val baseUrl: String = if (BuildConfig.DEBUG_MODE) BASE_URL_DEV else BASE_URL_PROD,
+) {
     val client = HttpClient(Android) {
         install(ContentNegotiation) {
             json(Json {
@@ -43,7 +49,7 @@ class ApiRepository {
 
     suspend fun requestJwtToken(id: String, pw: String): TokenResponse {
         val response = client.post(
-            urlString = "https://ssutimev2-api-dev.yourssu.com/auth/tokens"
+            urlString = "$baseUrl/auth/tokens"
         ) {
             contentType(ContentType.Application.Json)
             setBody(TokenRequest(id, pw))
@@ -55,7 +61,7 @@ class ApiRepository {
 
     suspend fun registerFCMToken(fcmRequest: FcmRequest): HttpStatusCode {
         val response = client.post(
-            urlString = "https://ssutimev2-api-dev.yourssu.com/auth/devices"
+            urlString = "$baseUrl/auth/devices"
         ) {
             bearerAuth(accessToken)
             contentType(ContentType.Application.Json)
@@ -67,7 +73,7 @@ class ApiRepository {
 
     suspend fun setNotificationSetting(enabled: Boolean, minutes: Long): NotificationSetting {
         val response = client.put(
-            urlString = "https://ssutimev2-api-dev.yourssu.com/auth/notification-settings"
+            urlString = "$baseUrl/auth/notification-settings"
         ) {
             bearerAuth(accessToken)
             contentType(ContentType.Application.Json)
@@ -81,7 +87,7 @@ class ApiRepository {
 
     suspend fun addEnrollment(enrollment: AddEnrollmentRequest): HttpStatusCode {
         val response = client.post(
-            urlString = "https://ssutimev2-api-dev.yourssu.com/enrollments"
+            urlString = "$baseUrl/enrollments"
         ) {
             bearerAuth(accessToken)
             contentType(ContentType.Application.Json)
@@ -94,7 +100,7 @@ class ApiRepository {
 
     suspend fun deleteEnrollment(enrollment: DeleteEnrollmentRequest): HttpStatusCode {
         val response = client.delete(
-            urlString = "https://ssutimev2-api-dev.yourssu.com/enrollments"
+            urlString = "$baseUrl/enrollments"
         ) {
             bearerAuth(accessToken)
             contentType(ContentType.Application.Json)
@@ -106,7 +112,7 @@ class ApiRepository {
 
     suspend fun getEnrollments(enrollment: AddEnrollmentRequest): List<EnrollmentResponse> {
         val response = client.get(
-            urlString = "https://ssutimev2-api-dev.yourssu.com/enrollments"
+            urlString = "$baseUrl/enrollments"
         ) {
             bearerAuth(accessToken)
             contentType(ContentType.Application.Json)
@@ -119,7 +125,7 @@ class ApiRepository {
 
     suspend fun reportTodo(todo: TodoReportRequest): HttpStatusCode {
         val response = client.post(
-            urlString = "https://ssutimev2-api-dev.yourssu.com/todo/report"
+            urlString = "$baseUrl/todo/report"
         ) {
             bearerAuth(accessToken)
             contentType(ContentType.Application.Json)
@@ -134,7 +140,7 @@ class ApiRepository {
 
     suspend fun getTodos(): List<UserTodoStatusResponse> {
         val response = client.get(
-            urlString = "https://ssutimev2-api-dev.yourssu.com/todo/todos"
+            urlString = "$baseUrl/todo/todos"
         ) {
             bearerAuth(accessToken)
             contentType(ContentType.Application.Json)
@@ -146,7 +152,7 @@ class ApiRepository {
 
     suspend fun reportTodoWithAnalysis(todo: TodoReportWithAnalysisRequest): AssignmentAnalysisResponse {
         val response = client.post(
-            urlString = "https://ssutimev2-api-dev.yourssu.com/todo/report-with-analysis"
+            urlString = "$baseUrl/todo/report-with-analysis"
         ) {
             bearerAuth(accessToken)
             contentType(ContentType.Application.Json)

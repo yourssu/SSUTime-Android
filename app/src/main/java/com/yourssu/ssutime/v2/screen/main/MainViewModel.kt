@@ -42,6 +42,7 @@ class MainViewModel(
     var showWidgetBadge = mutableStateOf(false)
     var onboardingInitialRefreshInProgress = mutableStateOf(false)
     var requiredShowAlertBottomSheet = mutableStateOf(false)
+    var isEnableSubmittedFile = mutableStateOf(false)
     private var handledHomeEntryVersion: Int? = null
 
     val unreadNoticeCount: Int
@@ -50,6 +51,12 @@ class MainViewModel(
         }
 
     init {
+        viewModelScope.launch {
+            mainRepository.labsData.collect { labsData ->
+                isEnableSubmittedFile.value = labsData.isEnableSubmittedFile
+            }
+        }
+
         viewModelScope.launch {
             val alertData = mainRepository.getAlertData()
             requiredShowAlertBottomSheet.value = shouldShowCallingAlertBottomSheet(alertData)

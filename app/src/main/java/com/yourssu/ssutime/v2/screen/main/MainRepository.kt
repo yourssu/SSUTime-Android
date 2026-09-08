@@ -5,6 +5,7 @@ import android.util.Log
 import androidx.datastore.core.DataStore
 import com.yourssu.data.AiSummaryCache
 import com.yourssu.data.AlertData
+import com.yourssu.data.LabsData
 import com.yourssu.data.TodoData
 import com.yourssu.data.TodoInfo
 import com.yourssu.data.network.LmsSessionRequest
@@ -24,11 +25,23 @@ import kotlinx.coroutines.flow.first
 class MainRepository(
     private val todoDataStore: DataStore<TodoData>,
     private val alertDataStore: DataStore<AlertData>,
+    private val labsDataStore: DataStore<LabsData>,
     private val apiRepository: ApiRepository,
     private val context: Context,
 ) {
     val todoData: Flow<TodoData> = todoDataStore.data
     val alertData: Flow<AlertData> = alertDataStore.data
+    val labsData: Flow<LabsData> = labsDataStore.data
+
+    suspend fun getLabsData(): LabsData = labsDataStore.data.first()
+
+    suspend fun updateLabsData(labsData: LabsData) {
+        labsDataStore.updateData { labsData }
+    }
+
+    suspend fun clearLabsData() {
+        labsDataStore.updateData { LabsData() }
+    }
 
     suspend fun updateTodoData(todoData: TodoData): TodoData {
         val updatedTodoData = todoDataStore.updateData { todoData }

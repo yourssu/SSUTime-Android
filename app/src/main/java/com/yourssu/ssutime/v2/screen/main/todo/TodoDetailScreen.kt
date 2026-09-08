@@ -55,7 +55,9 @@ import androidx.compose.ui.window.Dialog
 import com.yourssu.data.SubjectInfo
 import com.yourssu.data.TodoInfo
 import com.yourssu.data.TodoType
+import com.yourssu.data.isCyber
 import com.yourssu.ssutime.v2.R
+
 import com.yourssu.ssutime.v2.component.SButton_Small
 import com.yourssu.ssutime.v2.getStringDateWithTime
 import com.yourssu.ssutime.v2.screen.my.PopupButton
@@ -302,6 +304,9 @@ fun SummaryScreen(
  * 할일 유형별 LMS 상세 페이지 URL 생성
  */
 fun TodoInfo.toLmsUrl(): String {
+    if (isCyber()) {
+        return url.ifBlank { "https://lms.kcu.ac" }
+    }
     val currentSubjectId = subject?.id ?: subjectId
     return when (type) {
         TodoType.QUIZ -> "https://canvas.ssu.ac.kr/courses/$currentSubjectId/quizzes/$componentId"
@@ -310,6 +315,7 @@ fun TodoInfo.toLmsUrl(): String {
         else -> url.ifBlank { "https://canvas.ssu.ac.kr/courses/$currentSubjectId" }
     }
 }
+
 
 /**
  * LMS 외부 브라우저 이동
