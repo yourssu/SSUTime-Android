@@ -9,11 +9,14 @@ import androidx.datastore.core.Serializer
 import androidx.datastore.core.handlers.ReplaceFileCorruptionHandler
 import androidx.datastore.dataStore
 import com.yourssu.data.AlertData
+import com.yourssu.data.CyberLoginData
 import com.yourssu.data.LabsData
 import com.yourssu.data.LoginData
 import com.yourssu.data.TodoData
 import com.yourssu.ssutime.v2.analytics.SentryExceptionReporter
 import com.yourssu.ssutime.v2.network.ApiRepository
+import com.yourssu.ssutime.v2.screen.cyber.CyberLoginViewModel
+import com.yourssu.ssutime.v2.screen.cyber.CyberRepository
 import com.yourssu.ssutime.v2.screen.login.LoginRepository
 import com.yourssu.ssutime.v2.screen.login.LoginViewModel
 import com.yourssu.ssutime.v2.screen.main.LmsRefreshRepository
@@ -54,6 +57,7 @@ internal var accessToken = ""
 
 val appModule = module {
     single<DataStore<LoginData>> { androidContext().loginDataStore }
+    single<DataStore<CyberLoginData>>(named("cyberLoginDataStore")) { androidContext().cyberLoginDataStore }
     single<DataStore<TodoData>>(named("todoDataStore")) { androidContext().todoDataStore }
     single<DataStore<OnBoardingData>>(named("onBoardingDataStore")) { androidContext().onBoardingDataStore }
     single<DataStore<AlertData>>(named("alertDataStore")) { androidContext().notificationStore }
@@ -70,10 +74,17 @@ val appModule = module {
         )
     }
     single {
+        CyberRepository(
+            get(named("cyberLoginDataStore")),
+            get()
+        )
+    }
+    single {
         ApiRepository()
     }
     single {
         LmsRefreshRepository(
+            get(),
             get(),
             get(),
             get()
@@ -87,9 +98,10 @@ val appModule = module {
             )
         )
     }
-    viewModel { MyViewModel(get(), get(), get()) }
+    viewModel { MyViewModel(get(), get(), get(), get()) }
     viewModel { SplashViewModel(get(), get()) }
     viewModel { LoginViewModel(get(), get()) }
+    viewModel { CyberLoginViewModel(get()) }
     viewModel { TodoDetailViewModel(get(), get(), get()) }
     viewModel {
         OnBoardingViewModel(
@@ -104,6 +116,7 @@ val appModule = module {
 // Compose Preview를 위한 koinModule
 val previewModule = module {
     single<DataStore<LoginData>> { androidContext().loginDataStore }
+    single<DataStore<CyberLoginData>>(named("cyberLoginDataStore")) { androidContext().cyberLoginDataStore }
     single<DataStore<TodoData>>(named("todoDataStore")) { androidContext().todoDataStore }
     single<DataStore<OnBoardingData>>(named("onBoardingDataStore")) { androidContext().onBoardingDataStore }
     single<DataStore<AlertData>>(named("alertDataStore")) { androidContext().notificationStore }
@@ -123,7 +136,14 @@ val previewModule = module {
         )
     }
     single {
+        CyberRepository(
+            get(named("cyberLoginDataStore")),
+            get()
+        )
+    }
+    single {
         LmsRefreshRepository(
+            get(),
             get(),
             get(),
             get()
@@ -137,9 +157,10 @@ val previewModule = module {
             )
         )
     }
-    viewModel { MyViewModel(get(), get(), get()) }
+    viewModel { MyViewModel(get(), get(), get(), get()) }
     viewModel { SplashViewModel(get(), get()) }
     viewModel { LoginViewModel(get(), get()) }
+    viewModel { CyberLoginViewModel(get()) }
     viewModel { TodoDetailViewModel(get(), get(), get()) }
     viewModel {
         OnBoardingViewModel(
@@ -151,12 +172,50 @@ val previewModule = module {
     viewModel { MainViewModel(get(), get(), get()) }
 }
 
+
 val Context.loginDataStore: DataStore<LoginData> by dataStore(
     fileName = "account.json",
     serializer = LoginDataSerializer,
     corruptionHandler = ReplaceFileCorruptionHandler { LoginDataSerializer.defaultValue },
     produceMigrations = { listOf(LoginDataEncryptionMigration) },
 )
+
+val Context.cyberLoginDataStore: DataStore<CyberLoginData> by dataStore(
+    fileName = "cyber_account.json",
+    serializer = CyberLoginDataSerializer,
+    corruptionHandler = ReplaceFileCorruptionHandler { CyberLoginDataSerializer.defaultValue },
+)
+
+object CyberLoginDataSerializer : Serializer<CyberLoginData> {
+    override val defaultValue: CyberLoginData = CyberLoginData()
+
+    override suspend fun readFrom(input: InputStream): CyberLoginData =
+        try {
+            val storedValue = input.readBytes().decodeToString()
+            val json = if (LoginDataCrypto.isEncrypted(storedValue)) {
+                LoginDataCrypto.decrypt(storedValue).decodeToString()
+            } else {
+                storedValue
+            }
+            Json.decodeFromString<CyberLoginData>(json)
+        } catch (serialization: SerializationException) {
+            SentryExceptionReporter.capture(serialization)
+            throw CorruptionException("사이버 계정 정보를 읽어오지 못했습니다.", serialization)
+        } catch (security: GeneralSecurityException) {
+            SentryExceptionReporter.capture(security)
+            throw CorruptionException("사이버 계정 정보를 복호화하지 못했습니다.", security)
+        } catch (illegalArgument: IllegalArgumentException) {
+            SentryExceptionReporter.capture(illegalArgument)
+            throw CorruptionException("사이버 계정 정보 암호문 형식이 올바르지 않습니다.", illegalArgument)
+        }
+
+    override suspend fun writeTo(t: CyberLoginData, output: OutputStream) {
+        val json = Json.encodeToString(CyberLoginData.serializer(), t)
+        val encryptedValue = LoginDataCrypto.encrypt(json.encodeToByteArray())
+        output.write(encryptedValue.encodeToByteArray())
+    }
+}
+
 
 object LoginDataSerializer : Serializer<LoginData> {
     override val defaultValue: LoginData = LoginData(id = "", pw = "", isAutoLogin = false, accessToken = "")

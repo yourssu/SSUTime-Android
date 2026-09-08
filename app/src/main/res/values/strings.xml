@@ -41,10 +41,13 @@
     <string name="onboarding_tip_cyber_excluded">Soongsil Cyber University lectures are not included.</string>
     <string name="cyber_connect_title">Connect Soongsil Cyber University</string>
     <string name="cyber_connect_login">Log in</string>
+    <string name="cyber_title">Soongsil Cyber University</string>
+    <string name="cyber_disconnect">Disconnect</string>
     <string name="cyber_login_title">Log in to view\ncyber university deadlines</string>
     <string name="cyber_login_id_placeholder">Enter student ID issued by Cyber University</string>
     <string name="cyber_login_pw_placeholder">Enter Cyber University password</string>
     <string name="cyber_login_find_id">Find Student ID</string>
+
 
     <string name="network_error_title">Your internet connection is unstable</string>
     <string name="network_error_description">Check your Wi-Fi or cellular connection\nand try again.</string>
@@ -177,4 +180,5 @@
     <string name="tab_my">My</string>
     <string name="calendar_title">Calendar</string>
     <string name="calendar_coming_soon">Calendar feature is coming soon</string>
+    <string name="cyber_connected">Connected</string>
 </resources>

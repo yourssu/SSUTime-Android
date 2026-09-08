@@ -1,6 +1,7 @@
 package com.yourssu.ssutime.v2
 
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
@@ -14,6 +15,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -26,6 +28,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Alignment
@@ -33,7 +37,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
@@ -50,6 +56,7 @@ import com.yourssu.data.TodoInfo
 import com.yourssu.data.TodoType
 import com.yourssu.ssutime.v2.analytics.Analytics
 import com.yourssu.ssutime.v2.screen.cyber.CyberLoginScreen
+import com.yourssu.ssutime.v2.screen.cyber.CyberLoginViewModel
 import com.yourssu.ssutime.v2.screen.login.LoginScreen
 import com.yourssu.ssutime.v2.screen.main.MainContainerScreen
 import com.yourssu.ssutime.v2.screen.main.TermSelectionStore
@@ -57,12 +64,15 @@ import com.yourssu.ssutime.v2.screen.my.MyPageScreen
 import com.yourssu.ssutime.v2.screen.onboarding.OnBoardingScreen
 import com.yourssu.ssutime.v2.screen.splash.Screens
 import com.yourssu.ssutime.v2.screen.splash.SplashScreen
+import com.yourssu.ssutime.v2.ui.theme.BLACK
 import com.yourssu.ssutime.v2.ui.theme.N500
+import com.yourssu.ssutime.v2.ui.theme.R100
 import com.yourssu.ssutime.v2.ui.theme.R400
 import com.yourssu.ssutime.v2.ui.theme.SSUTimeTheme
 import com.yourssu.ssutime.v2.ui.theme.SSUType
 import com.yourssu.ssutime.v2.ui.theme.WHITE
 import org.koin.android.ext.android.inject
+import org.koin.compose.viewmodel.koinViewModel
 
 
 class MainActivity : ComponentActivity() {
@@ -213,11 +223,32 @@ class MainActivity : ComponentActivity() {
                     }
 
                     composable(route = Screens.CYBER_LOGIN.name) {
+                        val cyberLoginViewModel: CyberLoginViewModel = koinViewModel()
+                        val isLoading by cyberLoginViewModel.isLoading.collectAsState()
+                        val errorMessage by cyberLoginViewModel.errorMessage.collectAsState()
+                        val context = LocalContext.current
+
                         CyberLoginScreen(
+                            isLoading = isLoading,
+                            errorMessage = errorMessage,
                             onBackClick = { navController.popBackStack() },
-                            onLoginClick = { _, _ -> /* UI only for now */ },
+                            onLoginClick = { id, pw ->
+                                cyberLoginViewModel.login(id, pw) {
+                                    navController.popBackStack()
+                                }
+                            },
+                            onFindIdClick = {
+                                runCatching {
+                                    val intent = Intent(
+                                        Intent.ACTION_VIEW,
+                                        Uri.parse("https://portal.kcu.ac/findId/findId.do")
+                                    )
+                                    context.startActivity(intent)
+                                }
+                            },
                         )
                     }
+
                 }
             }
 
@@ -376,6 +407,52 @@ fun SSUCyberAccountHelperBadge(
             imageVector = Icons.AutoMirrored.Default.KeyboardArrowRight,
             contentDescription = stringResource(R.string.common_close),
             colorFilter = ColorFilter.tint(N500)
+        )
+    }
+}
+@Preview
+@Composable
+fun SSUCyberAccountConnectedBadge(
+    cyberId: String = "",
+    onDisconnect: () -> Unit = {},
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(10.dp))
+            .border(1.dp, Color(0xFFE2E8F0), RoundedCornerShape(10.dp))
+            .background(Color(0xFFF8FAFC))
+            .padding(16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+        Row(
+            modifier = Modifier.weight(1f),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = stringResource(R.string.cyber_title),
+                style = SSUType.Label2SemiBold,
+                color = BLACK,
+            )
+            Spacer(Modifier.width(4.dp))
+            Text(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(7.dp))
+                    .background(R100)
+                    .padding(6.dp),
+                text = stringResource(R.string.cyber_connected),
+                style = SSUType.Caption2Medium,
+                color = R400,
+            )
+        }
+
+        Text(
+            text = stringResource(R.string.cyber_disconnect),
+            style = SSUType.Label3Regular,
+            textDecoration = TextDecoration.Underline,
+            color = N500,
+            modifier = Modifier.clickable { onDisconnect() },
         )
     }
 }

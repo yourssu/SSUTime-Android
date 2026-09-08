@@ -50,6 +50,7 @@ import androidx.compose.material3.TooltipDefaults
 import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -74,6 +75,7 @@ import com.yourssu.data.AlertData
 import com.yourssu.data.UiState
 import com.yourssu.ssutime.v2.BuildConfig
 import com.yourssu.ssutime.v2.R
+import com.yourssu.ssutime.v2.SSUCyberAccountConnectedBadge
 import com.yourssu.ssutime.v2.SSUCyberAccountHelperBadge
 import com.yourssu.ssutime.v2.analytics.Analytics
 import com.yourssu.ssutime.v2.ui.theme.BLACK
@@ -366,7 +368,16 @@ fun MyPageContent(
             }
         }
 
-        SSUCyberAccountHelperBadge { onNavigateToCyberLogin() }
+        val cyberLoginData by viewModel.cyberLoginData.collectAsState()
+        if (cyberLoginData.hasCredentials) {
+            SSUCyberAccountConnectedBadge(
+                cyberId = cyberLoginData.id,
+                onDisconnect = { viewModel.logoutCyber() },
+            )
+        } else {
+            SSUCyberAccountHelperBadge { onNavigateToCyberLogin() }
+        }
+
 
         Spacer(Modifier.height(18.dp))
 
@@ -486,55 +497,53 @@ fun MyPageContent(
                 viewModel.openURL(context, "https://chlwhdtn03.github.io/ssutime/privacy.html")
             }
 
-        }
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "실험실",
+                    style = SSUType.H5SemiBold,
+                    color = N500,
+                )
 
-        Spacer(Modifier.height(28.dp))
+                Spacer(Modifier.width(5.dp))
 
-        Row(
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = "실험실",
-                style = SSUType.H5SemiBold,
-                color = N500,
+                TooltipBox(
+                    positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
+                        TooltipAnchorPosition.Below
+                    ),
+                    tooltip = {
+                        Card(
+                            elevation = CardDefaults.cardElevation(
+                                defaultElevation = 6.dp
+                            )
+                        ) {
+                            LabsTooltip()
+                        }
+                    },
+                    state = tooltipState
+                ) {
+                    Icon(
+                        modifier = Modifier.clickable {
+                            coroutine.launch { tooltipState.show() }
+                        },
+                        painter = painterResource(R.drawable.ic_alret),
+                        tint = N400,
+                        contentDescription = "about labs"
+                    )
+                }
+            }
+
+            ToggleOption(
+                text = "제출한 첨부파일 확인하기",
+                value = labsData.isEnableSubmittedFile,
+                onValueChanged = { enabled ->
+                    viewModel.updateLabsData(labsData.copy(isEnableSubmittedFile = enabled))
+                },
+                childOption = null
             )
 
-            Spacer(Modifier.width(5.dp))
-
-            TooltipBox(
-                positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
-                    TooltipAnchorPosition.Below
-                ),
-                tooltip = {
-                    Card(
-                        elevation = CardDefaults.cardElevation(
-                            defaultElevation = 6.dp
-                        )
-                    ) {
-                        LabsTooltip()
-                    }
-                },
-                state = tooltipState
-            ) {
-                Icon(
-                    modifier = Modifier.clickable {
-                        coroutine.launch { tooltipState.show() }
-                    },
-                    painter = painterResource(R.drawable.ic_alret),
-                    tint = N400,
-                    contentDescription = "about labs"
-                )
-            }
         }
-
-        ToggleOption(
-            text = "제출한 첨부파일 확인하기",
-            value = labsData.isEnableSubmittedFile,
-            onValueChanged = { enabled ->
-                viewModel.updateLabsData(labsData.copy(isEnableSubmittedFile = enabled))
-            },
-            childOption = null
-        )
 
         Spacer(Modifier.height(28.dp))
 

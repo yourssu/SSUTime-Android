@@ -8,6 +8,7 @@ import androidx.core.net.toUri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.yourssu.data.AlertData
+import com.yourssu.data.CyberLoginData
 import com.yourssu.data.LabsData
 import com.yourssu.data.TodoInfo
 import com.yourssu.data.UiState
@@ -18,6 +19,7 @@ import com.yourssu.ssutime.v2.lms.ensureLmsLoggedIn
 import com.yourssu.ssutime.v2.lms.getLmsLoginInfo
 import com.yourssu.ssutime.v2.lms.getLmsTerms
 import com.yourssu.ssutime.v2.notification.showCallAlert
+import com.yourssu.ssutime.v2.screen.cyber.CyberRepository
 import com.yourssu.ssutime.v2.screen.login.LoginRepository
 import com.yourssu.ssutime.v2.screen.main.MainRepository
 import com.yourssu.ssutime.v2.screen.main.TermSelectionStore
@@ -42,6 +44,7 @@ class MyViewModel(
     private val loginRepository: LoginRepository,
     private val mainRepository: MainRepository,
     private val termSelectionStore: TermSelectionStore,
+    private val cyberRepository: CyberRepository,
 ) : ViewModel() {
     var loginInfo = mutableStateOf<Info?>(null)
     var terms = mutableStateOf<List<Term>>(emptyList())
@@ -52,6 +55,19 @@ class MyViewModel(
     private val _uiState = MutableStateFlow<UiState<AlertData>>(UiState.Loading)
     val uiState: StateFlow<UiState<AlertData>> = _uiState.asStateFlow()
 
+    val cyberLoginData: StateFlow<CyberLoginData> = cyberRepository.cyberLoginData
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5_000),
+            initialValue = CyberLoginData(),
+        )
+
+    fun logoutCyber() {
+        viewModelScope.launch {
+            cyberRepository.logout()
+        }
+    }
+
     val hiddenTodos: StateFlow<List<TodoInfo>> = mainRepository.todoData
         .map { it.hiddenTodos }
         .stateIn(
@@ -59,6 +75,7 @@ class MyViewModel(
             started = SharingStarted.WhileSubscribed(5_000),
             initialValue = emptyList(),
         )
+
 
     val labsData: StateFlow<LabsData> = mainRepository.labsData
         .stateIn(

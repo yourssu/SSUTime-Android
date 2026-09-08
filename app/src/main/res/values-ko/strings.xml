@@ -40,10 +40,13 @@
     <string name="onboarding_tip_cyber_excluded">숭실 사이버 강의는 포함되지 않아요</string>
     <string name="cyber_connect_title">숭실 사이버 대학 연결하기</string>
     <string name="cyber_connect_login">로그인</string>
+    <string name="cyber_title">숭실 사이버 대학</string>
+    <string name="cyber_disconnect">연결 해제</string>
     <string name="cyber_login_title">로그인만 하면\n숭사대 마감일을 볼 수 있어요</string>
     <string name="cyber_login_id_placeholder">숭실 사이버 대학에서 발급받은 학번을 입력하세요</string>
     <string name="cyber_login_pw_placeholder">숭실 사이버 대학 비밀번호 입력하세요</string>
     <string name="cyber_login_find_id">학번 찾기</string>
+
 
     <string name="network_error_title">인터넷 연결이 불안정해요</string>
     <string name="network_error_description">Wi-Fi나 셀룰러 데이터 연결 상태를\n확인하고 다시 시도해주세요.</string>
@@ -176,4 +179,5 @@
     <string name="tab_my">마이</string>
     <string name="calendar_title">캘린더</string>
     <string name="calendar_coming_soon">캘린더 기능을 준비하고 있어요</string>
+    <string name="cyber_connected">연결됨</string>
 </resources>

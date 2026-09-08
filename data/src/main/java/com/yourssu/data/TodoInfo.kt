@@ -35,3 +35,7 @@ fun TodoInfo.todoUniqueKey(): String =
         "${subject?.id ?: subjectId}:$todoId:${type.name}:$title:$due_date"
     }
 
+fun TodoInfo.isCyber(): Boolean =
+    todoId < 0 || (subject?.id ?: subjectId) < 0 || url.contains("kcu.ac")
+
+

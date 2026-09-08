@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -25,13 +26,16 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.yourssu.data.CyberLoginData
 import com.yourssu.ssutime.v2.MainActivity
 import com.yourssu.ssutime.v2.component.SSUCyberConnectPopup
 import com.yourssu.ssutime.v2.component.SSUTimeBottomBar
 import com.yourssu.ssutime.v2.screen.calendar.CalendarScreen
+import com.yourssu.ssutime.v2.screen.cyber.CyberRepository
 import com.yourssu.ssutime.v2.screen.my.MyPageScreen
 import com.yourssu.ssutime.v2.screen.navigation.MainTab
 import com.yourssu.ssutime.v2.ui.theme.WHITE
+import org.koin.compose.koinInject
 
 @Composable
 fun MainContainerScreen(
@@ -50,6 +54,10 @@ fun MainContainerScreen(
     val currentRoute = navBackStackEntry?.destination?.route
     val currentTab = MainTab.fromRoute(currentRoute)
     var showCyberPopup by rememberSaveable { mutableStateOf(true) }
+
+    val cyberRepository: CyberRepository = koinInject()
+    val cyberLoginData by cyberRepository.cyberLoginData.collectAsState(initial = CyberLoginData())
+
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -111,7 +119,8 @@ fun MainContainerScreen(
             }
 
             AnimatedVisibility(
-                visible = showCyberPopup,
+                visible = !cyberLoginData.hasCredentials && showCyberPopup,
+
                 enter = fadeIn() + slideInVertically { it / 2 },
                 exit = fadeOut() + slideOutVertically { it / 2 },
                 modifier = Modifier
