@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.HorizontalDivider
@@ -48,7 +49,7 @@ import com.yourssu.ssutime.desktop.core.model.dueDate
 import com.yourssu.ssutime.desktop.core.model.formatVideoDuration
 import com.yourssu.ssutime.desktop.core.model.toLmsUrl
 import com.yourssu.ssutime.desktop.screen.main.DesktopAiSummaryUiState
-import com.yourssu.ssutime.desktop.ui.component.SButton
+import com.yourssu.ssutime.desktop.ui.component.SButton_Small
 import com.yourssu.ssutime.desktop.ui.resources.Res
 import com.yourssu.ssutime.desktop.ui.resources.ai_estimated_duration
 import com.yourssu.ssutime.desktop.ui.resources.ai_estimated_duration_unknown
@@ -82,6 +83,7 @@ import com.yourssu.ssutime.desktop.ui.theme.R400
 import com.yourssu.ssutime.desktop.ui.theme.SSUType
 import com.yourssu.ssutime.desktop.ui.theme.WHITE
 import com.yourssu.ssutime.desktop.ui.util.formatMonthDayWithTime
+import com.yourssu.ssutime.desktop.ui.util.parseHtmlToPlainText
 import com.yourssu.ssutime.desktop.ui.util.remainingSeconds
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
@@ -121,9 +123,8 @@ fun DesktopTodoDetailScreen(
             Box(
                 modifier = Modifier
                     .size(36.dp)
-                    .clip(RoundedCornerShape(8.dp))
-                    .clickable(onClick = onBack)
-                    .padding(4.dp),
+                    .clip(CircleShape)
+                    .clickable(onClick = onBack),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
@@ -281,7 +282,10 @@ private fun TodoDetailOverview(
                 contentAlignment = Alignment.CenterEnd,
             ) {
                 Text(
-                    modifier = Modifier.clickable(onClick = onHideClick),
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(4.dp))
+                        .clickable(onClick = onHideClick)
+                        .padding(horizontal = 6.dp, vertical = 4.dp),
                     text = stringResource(Res.string.todo_hide_from_list),
                     style = SSUType.Label3Medium,
                     color = N600,
@@ -356,8 +360,11 @@ private fun TodoDetailTabSection(
 
         when (currentTab) {
             TodoDetailTab.DESCRIPTION -> {
+                val parsedDescription = remember(todo.description) {
+                    parseHtmlToPlainText(todo.description).ifBlank { "상세 설명이 없습니다." }
+                }
                 Text(
-                    text = todo.description.ifBlank { "상세 설명이 없습니다." },
+                    text = parsedDescription,
                     style = SSUType.Body1Regular,
                     color = N600,
                 )
@@ -410,8 +417,9 @@ private fun TodoDetailTabSection(
             modifier = Modifier.fillMaxWidth(),
             contentAlignment = Alignment.TopEnd,
         ) {
-            SButton(
+            SButton_Small(
                 labelText = stringResource(Res.string.todo_detail_lms_link),
+                textStyle = SSUType.Label3Medium,
                 onClick = onOpenUrl,
             )
         }
@@ -450,10 +458,10 @@ fun DesktopHideTodoPopup(
             Box(
                 modifier = Modifier
                     .weight(1f)
-                    .clip(RoundedCornerShape(10.dp))
+                    .clip(RoundedCornerShape(12.dp))
                     .background(N200)
                     .clickable(onClick = onCancel)
-                    .padding(vertical = 12.dp),
+                    .padding(14.dp),
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
@@ -466,10 +474,10 @@ fun DesktopHideTodoPopup(
             Box(
                 modifier = Modifier
                     .weight(1f)
-                    .clip(RoundedCornerShape(10.dp))
+                    .clip(RoundedCornerShape(12.dp))
                     .background(R400)
                     .clickable(onClick = onConfirm)
-                    .padding(vertical = 12.dp),
+                    .padding(14.dp),
                 contentAlignment = Alignment.Center,
             ) {
                 Text(

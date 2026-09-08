@@ -1,7 +1,13 @@
 package com.yourssu.ssutime.desktop.screen.main
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -21,17 +27,17 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
@@ -39,7 +45,6 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -52,15 +57,18 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.yourssu.data.DiscussionInfo
+import com.yourssu.ssutime.desktop.component.SSUCyberConnectPopup
 import com.yourssu.ssutime.desktop.core.model.AppTodo
 import com.yourssu.ssutime.desktop.core.model.AppTodoData
 import com.yourssu.ssutime.desktop.core.model.AppTodoType
 import com.yourssu.ssutime.desktop.core.model.aiSummaryKey
+import com.yourssu.ssutime.desktop.core.model.desktopItemKey
 import com.yourssu.ssutime.desktop.core.model.dueDate
 import com.yourssu.ssutime.desktop.screen.calendar.DesktopCalendarPanel
 import com.yourssu.ssutime.desktop.screen.calendar.badgeBackgroundColor
 import com.yourssu.ssutime.desktop.screen.calendar.badgeTextColor
 import com.yourssu.ssutime.desktop.screen.notice.DesktopNoticeScreen
+import com.yourssu.ssutime.desktop.screen.submitted.DesktopSubmittedScreen
 import com.yourssu.ssutime.desktop.screen.todo.DesktopTodoDetailScreen
 import com.yourssu.ssutime.desktop.ui.component.SButton
 import com.yourssu.ssutime.desktop.ui.resources.Res
@@ -82,8 +90,6 @@ import com.yourssu.ssutime.desktop.ui.resources.main_empty_todos
 import com.yourssu.ssutime.desktop.ui.resources.main_late_submission_available
 import com.yourssu.ssutime.desktop.ui.resources.main_relaxed_tasks_title
 import com.yourssu.ssutime.desktop.ui.resources.main_submitted_count
-import com.yourssu.ssutime.desktop.ui.resources.main_submitted_empty
-import com.yourssu.ssutime.desktop.ui.resources.main_submitted_title
 import com.yourssu.ssutime.desktop.ui.resources.main_todo_count
 import com.yourssu.ssutime.desktop.ui.resources.main_todo_list_title
 import com.yourssu.ssutime.desktop.ui.resources.main_update_info_none
@@ -106,6 +112,7 @@ import com.yourssu.ssutime.desktop.ui.theme.G400
 import com.yourssu.ssutime.desktop.ui.theme.N100
 import com.yourssu.ssutime.desktop.ui.theme.N200
 import com.yourssu.ssutime.desktop.ui.theme.N300
+import com.yourssu.ssutime.desktop.ui.theme.N400
 import com.yourssu.ssutime.desktop.ui.theme.N500
 import com.yourssu.ssutime.desktop.ui.theme.R100
 import com.yourssu.ssutime.desktop.ui.theme.R400
@@ -149,14 +156,15 @@ fun DesktopMainScreen(
     onHideTodo: (AppTodo) -> Unit = {},
     onDiscussionExpanded: (DiscussionInfo) -> Unit = {},
     onOpenUrl: (String) -> Unit = {},
+    isCyberConnected: Boolean = false,
+    onNavigateToCyberLogin: () -> Unit = {},
+    isEnableSubmittedFile: Boolean = false,
     modifier: Modifier = Modifier,
     showBlockingLoading: Boolean = false,
 ) {
-    var showSubmitted by remember { mutableStateOf(false) }
+    var showingSubmitted by remember { mutableStateOf(false) }
     var selectedTodo by remember { mutableStateOf<AppTodo?>(null) }
     var showingNotice by remember { mutableStateOf(false) }
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
-    val scope = rememberCoroutineScope()
 
     val unreadNoticeCount = remember(todoData.subjects) {
         todoData.subjects.flatMap { it.discussions }.count {
@@ -185,7 +193,7 @@ fun DesktopMainScreen(
                     .fillMaxSize()
                     .padding(innerPadding),
             ) {
-                // Left Column: Main Todo List or Todo Detail Screen
+                // Left Column: Main Todo List or Todo Detail Screen or Submitted Screen
                 Box(
                     modifier = Modifier
                         .weight(1f)
@@ -203,17 +211,26 @@ fun DesktopMainScreen(
                             },
                             onOpenUrl = onOpenUrl,
                         )
+                    } else if (showingSubmitted) {
+                        DesktopSubmittedScreen(
+                            submitted = todoData.submitted,
+                            isEnableSubmittedFile = isEnableSubmittedFile,
+                            onBack = { showingSubmitted = false },
+                            onOpenUrl = onOpenUrl,
+                        )
                     } else {
                         HomeTodoListColumn(
                             todoData = todoData,
                             isLoading = isLoading && !showBlockingLoading,
                             loadingProgress = loadingProgress,
                             onRefresh = onRefresh,
-                            onSubmittedClick = { showSubmitted = true },
+                            onSubmittedClick = { showingSubmitted = true },
                             onTodoClick = { todo ->
                                 selectedTodo = todo
                                 onExpandTodo(todo)
                             },
+                            isCyberConnected = isCyberConnected,
+                            onNavigateToCyberLogin = onNavigateToCyberLogin,
                         )
                     }
                 }
@@ -245,31 +262,13 @@ fun DesktopMainScreen(
                             noticeCount = unreadNoticeCount,
                             onNoticeClick = { showingNotice = true },
                             onTodoClick = { todo ->
+                                showingSubmitted = false
                                 selectedTodo = todo
                                 onExpandTodo(todo)
                             },
                         )
                     }
                 }
-            }
-        }
-
-        if (showSubmitted) {
-            ModalBottomSheet(
-                modifier = Modifier.fillMaxWidth(),
-                containerColor = WHITE,
-                onDismissRequest = { showSubmitted = false },
-                sheetState = sheetState,
-            ) {
-                SubmittedSheet(
-                    todoData = todoData,
-                    onClose = {
-                        scope.launch {
-                            sheetState.hide()
-                            showSubmitted = false
-                        }
-                    },
-                )
             }
         }
 
@@ -297,10 +296,13 @@ private fun HomeTodoListColumn(
     onRefresh: () -> Unit,
     onSubmittedClick: () -> Unit,
     onTodoClick: (AppTodo) -> Unit,
+    isCyberConnected: Boolean = false,
+    onNavigateToCyberLogin: () -> Unit = {},
 ) {
     val density = LocalDensity.current
     val scrollState = rememberScrollState()
     var headerHeightPx by remember { mutableIntStateOf(0) }
+    var showCyberPopup by remember { mutableStateOf(true) }
 
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         val headerHeight = with(density) { headerHeightPx.toDp() }
@@ -351,6 +353,7 @@ private fun HomeTodoListColumn(
                     Box(
                         modifier = Modifier
                             .size(24.dp)
+                            .clip(CircleShape)
                             .clickable(enabled = !isLoading, onClick = onRefresh),
                         contentAlignment = Alignment.Center,
                     ) {
@@ -391,6 +394,20 @@ private fun HomeTodoListColumn(
                 onTodoClick = onTodoClick,
             )
         }
+
+        AnimatedVisibility(
+            visible = !isCyberConnected && showCyberPopup,
+            enter = fadeIn() + slideInVertically { it / 2 },
+            exit = fadeOut() + slideOutVertically { it / 2 },
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+        ) {
+            SSUCyberConnectPopup(
+                onClick = onNavigateToCyberLogin,
+                onDismiss = { showCyberPopup = false },
+            )
+        }
     }
 }
 
@@ -428,8 +445,8 @@ private fun TodoList(
             emphasized = immediate.isNotEmpty() || todos.isEmpty(),
         )
 
-        immediate.forEach { todo ->
-            key(todo.aiSummaryKey()) {
+        immediate.forEachIndexed { index, todo ->
+            key(todo.desktopItemKey(index)) {
                 Spacer(Modifier.height(8.dp))
                 TodoItemRow(
                     todo = todo,
@@ -446,8 +463,8 @@ private fun TodoList(
             )
         }
 
-        relaxed.forEach { todo ->
-            key(todo.aiSummaryKey()) {
+        relaxed.forEachIndexed { index, todo ->
+            key(todo.desktopItemKey(immediate.size + index)) {
                 Spacer(Modifier.height(8.dp))
                 TodoItemRow(
                     todo = todo,
@@ -499,9 +516,10 @@ private fun TodoListHeader(
             style = SSUType.Caption1SemiBold,
             color = N500,
             modifier = Modifier
+                .clip(RoundedCornerShape(8.dp))
                 .border(1.dp, N300, RoundedCornerShape(8.dp))
                 .clickable(onClick = onClickSubmitted)
-                .padding(8.dp),
+                .padding(horizontal = 10.dp, vertical = 6.dp),
         )
     }
 }
@@ -629,117 +647,6 @@ private fun AppTodoType.localizedLabel(): String = stringResource(
         AppTodoType.SUBMITTED_LATE -> Res.string.todo_type_submitted_late
     },
 )
-
-@Composable
-private fun SubmittedSheet(
-    todoData: AppTodoData,
-    onClose: () -> Unit,
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .fillMaxHeight(0.72f)
-            .padding(16.dp),
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                text = stringResource(Res.string.main_submitted_title),
-                style = SSUType.H3SemiBold,
-            )
-            Spacer(Modifier.width(6.dp))
-            Text(
-                text = todoData.submitted.size.toString(),
-                style = SSUType.H3SemiBold.copy(color = R400),
-            )
-            Spacer(Modifier.weight(1f))
-            Text(
-                text = if (todoData.loadedAt.isNotBlank()) {
-                    stringResource(
-                        Res.string.main_date_base,
-                        runCatching {
-                            formatMonthDay(todoData.loadedAt)
-                        }.getOrDefault("-"),
-                    )
-                } else {
-                    stringResource(Res.string.main_date_placeholder)
-                },
-                style = SSUType.Caption1SemiBold,
-            )
-        }
-        Spacer(Modifier.height(16.dp))
-        if (todoData.submitted.isEmpty()) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(
-                    text = stringResource(Res.string.main_submitted_empty),
-                    style = SSUType.H3Medium,
-                )
-            }
-        } else {
-            LazyColumn(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(4.dp),
-            ) {
-                items(
-                    items = todoData.submitted,
-                    key = AppTodo::aiSummaryKey,
-                ) { todo ->
-                    SubmittedItem(todo)
-                }
-            }
-        }
-        Spacer(Modifier.height(12.dp))
-        SButton(
-            modifier = Modifier.fillMaxWidth(),
-            labelText = stringResource(Res.string.common_close),
-            onClick = onClose,
-        )
-    }
-}
-
-@Composable
-private fun SubmittedItem(todo: AppTodo) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .background(N100)
-            .padding(18.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Column(Modifier.weight(1f)) {
-            Text(
-                text = todo.subject?.name
-                    ?: stringResource(Res.string.common_unknown_subject),
-                style = SSUType.Caption1SemiBold,
-                maxLines = 1,
-            )
-            Spacer(Modifier.height(4.dp))
-            Text(
-                text = todo.title,
-                style = SSUType.H5SemiBold,
-                maxLines = 1,
-            )
-        }
-        Spacer(Modifier.width(8.dp))
-        Text(
-            text = todo.type.localizedLabel(),
-            style = SSUType.Caption2Medium.copy(
-                color = if (todo.type == AppTodoType.SUBMITTED_LATE) R400 else G400,
-            ),
-            modifier = Modifier
-                .clip(RoundedCornerShape(6.dp))
-                .background(
-                    if (todo.type == AppTodoType.SUBMITTED_LATE) R100 else G100,
-                )
-                .padding(6.dp),
-        )
-    }
-}
 
 @Composable
 private fun SsuTimeTopBar(

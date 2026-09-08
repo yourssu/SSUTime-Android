@@ -30,6 +30,7 @@ dependencies {
     implementation(project(":data"))
     implementation(compose.desktop.currentOs)
     implementation(libs.compose.multiplatform.material3)
+    implementation(compose.materialIconsExtended)
     implementation(libs.compose.multiplatform.components.resources)
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.kotlinx.serialization.json)

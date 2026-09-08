@@ -16,7 +16,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -29,6 +30,7 @@ import androidx.compose.ui.unit.dp
 import com.yourssu.ssutime.desktop.core.model.AppTodo
 import com.yourssu.ssutime.desktop.core.model.AppTodoType
 import com.yourssu.ssutime.desktop.core.model.aiSummaryKey
+import com.yourssu.ssutime.desktop.core.model.desktopItemKey
 import com.yourssu.ssutime.desktop.screen.calendar.badgeBackgroundColor
 import com.yourssu.ssutime.desktop.screen.calendar.badgeTextColor
 import com.yourssu.ssutime.desktop.ui.resources.Res
@@ -75,9 +77,8 @@ fun DesktopHiddenTodosScreen(
             Box(
                 modifier = Modifier
                     .size(36.dp)
-                    .clip(RoundedCornerShape(8.dp))
-                    .clickable(onClick = onBack)
-                    .padding(4.dp),
+                    .clip(CircleShape)
+                    .clickable(onClick = onBack),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
@@ -130,10 +131,10 @@ fun DesktopHiddenTodosScreen(
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                items(
+                itemsIndexed(
                     items = hiddenTodos,
-                    key = { it.aiSummaryKey() },
-                ) { todo ->
+                    key = { index, item -> item.desktopItemKey(index) },
+                ) { _, todo ->
                     DesktopHiddenTodoItem(
                         todo = todo,
                         onRestoreClick = { onRestoreClick(todo) },

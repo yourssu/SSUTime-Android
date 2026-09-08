@@ -60,6 +60,7 @@ import com.yourssu.ssutime.desktop.ui.theme.N700
 import com.yourssu.ssutime.desktop.ui.theme.R400
 import com.yourssu.ssutime.desktop.ui.theme.SSUType
 import com.yourssu.ssutime.desktop.ui.theme.WHITE
+import com.yourssu.ssutime.desktop.ui.util.parseHtmlToPlainText
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import java.time.Instant
@@ -74,27 +75,6 @@ internal fun formatDiscussionDate(dateString: String): String {
         val formatter = DateTimeFormatter.ofPattern("yyyy.MM.dd. a h:mm", Locale.KOREA)
         instant.atZone(ZoneId.of("Asia/Seoul")).format(formatter)
     }.getOrElse { dateString }
-}
-
-internal fun parseHtmlToPlainText(html: String): String {
-    if (html.isBlank()) return ""
-    return html
-        .replace(Regex("<br\\s*/?>", RegexOption.IGNORE_CASE), "\n")
-        .replace(Regex("</p>", RegexOption.IGNORE_CASE), "\n\n")
-        .replace(Regex("<p[^>]*>", RegexOption.IGNORE_CASE), "")
-        .replace(Regex("<div[^>]*>", RegexOption.IGNORE_CASE), "")
-        .replace(Regex("</div>", RegexOption.IGNORE_CASE), "\n")
-        .replace(Regex("<li[^>]*>", RegexOption.IGNORE_CASE), "• ")
-        .replace(Regex("</li>", RegexOption.IGNORE_CASE), "\n")
-        .replace(Regex("<[^>]*>"), "")
-        .replace("&nbsp;", " ")
-        .replace("&amp;", "&")
-        .replace("&lt;", "<")
-        .replace("&gt;", ">")
-        .replace("&quot;", "\"")
-        .replace("&#39;", "'")
-        .replace(Regex("\n{3,}"), "\n\n")
-        .trim()
 }
 
 @Composable
@@ -122,9 +102,8 @@ fun DesktopNoticeScreen(
             Box(
                 modifier = Modifier
                     .size(36.dp)
-                    .clip(RoundedCornerShape(8.dp))
-                    .clickable(onClick = onBack)
-                    .padding(4.dp),
+                    .clip(CircleShape)
+                    .clickable(onClick = onBack),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
@@ -162,7 +141,7 @@ fun DesktopNoticeScreen(
             if (currentSubject != null && currentSubject.discussions.isNotEmpty()) {
                 itemsIndexed(
                     items = currentSubject.discussions,
-                    key = { _, item -> item.id },
+                    key = { index, item -> "${item.id}_${item.title}_${item.createdAt}_$index" },
                 ) { index, discussion ->
                     NoticeAccordionItem(
                         discussion = discussion,

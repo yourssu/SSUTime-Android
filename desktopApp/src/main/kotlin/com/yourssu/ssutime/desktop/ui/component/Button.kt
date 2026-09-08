@@ -1,5 +1,6 @@
 package com.yourssu.ssutime.desktop.ui.component
 
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
@@ -36,6 +37,34 @@ fun SButton(
         Text(
             modifier = Modifier
                 .padding(10.dp),
+            text = labelText,
+            style = textStyle.copy(color = WHITE)
+        )
+    }
+}
+
+@Composable
+fun SButton_Small(
+    modifier: Modifier = Modifier,
+    labelText: String,
+    onClick: () -> Unit = {},
+    enable: Boolean = true,
+    textStyle: TextStyle = SSUType.Label2Medium
+) {
+    Button(
+        colors = ButtonDefaults.buttonColors(
+            disabledContentColor = WHITE,
+            disabledContainerColor = N300,
+            containerColor = R500
+        ),
+        enabled = enable,
+        modifier = modifier,
+        contentPadding = PaddingValues(vertical = 0.dp, horizontal = 12.dp),
+        onClick = onClick,
+        shape = RoundedCornerShape(8.dp)
+    ) {
+        Text(
+            modifier = Modifier.padding(0.dp),
             text = labelText,
             style = textStyle.copy(color = WHITE)
         )

@@ -52,7 +52,7 @@
     <string name="main_updated_at">업데이트 %1$s 기준</string>
     <string name="main_updated_at_base">%1$s 기준</string>
     <string name="main_update_info_none">업데이트 정보 없음</string>
-    <string name="main_submitted_title">제출한 과제</string>
+    <string name="main_submitted_title">제출 완료된 할 일</string>
     <string name="main_submitted_empty">아직 제출한 과제가 없어요</string>
     <string name="main_submitted_count">제출 완료 %1$d</string>
     <string name="main_date_base">%1$s 기준</string>
@@ -115,6 +115,7 @@
     <string name="my_notification_tooltip_call_title">전화 알림?</string>
     <string name="my_notification_tooltip_call_desc">과제 마감 당일 설정한 시간까지 완료하지 않았다면, 전화 알림을 드려요! * 진짜 전화는 아니니 놀라지 않으셔도 돼요!</string>
     <string name="my_logout_message">정말 로그아웃 하시겠어요?</string>
+    <string name="my_settings">설정</string>
     <string name="my_hidden_todos">숨긴 할 일</string>
     <string name="todo_hide_from_list">목록에서 숨기기</string>
     <string name="todo_hide_popup_title">과제를 숨길까요?</string>
@@ -157,4 +158,22 @@
     <string name="todo_detail_ai_summary_tab">AI 요약</string>
     <string name="todo_detail_ai_sparkle_desc">첨부된 파일 내용을 ai가 요약했어요.</string>
     <string name="todo_detail_late_notice">마감이 지났지만 지각 제출이 가능한 과제에요!</string>
+    <string name="cyber_connect_title">숭실 사이버 대학 연결하기</string>
+    <string name="cyber_connect_login">로그인</string>
+    <string name="cyber_title">숭실 사이버 대학</string>
+    <string name="cyber_disconnect">연결 해제</string>
+    <string name="cyber_login_title">로그인만 하면\n숭사대 마감일을 볼 수 있어요</string>
+    <string name="cyber_login_id_placeholder">숭실 사이버 대학에서 발급받은 학번을 입력하세요</string>
+    <string name="cyber_login_pw_placeholder">숭실 사이버 대학 비밀번호 입력하세요</string>
+    <string name="cyber_login_find_id">학번 찾기</string>
+    <string name="cyber_connected">연결됨</string>
+    <string name="cyber_connect_description">사이버대학교 마감일을 확인하려면 연결하세요</string>
+    <string name="my_labs_title">실험실</string>
+    <string name="my_labs_enable_submitted_file">제출한 첨부파일 확인하기</string>
+    <string name="my_labs_tooltip_title">실험실?</string>
+    <string name="my_labs_tooltip_desc">실험적 기능들을 사용해보실 수 있어요. 예고 없이 추가되거나 사라질 수 있고 사용빈도가 높은 기능은 정식으로 추가될 수 있어요.</string>
+    <string name="main_submitted_sort_latest">최신순</string>
+    <string name="main_submitted_attachment">첨부파일</string>
+    <string name="cyber_login_failed">로그인에 실패했습니다. 학번과 비밀번호를 확인해주세요.</string>
+    <string name="cyber_login_error">로그인 중 오류가 발생했습니다. 다시 시도해주세요.</string>
 </resources>

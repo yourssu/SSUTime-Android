@@ -116,6 +116,7 @@
     <string name="my_notification_tooltip_call_title">Call alert?</string>
     <string name="my_notification_tooltip_call_desc">If you have not completed an assignment by the time you set on its due date, we will send a call-style alert. * It is not a real phone call, so do not be surprised!</string>
     <string name="my_logout_message">Are you sure you want to log out?</string>
+    <string name="my_settings">Settings</string>
     <string name="my_hidden_todos">Hidden Tasks</string>
     <string name="todo_hide_from_list">Hide from list</string>
     <string name="todo_hide_popup_title">Hide assignment?</string>
@@ -158,4 +159,22 @@
     <string name="todo_detail_ai_summary_tab">AI Summary</string>
     <string name="todo_detail_ai_sparkle_desc">File content summarized by AI.</string>
     <string name="todo_detail_late_notice">Late submission is available even though deadline passed!</string>
+    <string name="cyber_connect_title">Connect Soongsil Cyber University</string>
+    <string name="cyber_connect_login">Log in</string>
+    <string name="cyber_title">Soongsil Cyber University</string>
+    <string name="cyber_disconnect">Disconnect</string>
+    <string name="cyber_login_title">Log in to view\ncyber university deadlines</string>
+    <string name="cyber_login_id_placeholder">Enter student ID issued by Cyber University</string>
+    <string name="cyber_login_pw_placeholder">Enter Cyber University password</string>
+    <string name="cyber_login_find_id">Find Student ID</string>
+    <string name="cyber_connected">Connected</string>
+    <string name="cyber_connect_description">Connect to check Cyber University deadlines</string>
+    <string name="my_labs_title">Labs</string>
+    <string name="my_labs_enable_submitted_file">Check submitted attachments</string>
+    <string name="my_labs_tooltip_title">About Labs</string>
+    <string name="my_labs_tooltip_desc">Try out experimental features. They may change without notice, and frequently used features may become official.</string>
+    <string name="main_submitted_sort_latest">Latest</string>
+    <string name="main_submitted_attachment">Attachment</string>
+    <string name="cyber_login_failed">Login failed. Please check your student ID and password.</string>
+    <string name="cyber_login_error">An error occurred during login. Please try again.</string>
 </resources>

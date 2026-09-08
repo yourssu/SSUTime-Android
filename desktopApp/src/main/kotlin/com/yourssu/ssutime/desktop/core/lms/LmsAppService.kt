@@ -1,8 +1,10 @@
 package com.yourssu.ssutime.desktop.core.lms
 
+import com.yourssu.data.AttachmentInfo
 import com.yourssu.data.DiscussionAttachment
 import com.yourssu.data.DiscussionInfo
 import com.yourssu.data.todoUniqueKey
+import com.yourssu.ssutime.desktop.core.cyber.CyberTodoResult
 import com.yourssu.ssutime.desktop.core.model.AiSummary
 import com.yourssu.ssutime.desktop.core.model.AppProfile
 import com.yourssu.ssutime.desktop.core.model.AppSubject
@@ -39,6 +41,7 @@ class LmsAppService(
     suspend fun refreshTodos(
         loadingState: (Float) -> Unit = {},
         previousData: AppTodoData = AppTodoData(),
+        cyberResult: CyberTodoResult = CyberTodoResult(),
         onRequireReLogin: (suspend () -> Unit)? = null,
     ): LmsRefreshSnapshot {
         val terms = try {
@@ -74,6 +77,7 @@ class LmsAppService(
             subjects = subjects,
             loadedAt = Clock.System.now().toString(),
             previousData = previousData,
+            cyberResult = cyberResult,
         )
 
         return LmsRefreshSnapshot(
@@ -88,6 +92,7 @@ class LmsAppService(
         term: Term,
         loadingState: (Float) -> Unit = {},
         previousData: AppTodoData = AppTodoData(),
+        cyberResult: CyberTodoResult = CyberTodoResult(),
         onRequireReLogin: (suspend () -> Unit)? = null,
     ): AppTodoData {
         val subjects = try {
@@ -110,6 +115,7 @@ class LmsAppService(
             subjects = subjects,
             loadedAt = Clock.System.now().toString(),
             previousData = previousData,
+            cyberResult = cyberResult,
         )
     }
 
@@ -310,6 +316,7 @@ private fun toAppTodoData(
     subjects: List<Subject>,
     loadedAt: String,
     previousData: AppTodoData = AppTodoData(),
+    cyberResult: CyberTodoResult = CyberTodoResult(),
 ): AppTodoData {
     val locallyReadDiscussionIds = previousData.subjects
         .flatMap { it.discussions }
@@ -317,14 +324,14 @@ private fun toAppTodoData(
         .map { it.id }
         .toSet()
 
-    val subjectInfos = subjects.map { subject ->
+    val lmsSubjectInfos = subjects.map { subject ->
         AppSubject(
             id = subject.id,
             name = subject.name.withoutTrailingCourseNumber(),
             professor = subject.professor,
             discussions = subject.discussions.map { discussion ->
                 val isLocallyRead = discussion.id in locallyReadDiscussionIds
-                val initialReadState = if (isLocallyRead) "read" else discussion.read_state.ifBlank { "unread" }
+                val initialReadState = if (isLocallyRead) "read" else discussion.read_state.trim().ifBlank { "unread" }
                 DiscussionInfo(
                     id = discussion.id,
                     title = discussion.title,
@@ -346,9 +353,10 @@ private fun toAppTodoData(
         )
     }.distinctBy { it.id }
 
-    val subjectById = subjectInfos.associateBy { it.id }
+    val allSubjectInfos = (lmsSubjectInfos + cyberResult.subjects).distinctBy { it.id }
+    val subjectById = allSubjectInfos.associateBy { it.id }
 
-    val allTodos = subjects.flatMap { subject ->
+    val lmsTodos = subjects.flatMap { subject ->
         subject.todoList.mapNotNull { todo ->
             val type = runCatching {
                 AppTodoType.valueOf(todo.component_type.uppercase())
@@ -364,11 +372,28 @@ private fun toAppTodoData(
                 duration = todo.durationOfVideo ?: -1.0,
                 componentId = todo.component_id ?: -1,
                 moduleItemId = todo.moduleItemId ?: -1,
+                attachments = todo.attachments?.map {
+                    AttachmentInfo(
+                        id = it.id,
+                        uuid = it.uuid,
+                        folder_id = it.folder_id,
+                        display_name = it.display_name,
+                        file_name = it.file_name,
+                        content_type = it.content_type,
+                        size = it.size,
+                        url = it.url,
+                        thumbnail_url = it.thumbnail_url,
+                        created_at = it.created_at,
+                        updated_at = it.modified_at,
+                        modified_at = it.modified_at,
+                        mime_class = it.mime_class,
+                    )
+                } ?: emptyList(),
             )
         }
-    }.sortedWith(appTodoComparator())
+    }
 
-    val submitted = subjects.flatMap { subject ->
+    val lmsSubmitted = subjects.flatMap { subject ->
         subject.submissions
             .filter(Submission::isReportableSubmission)
             .map { submission ->
@@ -384,17 +409,37 @@ private fun toAppTodoData(
                     subject = subjectById[subject.id],
                     submittedAt = submission.submitted_at.orEmpty(),
                     url = submission.url.orEmpty(),
+                    attachments = submission.attachments?.map {
+                        AttachmentInfo(
+                            id = it.id,
+                            uuid = it.uuid,
+                            folder_id = it.folder_id,
+                            display_name = it.display_name,
+                            file_name = it.file_name,
+                            content_type = it.content_type,
+                            size = it.size,
+                            url = it.url,
+                            thumbnail_url = it.thumbnail_url,
+                            created_at = it.created_at,
+                            updated_at = it.updated_at,
+                            modified_at = it.modified_at,
+                            mime_class = it.mime_class,
+                        )
+                    } ?: emptyList(),
                 )
             }
-    }.sortedWith(appTodoComparator())
+    }
+
+    val allTodos = (lmsTodos + cyberResult.todos).sortedWith(appTodoComparator())
+    val allSubmitted = (lmsSubmitted + cyberResult.submitted).sortedWith(appTodoComparator())
 
     val hiddenKeysSet = previousData.hiddenTodoKeys.toSet()
     val (hidden, active) = allTodos.partition { it.todoUniqueKey() in hiddenKeysSet }
 
     return previousData.copy(
         todos = active,
-        submitted = submitted,
-        subjects = subjectInfos,
+        submitted = allSubmitted,
+        subjects = allSubjectInfos,
         hiddenTodos = hidden,
         hiddenTodoKeys = previousData.hiddenTodoKeys,
         loadedAt = loadedAt,

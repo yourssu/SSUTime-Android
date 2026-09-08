@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Card
@@ -27,7 +28,6 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
@@ -70,6 +70,7 @@ import com.yourssu.ssutime.desktop.ui.resources.my_notification_settings
 import com.yourssu.ssutime.desktop.ui.resources.my_notification_tooltip_desktop_desc
 import com.yourssu.ssutime.desktop.ui.resources.my_notification_tooltip_system_title
 import com.yourssu.ssutime.desktop.ui.resources.my_privacy_policy
+import com.yourssu.ssutime.desktop.ui.resources.my_settings
 import com.yourssu.ssutime.desktop.ui.resources.my_system_alert
 import com.yourssu.ssutime.desktop.ui.resources.my_terms
 import com.yourssu.ssutime.desktop.ui.theme.BLACK
@@ -78,6 +79,17 @@ import com.yourssu.ssutime.desktop.ui.theme.N200
 import com.yourssu.ssutime.desktop.ui.theme.N300
 import com.yourssu.ssutime.desktop.ui.theme.N400
 import com.yourssu.ssutime.desktop.ui.theme.N500
+import androidx.compose.ui.text.style.TextDecoration
+import com.yourssu.ssutime.desktop.ui.resources.cyber_connect_title
+import com.yourssu.ssutime.desktop.ui.resources.cyber_connected
+import com.yourssu.ssutime.desktop.ui.resources.cyber_disconnect
+import com.yourssu.ssutime.desktop.ui.resources.cyber_title
+import com.yourssu.ssutime.desktop.ui.resources.ic_arrow_right
+import com.yourssu.ssutime.desktop.ui.resources.my_labs_enable_submitted_file
+import com.yourssu.ssutime.desktop.ui.resources.my_labs_title
+import com.yourssu.ssutime.desktop.ui.resources.my_labs_tooltip_desc
+import com.yourssu.ssutime.desktop.ui.resources.my_labs_tooltip_title
+import com.yourssu.ssutime.desktop.ui.theme.R100
 import com.yourssu.ssutime.desktop.ui.theme.R400
 import com.yourssu.ssutime.desktop.ui.theme.SSUType
 import com.yourssu.ssutime.desktop.ui.theme.WHITE
@@ -107,9 +119,16 @@ fun DesktopMyPageScreen(
     showSystemNotificationSetting: Boolean = false,
     systemNotificationsEnabled: Boolean = false,
     onSystemNotificationsChanged: (Boolean) -> Unit = {},
+    isCyberConnected: Boolean = false,
+    cyberUserId: String = "",
+    onNavigateToCyberLogin: () -> Unit = {},
+    onDisconnectCyber: () -> Unit = {},
+    isEnableSubmittedFile: Boolean = false,
+    onEnableSubmittedFileChanged: (Boolean) -> Unit = {},
 ) {
     var showLogoutDialog by remember { mutableStateOf(false) }
     val tooltipState = rememberTooltipState(isPersistent = true)
+    val labsTooltipState = rememberTooltipState(isPersistent = true)
     val scope = rememberCoroutineScope()
 
     if (showLogoutDialog) {
@@ -133,12 +152,19 @@ fun DesktopMyPageScreen(
             .verticalScroll(rememberScrollState()),
     ) {
         Row(modifier = Modifier.padding(top = 8.dp)) {
-            IconButton(onClick = onBack) {
+            Box(
+                modifier = Modifier
+                    .size(36.dp)
+                    .clip(CircleShape)
+                    .clickable(onClick = onBack),
+                contentAlignment = Alignment.Center,
+            ) {
                 Icon(
                     painter = painterResource(Res.drawable.ic_arrow_back),
                     contentDescription = stringResource(
                         Res.string.my_back_content_description,
                     ),
+                    modifier = Modifier.size(24.dp),
                 )
             }
         }
@@ -195,6 +221,19 @@ fun DesktopMyPageScreen(
             }
         }
 
+        Spacer(Modifier.height(16.dp))
+
+        if (isCyberConnected) {
+            SSUCyberAccountConnectedBadge(
+                cyberId = cyberUserId,
+                onDisconnect = onDisconnectCyber,
+            )
+        } else {
+            SSUCyberAccountHelperBadge(
+                onClickBadge = onNavigateToCyberLogin,
+            )
+        }
+
         Spacer(Modifier.height(20.dp))
 
         Column(
@@ -232,6 +271,7 @@ fun DesktopMyPageScreen(
                             tint = N400,
                             modifier = Modifier
                                 .size(24.dp)
+                                .clip(CircleShape)
                                 .clickable {
                                     scope.launch { tooltipState.show() }
                                 }
@@ -244,7 +284,14 @@ fun DesktopMyPageScreen(
                     value = systemNotificationsEnabled,
                     onValueChanged = onSystemNotificationsChanged,
                 )
+                Spacer(Modifier.height(4.dp))
             }
+
+            Text(
+                text = stringResource(Res.string.my_settings),
+                style = SSUType.H5SemiBold,
+                color = N500,
+            )
 
             OptionButton(
                 text = stringResource(Res.string.my_hidden_todos),
@@ -262,9 +309,53 @@ fun DesktopMyPageScreen(
                 text = stringResource(Res.string.my_privacy_policy),
                 onClick = { onOpenUrl(PRIVACY_URL) },
             )
+
+            Spacer(Modifier.height(4.dp))
+
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = stringResource(Res.string.my_labs_title),
+                    style = SSUType.H5SemiBold,
+                    color = N500,
+                )
+                Spacer(Modifier.width(5.dp))
+                TooltipBox(
+                    positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
+                        TooltipAnchorPosition.Below,
+                    ),
+                    tooltip = {
+                        Card(
+                            elevation = CardDefaults.cardElevation(
+                                defaultElevation = 6.dp,
+                            ),
+                        ) {
+                            LabsTooltip()
+                        }
+                    },
+                    state = labsTooltipState,
+                ) {
+                    Icon(
+                        painter = painterResource(Res.drawable.ic_alret),
+                        contentDescription = stringResource(Res.string.my_labs_title),
+                        tint = N400,
+                        modifier = Modifier
+                            .size(24.dp)
+                            .clip(CircleShape)
+                            .clickable {
+                                scope.launch { labsTooltipState.show() }
+                            }
+                            .padding(4.dp),
+                    )
+                }
+            }
+            ToggleOption(
+                text = stringResource(Res.string.my_labs_enable_submitted_file),
+                value = isEnableSubmittedFile,
+                onValueChanged = onEnableSubmittedFileChanged,
+            )
         }
 
-        Spacer(Modifier.height(24.dp))
+        Spacer(Modifier.height(28.dp))
         OptionButton(
             text = stringResource(Res.string.my_logout),
             onClick = { showLogoutDialog = true },
@@ -337,25 +428,25 @@ private fun ToggleOption(
     value: Boolean,
     onValueChanged: (Boolean) -> Unit,
 ) {
-    Column(
+    Row(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
             .background(N100)
-            .padding(20.dp),
+            .clickable { onValueChanged(!value) }
+            .padding(horizontal = 20.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                text = text,
-                style = SSUType.H5SemiBold,
-            )
-            Spacer(Modifier.weight(1f))
-            Switch(
-                checked = value,
-                onCheckedChange = onValueChanged,
-                colors = SwitchDefaults.colors(checkedTrackColor = R400),
-            )
-        }
+        Text(
+            text = text,
+            style = SSUType.H5SemiBold,
+            modifier = Modifier.weight(1f),
+        )
+        Switch(
+            checked = value,
+            onCheckedChange = onValueChanged,
+            colors = SwitchDefaults.colors(checkedTrackColor = R400),
+        )
     }
 }
 
@@ -368,8 +459,8 @@ private fun OptionButton(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
-            .clickable(onClick = onClick)
             .background(N100)
+            .clickable(onClick = onClick)
             .padding(20.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -449,8 +540,8 @@ private fun PopupButton(
         modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
-            .clickable(onClick = onClick)
             .background(color)
+            .clickable(onClick = onClick)
             .padding(14.dp),
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically,
@@ -459,6 +550,114 @@ private fun PopupButton(
             text = text,
             style = SSUType.H5SemiBold,
             color = textColor,
+        )
+    }
+}
+
+@Composable
+fun SSUCyberAccountHelperBadge(
+    onClickBadge: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(10.dp))
+            .background(Color(0xFFFFF0F0))
+            .border(1.dp, Color(0xFFFFD2D2), RoundedCornerShape(10.dp))
+            .clickable(onClick = onClickBadge)
+            .padding(16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+        Text(
+            text = stringResource(Res.string.cyber_connect_title),
+            style = SSUType.H4SemiBold,
+            color = R400,
+        )
+
+        Icon(
+            painter = painterResource(Res.drawable.ic_arrow_right),
+            contentDescription = null,
+            tint = N500,
+            modifier = Modifier.size(16.dp),
+        )
+    }
+}
+
+@Composable
+fun SSUCyberAccountConnectedBadge(
+    cyberId: String,
+    onDisconnect: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(10.dp))
+            .border(1.dp, Color(0xFFE2E8F0), RoundedCornerShape(10.dp))
+            .background(Color(0xFFF8FAFC))
+            .padding(16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+        Row(
+            modifier = Modifier.weight(1f),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = stringResource(Res.string.cyber_title),
+                style = SSUType.Label2SemiBold,
+                color = BLACK,
+            )
+            Spacer(Modifier.width(6.dp))
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(7.dp))
+                    .background(R100)
+                    .padding(horizontal = 6.dp, vertical = 2.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = stringResource(Res.string.cyber_connected),
+                    style = SSUType.Caption2Medium,
+                    color = R400,
+                )
+            }
+        }
+
+        Text(
+            text = stringResource(Res.string.cyber_disconnect),
+            style = SSUType.Label3Regular,
+            textDecoration = TextDecoration.Underline,
+            color = N500,
+            modifier = Modifier
+                .clip(RoundedCornerShape(6.dp))
+                .clickable(onClick = onDisconnect)
+                .padding(horizontal = 8.dp, vertical = 6.dp),
+        )
+    }
+}
+
+@Composable
+fun LabsTooltip() {
+    Column(
+        Modifier
+            .width(300.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .background(WHITE)
+            .padding(16.dp),
+    ) {
+        Text(
+            text = stringResource(Res.string.my_labs_tooltip_title),
+            style = SSUType.Caption1SemiBold,
+            color = BLACK,
+        )
+        Spacer(Modifier.height(4.dp))
+        Text(
+            text = stringResource(Res.string.my_labs_tooltip_desc),
+            style = SSUType.Body2Medium,
+            color = N500,
         )
     }
 }

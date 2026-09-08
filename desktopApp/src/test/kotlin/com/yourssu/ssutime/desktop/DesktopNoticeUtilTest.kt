@@ -1,7 +1,7 @@
 package com.yourssu.ssutime.desktop
 
 import com.yourssu.ssutime.desktop.screen.notice.formatDiscussionDate
-import com.yourssu.ssutime.desktop.screen.notice.parseHtmlToPlainText
+import com.yourssu.ssutime.desktop.ui.util.parseHtmlToPlainText
 import kotlin.test.Test
 import kotlin.test.assertTrue
 

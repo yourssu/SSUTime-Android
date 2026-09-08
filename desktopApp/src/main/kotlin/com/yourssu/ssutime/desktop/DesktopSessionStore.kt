@@ -26,6 +26,10 @@ data class DesktopStoredState(
     val systemNotificationsEnabled: Boolean = false,
     val todoData: AppTodoData = AppTodoData(),
     val profile: AppProfile? = null,
+    val cyberUserId: String = "",
+    val protectedCyberPassword: String = "",
+    val isCyberConnected: Boolean = false,
+    val isEnableSubmittedFile: Boolean = false,
 )
 
 data class StoredCredentials(
@@ -94,6 +98,46 @@ class DesktopSessionStore(
             autoLogin = false,
             todoData = AppTodoData(),
             profile = null,
+        )
+        write(next)
+        return next
+    }
+
+    fun cyberCredentials(state: DesktopStoredState): StoredCredentials? {
+        if (
+            !state.isCyberConnected ||
+            state.cyberUserId.isBlank() ||
+            state.protectedCyberPassword.isBlank()
+        ) {
+            return null
+        }
+        return runCatching {
+            StoredCredentials(
+                userId = state.cyberUserId,
+                password = secretCodec.decrypt(state.protectedCyberPassword),
+            )
+        }.getOrNull()
+    }
+
+    fun saveCyber(
+        current: DesktopStoredState,
+        cyberUserId: String,
+        cyberPassword: String,
+    ): DesktopStoredState {
+        val next = current.copy(
+            cyberUserId = cyberUserId,
+            protectedCyberPassword = secretCodec.encrypt(cyberPassword),
+            isCyberConnected = true,
+        )
+        write(next)
+        return next
+    }
+
+    fun clearCyber(current: DesktopStoredState): DesktopStoredState {
+        val next = current.copy(
+            cyberUserId = "",
+            protectedCyberPassword = "",
+            isCyberConnected = false,
         )
         write(next)
         return next

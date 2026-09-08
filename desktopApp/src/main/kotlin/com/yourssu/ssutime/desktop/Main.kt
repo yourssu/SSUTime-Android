@@ -23,7 +23,10 @@ import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
 import com.yourssu.data.DiscussionInfo
+import com.yourssu.data.isCyber
 import com.yourssu.data.todoUniqueKey
+import com.yourssu.ssutime.desktop.core.cyber.CyberTodoResult
+import com.yourssu.ssutime.desktop.core.cyber.DesktopCyberService
 import com.yourssu.ssutime.desktop.core.lms.LmsAppService
 import com.yourssu.ssutime.desktop.core.login.LmsApiAuthenticator
 import com.yourssu.ssutime.desktop.core.login.LoginService
@@ -38,6 +41,7 @@ import com.yourssu.ssutime.desktop.core.network.SsuTimeApi
 import com.yourssu.ssutime.desktop.core.network.SsuTimeAuthApi
 import com.yourssu.ssutime.desktop.core.network.createSsuTimeHttpClient
 import com.yourssu.ssutime.desktop.lms.isLmsLoggedIn
+import com.yourssu.ssutime.desktop.screen.cyber.DesktopCyberLoginScreen
 import com.yourssu.ssutime.desktop.screen.login.DesktopLoginScreen
 import com.yourssu.ssutime.desktop.screen.main.DesktopAiSummaryUiState
 import com.yourssu.ssutime.desktop.screen.main.DesktopMainScreen
@@ -65,6 +69,8 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 
+private const val FIND_CYBER_ID_URL = "https://portal.kcu.ac/findId/findId.do"
+
 private enum class DesktopRoute {
     SPLASH,
     LOGIN,
@@ -72,6 +78,7 @@ private enum class DesktopRoute {
     MAIN,
     MY,
     HIDDEN_TODOS,
+    CYBER_LOGIN,
 }
 
 fun main() {
@@ -164,8 +171,10 @@ private fun DesktopApp(
         LmsAppService(SsuTimeApi(httpClient))
     }
     val store = remember { DesktopSessionStore() }
+    val cyberService = remember(store) { DesktopCyberService(store) }
     var storedState by remember { mutableStateOf(store.load()) }
     var route by remember { mutableStateOf(DesktopRoute.SPLASH) }
+    var previousRoute by remember { mutableStateOf<DesktopRoute?>(null) }
     var session by remember { mutableStateOf<LoginSession?>(null) }
     var todoData by remember { mutableStateOf(storedState.todoData) }
     var profile by remember { mutableStateOf<AppProfile?>(storedState.profile) }
@@ -176,6 +185,8 @@ private fun DesktopApp(
     var mainError by remember { mutableStateOf<String?>(null) }
     var profileError by remember { mutableStateOf<String?>(null) }
     var isLoggingIn by remember { mutableStateOf(false) }
+    var isCyberLoggingIn by remember { mutableStateOf(false) }
+    var cyberLoginError by remember { mutableStateOf<String?>(null) }
     var isRefreshing by remember { mutableStateOf(false) }
     var isProfileLoading by remember { mutableStateOf(false) }
     var loadingProgress by remember { mutableStateOf(0f) }
@@ -215,9 +226,15 @@ private fun DesktopApp(
             mainError = null
             try {
                 ensureLmsSession(force = false)
+                val cyberResult = if (storedState.isCyberConnected) {
+                    runCatching { cyberService.fetchCyberTodos() }.getOrDefault(CyberTodoResult())
+                } else {
+                    CyberTodoResult()
+                }
                 val snapshot = lmsService.refreshTodos(
                     loadingState = { progress -> loadingProgress = progress },
                     previousData = todoData,
+                    cyberResult = cyberResult,
                     onRequireReLogin = { ensureLmsSession(force = true) },
                 )
                 todoData = snapshot.todoData.copy(
@@ -278,10 +295,16 @@ private fun DesktopApp(
             mainError = null
             try {
                 ensureLmsSession(force = false)
+                val cyberResult = if (storedState.isCyberConnected) {
+                    runCatching { cyberService.fetchCyberTodos() }.getOrDefault(CyberTodoResult())
+                } else {
+                    CyberTodoResult()
+                }
                 val nextData = lmsService.loadTodosForTerm(
                     term = term,
                     loadingState = { progress -> loadingProgress = progress },
                     previousData = todoData,
+                    cyberResult = cyberResult,
                     onRequireReLogin = { ensureLmsSession(force = true) },
                 )
                 todoData = nextData.copy(
@@ -453,9 +476,69 @@ private fun DesktopApp(
         }
     }
 
+    fun loginCyber(id: String, pw: String) {
+        if (isCyberLoggingIn) return
+        scope.launch {
+            isCyberLoggingIn = true
+            cyberLoginError = null
+            try {
+                cyberService.login(id, pw)
+                storedState = store.load()
+                val cyberResult = runCatching { cyberService.fetchCyberTodos() }.getOrNull()
+                if (cyberResult != null) {
+                    val nonCyberTodos = todoData.todos.filterNot { it.isCyber() }
+                    val nonCyberSubmitted = todoData.submitted.filterNot { it.isCyber() }
+                    val nonCyberSubjects = todoData.subjects.filterNot { it.id < 0 }
+                    val nonCyberHidden = todoData.hiddenTodos.filterNot { it.isCyber() }
+
+                    val allTodos = (nonCyberTodos + cyberResult.todos).distinctBy { it.todoUniqueKey() }
+                    val allSubmitted = (nonCyberSubmitted + cyberResult.submitted).distinctBy { it.todoUniqueKey() }
+                    val allSubjects = (nonCyberSubjects + cyberResult.subjects).distinctBy { it.id }
+
+                    val hiddenKeysSet = todoData.hiddenTodoKeys.toSet()
+                    val (hiddenNewTodos, activeNewTodos) = allTodos.partition { it.todoUniqueKey() in hiddenKeysSet }
+
+                    todoData = todoData.copy(
+                        todos = activeNewTodos,
+                        submitted = allSubmitted,
+                        subjects = allSubjects,
+                        hiddenTodos = (nonCyberHidden + hiddenNewTodos).distinctBy { it.todoUniqueKey() },
+                    )
+                    saveCache(nextTodoData = todoData)
+                }
+                route = previousRoute ?: DesktopRoute.MAIN
+            } catch (cancellation: CancellationException) {
+                throw cancellation
+            } catch (e: Exception) {
+                cyberLoginError = e.displayMessage()
+            } finally {
+                isCyberLoggingIn = false
+            }
+        }
+    }
+
+    fun disconnectCyber() {
+        scope.launch {
+            cyberService.logout()
+            storedState = store.load()
+            val cleanedTodos = todoData.todos.filterNot { it.isCyber() }
+            val cleanedSubmitted = todoData.submitted.filterNot { it.isCyber() }
+            val cleanedSubjects = todoData.subjects.filterNot { it.id < 0 }
+            val cleanedHidden = todoData.hiddenTodos.filterNot { it.isCyber() }
+            todoData = todoData.copy(
+                todos = cleanedTodos,
+                submitted = cleanedSubmitted,
+                subjects = cleanedSubjects,
+                hiddenTodos = cleanedHidden,
+            )
+            saveCache(nextTodoData = todoData)
+        }
+    }
+
     fun logout() {
         scope.launch {
             runCatching { authenticator.logout() }
+            cyberService.logout()
             storedState = store.logout(storedState)
             session = null
             todoData = AppTodoData()
@@ -597,6 +680,13 @@ private fun DesktopApp(
                         runCatching { openDesktopUrl(url) }
                             .onFailure { mainError = openLinkError }
                     },
+                    isCyberConnected = storedState.isCyberConnected,
+                    onNavigateToCyberLogin = {
+                        previousRoute = DesktopRoute.MAIN
+                        cyberLoginError = null
+                        route = DesktopRoute.CYBER_LOGIN
+                    },
+                    isEnableSubmittedFile = storedState.isEnableSubmittedFile,
                 )
             }
 
@@ -627,6 +717,20 @@ private fun DesktopApp(
                                 storedState.copy(systemNotificationsEnabled = enabled),
                             )
                         },
+                        isCyberConnected = storedState.isCyberConnected,
+                        cyberUserId = storedState.cyberUserId,
+                        onNavigateToCyberLogin = {
+                            previousRoute = DesktopRoute.MY
+                            cyberLoginError = null
+                            route = DesktopRoute.CYBER_LOGIN
+                        },
+                        onDisconnectCyber = ::disconnectCyber,
+                        isEnableSubmittedFile = storedState.isEnableSubmittedFile,
+                        onEnableSubmittedFileChanged = { enabled ->
+                            storedState = store.update(
+                                storedState.copy(isEnableSubmittedFile = enabled),
+                            )
+                        },
                     )
                 }
             }
@@ -641,6 +745,28 @@ private fun DesktopApp(
                         hiddenTodos = todoData.hiddenTodos,
                         onBack = { route = DesktopRoute.MY },
                         onRestoreClick = ::restoreTodo,
+                    )
+                }
+            }
+
+            DesktopRoute.CYBER_LOGIN -> {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .widthIn(max = 560.dp),
+                ) {
+                    DesktopCyberLoginScreen(
+                        isLoading = isCyberLoggingIn,
+                        errorMessage = cyberLoginError,
+                        onBack = {
+                            cyberLoginError = null
+                            route = previousRoute ?: DesktopRoute.MAIN
+                        },
+                        onLoginClick = ::loginCyber,
+                        onFindIdClick = {
+                            runCatching { openDesktopUrl(FIND_CYBER_ID_URL) }
+                                .onFailure { cyberLoginError = openLinkError }
+                        },
                     )
                 }
             }
