@@ -12,6 +12,8 @@ import android.os.Build
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -48,6 +50,7 @@ import androidx.compose.material3.TooltipDefaults
 import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -72,6 +75,8 @@ import com.yourssu.data.AlertData
 import com.yourssu.data.UiState
 import com.yourssu.ssutime.v2.BuildConfig
 import com.yourssu.ssutime.v2.R
+import com.yourssu.ssutime.v2.SSUCyberAccountConnectedBadge
+import com.yourssu.ssutime.v2.SSUCyberAccountHelperBadge
 import com.yourssu.ssutime.v2.analytics.Analytics
 import com.yourssu.ssutime.v2.ui.theme.BLACK
 import com.yourssu.ssutime.v2.ui.theme.N100
@@ -93,17 +98,23 @@ const val HIDDEN_TODOS_ROUTE = "hidden_todos"
 fun MyPageScreen(
     viewModel: MyViewModel = koinViewModel(),
     onLogout: () -> Unit = {},
+    onNavigateToCyberLogin: () -> Unit = {},
 ) {
     val myNavController = rememberNavController()
 
     NavHost(
         navController = myNavController,
         startDestination = MY_PAGE_MAIN_ROUTE,
+        enterTransition = { EnterTransition.None },
+        exitTransition = { ExitTransition.None },
+        popEnterTransition = { EnterTransition.None },
+        popExitTransition = { ExitTransition.None },
     ) {
         composable(MY_PAGE_MAIN_ROUTE) {
             MyPageContent(
                 viewModel = viewModel,
                 onLogout = onLogout,
+                onNavigateToCyberLogin = onNavigateToCyberLogin,
                 onNavigateToHiddenTodos = {
                     myNavController.navigate(HIDDEN_TODOS_ROUTE)
                 },
@@ -124,6 +135,7 @@ fun MyPageContent(
     viewModel: MyViewModel = koinViewModel(),
     onLogout: () -> Unit = {},
     onNavigateToHiddenTodos: () -> Unit = {},
+    onNavigateToCyberLogin: () -> Unit = {},
 ) {
     val context = LocalContext.current
     val loginInfo = viewModel.loginInfo.value
@@ -138,6 +150,8 @@ fun MyPageContent(
     val coroutine = rememberCoroutineScope()
     val alertState by viewModel.uiState.collectAsStateWithLifecycle()
     var alertData by remember { mutableStateOf<AlertData>(AlertData(valid = false, false, false, -1)) }
+    val labsData by viewModel.labsData.collectAsStateWithLifecycle()
+
     var pendingNotificationSettingsRequest by remember {
         mutableStateOf<NotificationSettingsRequest?>(null)
     }
@@ -354,7 +368,18 @@ fun MyPageContent(
             }
         }
 
-        Spacer(Modifier.height(28.dp))
+        val cyberLoginData by viewModel.cyberLoginData.collectAsState()
+        if (cyberLoginData.hasCredentials) {
+            SSUCyberAccountConnectedBadge(
+                cyberId = cyberLoginData.id,
+                onDisconnect = { viewModel.logoutCyber() },
+            )
+        } else {
+            SSUCyberAccountHelperBadge { onNavigateToCyberLogin() }
+        }
+
+
+        Spacer(Modifier.height(18.dp))
 
         Column(
             modifier = Modifier
@@ -440,6 +465,14 @@ fun MyPageContent(
                 }
             )
 
+            Spacer(Modifier.width(5.dp))
+
+            Text(
+                text = stringResource(R.string.my_settings),
+                style = SSUType.H5SemiBold,
+                color = N500,
+            )
+
             OptionButton(
                 text = stringResource(R.string.my_hidden_todos)
             ) {
@@ -463,6 +496,52 @@ fun MyPageContent(
             ) {
                 viewModel.openURL(context, "https://chlwhdtn03.github.io/ssutime/privacy.html")
             }
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "실험실",
+                    style = SSUType.H5SemiBold,
+                    color = N500,
+                )
+
+                Spacer(Modifier.width(5.dp))
+
+                TooltipBox(
+                    positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
+                        TooltipAnchorPosition.Below
+                    ),
+                    tooltip = {
+                        Card(
+                            elevation = CardDefaults.cardElevation(
+                                defaultElevation = 6.dp
+                            )
+                        ) {
+                            LabsTooltip()
+                        }
+                    },
+                    state = tooltipState
+                ) {
+                    Icon(
+                        modifier = Modifier.clickable {
+                            coroutine.launch { tooltipState.show() }
+                        },
+                        painter = painterResource(R.drawable.ic_alret),
+                        tint = N400,
+                        contentDescription = "about labs"
+                    )
+                }
+            }
+
+            ToggleOption(
+                text = "제출한 첨부파일 확인하기",
+                value = labsData.isEnableSubmittedFile,
+                onValueChanged = { enabled ->
+                    viewModel.updateLabsData(labsData.copy(isEnableSubmittedFile = enabled))
+                },
+                childOption = null
+            )
 
         }
 
@@ -704,16 +783,16 @@ fun ComboOption(
                 onDismissRequest = { expanded = false }
             ) {
                 DropdownMenuItem(
-                    text = { Text(stringResource(R.string.call_alert_time_1h), style = SSUType.Label3Medium, color = BLACK) },
-                    onClick = { onValueChanged(1); expanded = false }
-                )
-                DropdownMenuItem(
-                    text = { Text(stringResource(R.string.call_alert_time_2h), style = SSUType.Label3Medium, color = BLACK) },
-                    onClick = { onValueChanged(2); expanded = false }
+                    text = { Text(stringResource(R.string.call_alert_time_3h), style = SSUType.Label3Medium, color = BLACK) },
+                    onClick = { onValueChanged(3); expanded = false }
                 )
                 DropdownMenuItem(
                     text = { Text(stringResource(R.string.call_alert_time_6h), style = SSUType.Label3Medium, color = BLACK) },
                     onClick = { onValueChanged(6); expanded = false }
+                )
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.call_alert_time_12h), style = SSUType.Label3Medium, color = BLACK) },
+                    onClick = { onValueChanged(12); expanded = false }
                 )
             }
         }
@@ -801,6 +880,27 @@ fun NotificationTooltip() {
         )
         Text(
             text = stringResource(R.string.my_notification_tooltip_call_desc),
+            style = SSUType.Body2Medium
+        )
+    }
+}
+
+@Composable
+@Preview
+fun LabsTooltip() {
+    Column(
+        Modifier
+            .width(300.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .background(WHITE)
+            .padding(16.dp)
+    ) {
+        Text(
+            text = "실험실?",
+            style = SSUType.Caption1SemiBold
+        )
+        Text(
+            text = "실험적 기능들을 사용해보실 수 있어요. 예고 없이 추가되거나 사라질 수 있고 사용빈도가 높은 기능은 정식으로 추가될 수 있어요.",
             style = SSUType.Body2Medium
         )
     }

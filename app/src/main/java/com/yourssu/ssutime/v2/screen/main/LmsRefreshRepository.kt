@@ -1,6 +1,7 @@
 package com.yourssu.ssutime.v2.screen.main
 
 import android.util.Log
+import com.yourssu.data.AttachmentInfo
 import com.yourssu.data.DiscussionAttachment
 import com.yourssu.data.DiscussionInfo
 import com.yourssu.data.LoginData
@@ -16,11 +17,13 @@ import com.yourssu.data.todoUniqueKey
 import com.yourssu.ssutime.v2.accessToken
 import com.yourssu.ssutime.v2.analytics.Analytics
 import com.yourssu.ssutime.v2.analytics.SentryExceptionReporter
+import com.yourssu.ssutime.v2.lms.ensureLmsLoggedIn
 import com.yourssu.ssutime.v2.lms.getLmsCookies
 import com.yourssu.ssutime.v2.lms.getLmsTerms
 import com.yourssu.ssutime.v2.lms.getLmsTodoList
-import com.yourssu.ssutime.v2.lms.loginLms
 import com.yourssu.ssutime.v2.network.ApiRepository
+import com.yourssu.ssutime.v2.screen.cyber.CyberRepository
+import com.yourssu.ssutime.v2.screen.cyber.CyberTodoResult
 import com.yourssu.ssutime.v2.screen.login.LoginRepository
 import com.yourssu.ssutime.v2.todo.sortedByDeadlineThenName
 import io.github.chlwhdtn03.LmsApi
@@ -66,7 +69,9 @@ class LmsRefreshRepository(
     private val loginRepository: LoginRepository,
     private val mainRepository: MainRepository,
     private val apiRepository: ApiRepository,
+    private val cyberRepository: CyberRepository,
 ) {
+
     private val isRefreshing = AtomicBoolean(false)
     private val backendReportScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val appRefreshScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -292,11 +297,24 @@ class LmsRefreshRepository(
         }
         val subjectInfos = buildSubjectInfos(subjects)
         val completedAt = Instant.now()
+        val cyberLoginData = cyberRepository.getLoginData()
+        val cyberResult = if (cyberLoginData.hasCredentials) {
+            runCatching {
+                cyberRepository.fetchCyberTodos()
+            }.getOrElse { exception ->
+                Log.e(TAG, "사이버대학교 Todo 새로고침 실패", exception)
+                CyberTodoResult()
+            }
+        } else {
+            CyberTodoResult()
+        }
         val summary = buildRefreshSummary(
             completedAt = completedAt,
             terms = terms,
             subjects = subjects,
+            cyberResult = cyberResult,
         )
+
         onRefreshStage(LmsRefreshStage.SavingResult)
         val todoData = saveRefreshResult(
             source = source,
@@ -305,12 +323,15 @@ class LmsRefreshRepository(
             subjectInfos = subjectInfos,
             completedAt = completedAt,
             summary = summary,
+            cyberResult = cyberResult,
+            isCyberConnected = cyberLoginData.hasCredentials,
         )
 
         reportRefreshResultToBackend(
-            subjectInfos = subjectInfos,
+            subjectInfos = subjectInfos.filter { it.id > 0 },
             semester = currentTerm.toString(),
-            todos = todoData.todos + todoData.submitted.filter { it.isReportableSubmission },
+            todos = (todoData.todos + todoData.submitted.filter { it.isReportableSubmission })
+                .filter { (it.subject?.id ?: it.subjectId) > 0 },
             loginData,
         )
         TodoRefreshResult.Success(todoData, summary)
@@ -333,15 +354,17 @@ class LmsRefreshRepository(
         completedAt: Instant,
         terms: List<Term>,
         subjects: List<Subject>,
+        cyberResult: CyberTodoResult = CyberTodoResult(),
     ): TodoRefreshSummary = TodoRefreshSummary(
         completedAt = completedAt,
         semesterCount = terms.size,
-        subjectCount = subjects.size,
-        todoCount = subjects.sumOf { it.todoList.size },
+        subjectCount = subjects.size + cyberResult.subjects.size,
+        todoCount = subjects.sumOf { it.todoList.size } + cyberResult.todos.size,
         submittedCount = subjects.sumOf { subject ->
             subject.submissions.count { it.submitted_at?.isNotEmpty() == true }
-        },
+        } + cyberResult.submitted.size,
     )
+
 
     private suspend fun saveRefreshResult(
         source: RefreshSource,
@@ -350,6 +373,8 @@ class LmsRefreshRepository(
         subjectInfos: List<SubjectInfo>,
         completedAt: Instant,
         summary: TodoRefreshSummary,
+        cyberResult: CyberTodoResult = CyberTodoResult(),
+        isCyberConnected: Boolean = false,
     ): TodoData {
         val completedAtText = completedAt.toString()
 
@@ -360,6 +385,8 @@ class LmsRefreshRepository(
                 subjectInfos = subjectInfos,
                 previousData = currentData,
                 loadedAt = completedAtText,
+                cyberResult = cyberResult,
+                isCyberConnected = isCyberConnected,
             ).withWidgetRefreshCompleted(completedAtText)
 
             if (source == RefreshSource.FCM) {
@@ -491,11 +518,9 @@ class LmsRefreshRepository(
         loginData: LoginData,
         forceLogin: Boolean,
     ) {
-        if (
-            loginData.hasAutoLoginCredentials &&
-            (forceLogin || source == RefreshSource.FCM || !LmsApi.isLoggined)
-        ) {
-            val isLoggedIn = loginWithRetryIfNeeded(source, loginData)
+        if (loginData.hasAutoLoginCredentials) {
+            val force = forceLogin || source == RefreshSource.FCM
+            val isLoggedIn = loginWithRetryIfNeeded(source, loginData, force = force)
             if (!isLoggedIn) {
                 throw IllegalStateException("LMS 로그인에 실패했어요.")
             }
@@ -507,12 +532,16 @@ class LmsRefreshRepository(
         }
     }
 
-    private suspend fun loginWithRetryIfNeeded(source: RefreshSource, loginData: LoginData): Boolean {
+    private suspend fun loginWithRetryIfNeeded(
+        source: RefreshSource,
+        loginData: LoginData,
+        force: Boolean = false,
+    ): Boolean {
         var attempt = 0
 
         while (true) {
             try {
-                return loginLms(loginData.id, loginData.pw)
+                return ensureLmsLoggedIn(loginData.id, loginData.pw, force = force || attempt > 0)
             } catch (e: Exception) {
                 val shouldRetry = source == RefreshSource.FCM &&
                     e.message == LMS_API_TOKEN_ERROR_MESSAGE &&
@@ -530,9 +559,11 @@ class LmsRefreshRepository(
         subjectInfos: List<SubjectInfo>,
         previousData: TodoData,
         loadedAt: String,
+        cyberResult: CyberTodoResult = CyberTodoResult(),
+        isCyberConnected: Boolean = false,
     ): TodoData {
         val subjectInfoById = subjectInfos.associateBy { it.id }
-        val newTodos = subjects.flatMap { subject ->
+        val lmsTodos = subjects.flatMap { subject ->
             subject.todoList.map { todo ->
                 TodoInfo(
                     todoId = todo.assignment_id ?: -1,
@@ -545,9 +576,32 @@ class LmsRefreshRepository(
                     duration = todo.durationOfVideo ?: -1.0,
                     componentId = todo.component_id ?: -1,
                     moduleItemId = todo.moduleItemId ?: -1,
+                    attachments = todo.attachments?.map {
+                        AttachmentInfo(
+                            id = it.id,
+                            uuid = it.uuid,
+                            folder_id = it.folder_id,
+                            display_name = it.display_name,
+                            file_name = it.file_name,
+                            content_type = it.content_type,
+                            size = it.size,
+                            url = it.url,
+                            thumbnail_url = it.thumbnail_url,
+                            created_at = it.created_at,
+                            updated_at = it.modified_at,
+                            modified_at = it.modified_at,
+                            mime_class = it.mime_class
+                        )
+                    } ?: emptyList(),
                 )
             }
-        }.sortedByDeadlineThenName()
+        }
+
+        val allTodos = if (isCyberConnected) {
+            (lmsTodos + cyberResult.todos).sortedByDeadlineThenName()
+        } else {
+            lmsTodos.sortedByDeadlineThenName()
+        }
 
         val reportedSubmitted = subjects.flatMap { subject ->
             Log.i(
@@ -567,23 +621,53 @@ class LmsRefreshRepository(
                         subject = subjectInfoById[subject.id],
                         submittedAt = todo.submitted_at.orEmpty(),
                         url = todo.url.orEmpty(),
+                        attachments = todo.attachments?.map {
+                            AttachmentInfo(
+                                id = it.id,
+                                uuid = it.uuid,
+                                folder_id = it.folder_id,
+                                display_name = it.display_name,
+                                file_name = it.file_name,
+                                content_type = it.content_type,
+                                size = it.size,
+                                url = it.url,
+                                thumbnail_url = it.thumbnail_url,
+                                created_at = it.created_at,
+                                updated_at = it.updated_at,
+                                modified_at = it.modified_at,
+                                mime_class = it.mime_class
+                            )
+                        } ?: emptyList(),
                     )
                 }
         }
-        val newSubmitted = reportedSubmitted.sortedByDeadlineThenName()
+
+        val allSubmitted = if (isCyberConnected) {
+            (reportedSubmitted + cyberResult.submitted).sortedByDeadlineThenName()
+        } else {
+            reportedSubmitted.sortedByDeadlineThenName()
+        }
+
         val locallyReadDiscussionIds = previousData.subjects
             .flatMap { it.discussions }
             .filter { it.readState.equals("read", ignoreCase = true) }
             .map { it.id }
             .toSet()
 
+        val lmsSubjectInfos = buildSubjectInfos(subjects, locallyReadDiscussionIds)
+        val allSubjectInfos = if (isCyberConnected) {
+            (lmsSubjectInfos + cyberResult.subjects).distinctBy { it.id }
+        } else {
+            lmsSubjectInfos
+        }
+
         val hiddenKeysSet = previousData.hiddenTodoKeys.toSet()
-        val (hiddenNewTodos, activeNewTodos) = newTodos.partition { it.todoUniqueKey() in hiddenKeysSet }
+        val (hiddenNewTodos, activeNewTodos) = allTodos.partition { it.todoUniqueKey() in hiddenKeysSet }
 
         return previousData.copy(
             todos = activeNewTodos,
-            submitted = newSubmitted,
-            subjects = buildSubjectInfos(subjects, locallyReadDiscussionIds),
+            submitted = allSubmitted,
+            subjects = allSubjectInfos,
             hiddenTodos = hiddenNewTodos,
             loadedAt = loadedAt,
         )

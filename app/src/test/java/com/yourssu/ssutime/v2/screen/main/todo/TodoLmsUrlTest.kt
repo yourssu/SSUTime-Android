@@ -54,6 +54,36 @@ class TodoLmsUrlTest {
     }
 
     @Test
+    fun `cyber todo returns url property directly instead of canvas url`() {
+        val cyberUrl = "https://lms.kcu.ac/atnlcSubj/atnlcApe/list"
+        val todo = TodoInfo(
+            todoId = -1001,
+            title = "1주차 1강",
+            due_date = "2026-03-15T23:59:59+09:00",
+            type = TodoType.COMMONS,
+            subject = SubjectInfo(id = -2001, name = "사이버대학교 강의", professor = "교수님"),
+            url = cyberUrl,
+        )
+
+        assertEquals(cyberUrl, todo.toLmsUrl())
+    }
+
+    @Test
+    fun `cyber todo with blank url falls back to cyber portal base url`() {
+        val todo = TodoInfo(
+            todoId = -1002,
+            title = "2주차 1강",
+            due_date = "2026-03-22T23:59:59+09:00",
+            type = TodoType.COMMONS,
+            subject = SubjectInfo(id = -2002, name = "사이버대학교 강의2", professor = "교수님"),
+            url = "",
+        )
+
+        assertEquals("https://lms.kcu.ac", todo.toLmsUrl())
+    }
+
+
+    @Test
     fun `uses fallback subjectId when subject is null`() {
         val todo = TodoInfo(
             todoId = 4004,
@@ -80,5 +110,26 @@ class TodoLmsUrlTest {
         assertEquals("1시간 1분 5초", formatVideoDuration(3665.0))
         assertEquals("", formatVideoDuration(0.0))
         assertEquals("", formatVideoDuration(-1.0))
+    }
+
+    @Test
+    fun `parseHtmlToAnnotatedString handles blank string`() {
+        assertEquals("", parseHtmlToAnnotatedString("").text)
+        assertEquals("", parseHtmlToAnnotatedString("   ").text)
+    }
+
+    @Test
+    fun `parseHtmlToAnnotatedString falls back safely without crashing on JVM unit test`() {
+        val html = "<p>과제 설명입니다. <b>중요</b> 안내</p>"
+        val result = parseHtmlToAnnotatedString(html)
+        // On JVM unit tests without android.jar framework mocks, runCatching catches the stub exception and returns the string safely
+        assertEquals(html, result.text)
+    }
+
+    @Test
+    fun `parseHtmlToAnnotatedString handles plain text without html`() {
+        val plain = "일반 텍스트입니다."
+        val result = parseHtmlToAnnotatedString(plain)
+        assertEquals(plain, result.text)
     }
 }

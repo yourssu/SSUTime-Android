@@ -39,6 +39,15 @@
     <string name="onboarding_tip_quiz">LearningX [Quiz]</string>
     <string name="onboarding_tip_lecture">LearningX [Lecture]</string>
     <string name="onboarding_tip_cyber_excluded">Soongsil Cyber University lectures are not included.</string>
+    <string name="cyber_connect_title">Connect Soongsil Cyber University</string>
+    <string name="cyber_connect_login">Log in</string>
+    <string name="cyber_title">Soongsil Cyber University</string>
+    <string name="cyber_disconnect">Disconnect</string>
+    <string name="cyber_login_title">Log in to view\ncyber university deadlines</string>
+    <string name="cyber_login_id_placeholder">Enter student ID issued by Cyber University</string>
+    <string name="cyber_login_pw_placeholder">Enter Cyber University password</string>
+    <string name="cyber_login_find_id">Find Student ID</string>
+
 
     <string name="network_error_title">Your internet connection is unstable</string>
     <string name="network_error_description">Check your Wi-Fi or cellular connection\nand try again.</string>
@@ -46,12 +55,14 @@
 
     <string name="main_completed_auto_disappear">Completed tasks disappear automatically</string>
     <string name="main_todo_count">You have %1$d tasks</string>
+    <string name="main_todo_count_highlight">%1$d tasks</string>
     <string name="main_updated_at">Updated at %1$s</string>
     <string name="main_updated_at_base">Updated at %1$s</string>
     <string name="main_update_info_none">No update information</string>
     <string name="main_submitted_title">Submitted assignments</string>
     <string name="main_submitted_empty">No submitted assignments yet</string>
     <string name="main_submitted_count">Submitted %1$d</string>
+    <string name="main_submitted_sort_latest">Latest</string>
     <string name="main_date_base">%1$s</string>
     <string name="main_date_placeholder">No date</string>
     <string name="main_widget_badge_title">Add the SSUTime widget</string>
@@ -85,16 +96,21 @@
     <string name="call_alert_setup_description">You can receive a call-style alert from your professor based on the time you set.\n(It does not make a real phone call!)</string>
     <string name="call_alert_option_1h">1 hour before the deadline</string>
     <string name="call_alert_option_2h">2 hours before the deadline</string>
+    <string name="call_alert_option_3h">3 hours before the deadline</string>
     <string name="call_alert_option_6h">6 hours before the deadline</string>
+    <string name="call_alert_option_12h">12 hours before the deadline</string>
     <string name="call_alert_disable">Do not receive call alerts</string>
     <string name="call_alert_time_1h">1 hour before</string>
     <string name="call_alert_time_2h">2 hours before</string>
+    <string name="call_alert_time_3h">3 hours before</string>
     <string name="call_alert_time_6h">6 hours before</string>
+    <string name="call_alert_time_12h">12 hours before</string>
     <string name="call_alert_time_dropdown_content_description">Open call alert time options</string>
 
     <string name="my_back_content_description">Back</string>
     <string name="my_avatar_content_description">Avatar</string>
     <string name="my_notification_settings">Notification settings</string>
+    <string name="my_settings">Settings</string>
     <string name="my_no_term_info">No term information</string>
     <string name="my_term_dropdown_content_description">Select term</string>
     <string name="my_notification_info_content_description">About notifications</string>
@@ -164,4 +180,5 @@
     <string name="tab_my">My</string>
     <string name="calendar_title">Calendar</string>
     <string name="calendar_coming_soon">Calendar feature is coming soon</string>
+    <string name="cyber_connected">Connected</string>
 </resources>

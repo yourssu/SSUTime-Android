@@ -38,9 +38,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextLinkStyles
+import androidx.compose.ui.text.fromHtml
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
@@ -50,7 +55,9 @@ import androidx.compose.ui.window.Dialog
 import com.yourssu.data.SubjectInfo
 import com.yourssu.data.TodoInfo
 import com.yourssu.data.TodoType
+import com.yourssu.data.isCyber
 import com.yourssu.ssutime.v2.R
+
 import com.yourssu.ssutime.v2.component.SButton_Small
 import com.yourssu.ssutime.v2.getStringDateWithTime
 import com.yourssu.ssutime.v2.screen.my.PopupButton
@@ -209,16 +216,40 @@ fun TodoDetailTabArea(
     }
 }
 
+/**
+ * HTML 형식의 문자열을 Compose의 AnnotatedString으로 변환
+ */
+internal fun parseHtmlToAnnotatedString(html: String): AnnotatedString {
+    if (html.isBlank()) return AnnotatedString("")
+    return runCatching {
+        AnnotatedString.fromHtml(
+            htmlString = html,
+            linkStyles = TextLinkStyles(
+                style = SpanStyle(
+                    color = Color(0xFF007BFF),
+                    textDecoration = TextDecoration.Underline,
+                )
+            )
+        )
+    }.getOrElse {
+        AnnotatedString(html)
+    }
+}
+
 @Composable
 fun DescriptionScreen(
     description: String,
 ) {
+    val annotatedDescription = remember(description) {
+        parseHtmlToAnnotatedString(description)
+    }
+
     Column(
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Text(
-            text = description,
+            text = annotatedDescription,
             style = SSUType.Body1Regular
         )
     }
@@ -273,6 +304,9 @@ fun SummaryScreen(
  * 할일 유형별 LMS 상세 페이지 URL 생성
  */
 fun TodoInfo.toLmsUrl(): String {
+    if (isCyber()) {
+        return url.ifBlank { "https://lms.kcu.ac" }
+    }
     val currentSubjectId = subject?.id ?: subjectId
     return when (type) {
         TodoType.QUIZ -> "https://canvas.ssu.ac.kr/courses/$currentSubjectId/quizzes/$componentId"
@@ -281,6 +315,7 @@ fun TodoInfo.toLmsUrl(): String {
         else -> url.ifBlank { "https://canvas.ssu.ac.kr/courses/$currentSubjectId" }
     }
 }
+
 
 /**
  * LMS 외부 브라우저 이동
@@ -444,7 +479,7 @@ fun TodoOverView(
                         .background(R100)
                         .padding(14.dp),
                     textAlign = TextAlign.Center,
-                    text = "마감이 지났지만 지각 제출이 가능한 과제에요!",
+                    text = "마감이 지났지만 지각 제출이 가능한 과제예요!",
                     style = SSUType.Caption1SemiBold.copy(color = R400)
                 )
             }

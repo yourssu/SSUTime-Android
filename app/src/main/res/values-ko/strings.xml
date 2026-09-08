@@ -38,6 +38,15 @@
     <string name="onboarding_tip_quiz">LearningX [퀴즈]</string>
     <string name="onboarding_tip_lecture">LearningX [강의]</string>
     <string name="onboarding_tip_cyber_excluded">숭실 사이버 강의는 포함되지 않아요</string>
+    <string name="cyber_connect_title">숭실 사이버 대학 연결하기</string>
+    <string name="cyber_connect_login">로그인</string>
+    <string name="cyber_title">숭실 사이버 대학</string>
+    <string name="cyber_disconnect">연결 해제</string>
+    <string name="cyber_login_title">로그인만 하면\n숭사대 마감일을 볼 수 있어요</string>
+    <string name="cyber_login_id_placeholder">숭실 사이버 대학에서 발급받은 학번을 입력하세요</string>
+    <string name="cyber_login_pw_placeholder">숭실 사이버 대학 비밀번호 입력하세요</string>
+    <string name="cyber_login_find_id">학번 찾기</string>
+
 
     <string name="network_error_title">인터넷 연결이 불안정해요</string>
     <string name="network_error_description">Wi-Fi나 셀룰러 데이터 연결 상태를\n확인하고 다시 시도해주세요.</string>
@@ -45,12 +54,14 @@
 
     <string name="main_completed_auto_disappear">완료하면 자동으로 사라져요</string>
     <string name="main_todo_count">%1$d건의 할 일이 있어요</string>
+    <string name="main_todo_count_highlight">%1$d건</string>
     <string name="main_updated_at">업데이트 %1$s 기준</string>
     <string name="main_updated_at_base">%1$s 기준</string>
     <string name="main_update_info_none">업데이트 정보 없음</string>
-    <string name="main_submitted_title">제출한 과제</string>
+    <string name="main_submitted_title">제출 완료된 할 일</string>
     <string name="main_submitted_empty">아직 제출한 과제가 없어요</string>
     <string name="main_submitted_count">제출 완료 %1$d</string>
+    <string name="main_submitted_sort_latest">최신순</string>
     <string name="main_date_base">%1$s 기준</string>
     <string name="main_date_placeholder">00월 00일 기준</string>
     <string name="main_widget_badge_title">슈타임 위젯 등록하기</string>
@@ -84,16 +95,21 @@
     <string name="call_alert_setup_description">설정한 시간 기준으로 교수님한테 전화 알림을 받을 수 있어요\n(진짜 전화 연결이 되는 것은 아니에요!)</string>
     <string name="call_alert_option_1h">마감 당일 1시간 전</string>
     <string name="call_alert_option_2h">마감 당일 2시간 전</string>
+    <string name="call_alert_option_3h">마감 당일 3시간 전</string>
     <string name="call_alert_option_6h">마감 당일 6시간 전</string>
+    <string name="call_alert_option_12h">마감 당일 12시간 전</string>
     <string name="call_alert_disable">전화 알림 받지 않기</string>
     <string name="call_alert_time_1h">1시간 전</string>
     <string name="call_alert_time_2h">2시간 전</string>
+    <string name="call_alert_time_3h">3시간 전</string>
     <string name="call_alert_time_6h">6시간 전</string>
+    <string name="call_alert_time_12h">12시간 전</string>
     <string name="call_alert_time_dropdown_content_description">전화알림 시간 펼치기</string>
 
     <string name="my_back_content_description">뒤로가기</string>
     <string name="my_avatar_content_description">프로필 이미지</string>
     <string name="my_notification_settings">알림 설정</string>
+    <string name="my_settings">설정</string>
     <string name="my_no_term_info">학기 정보 없음</string>
     <string name="my_term_dropdown_content_description">학기 선택</string>
     <string name="my_notification_info_content_description">알림 안내</string>
@@ -163,4 +179,5 @@
     <string name="tab_my">마이</string>
     <string name="calendar_title">캘린더</string>
     <string name="calendar_coming_soon">캘린더 기능을 준비하고 있어요</string>
+    <string name="cyber_connected">연결됨</string>
 </resources>

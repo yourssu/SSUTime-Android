@@ -51,10 +51,16 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.Placeholder
 import androidx.compose.ui.text.PlaceholderVerticalAlign
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextLinkStyles
 import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.fromHtml
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -101,6 +107,24 @@ internal fun parseHtmlToPlainText(html: String): String {
     return runCatching {
         Html.fromHtml(html, Html.FROM_HTML_MODE_COMPACT).toString().trim()
     }.getOrElse { html }
+}
+
+/**
+ * HTML 형식의 문자열을 Compose의 AnnotatedString으로 변환
+ */
+internal fun parseHtmlToAnnotatedString(html: String): AnnotatedString {
+    if (html.isBlank()) return AnnotatedString("")
+    return runCatching {
+        AnnotatedString.fromHtml(
+            htmlString = html,
+            linkStyles = TextLinkStyles(
+                style = SpanStyle(
+                    color = Color(0xFF007BFF),
+                    textDecoration = TextDecoration.Underline,
+                )
+            )
+        )
+    }.getOrElse { AnnotatedString(html) }
 }
 
 /**
@@ -408,7 +432,7 @@ fun NoticeAccordionItem(
     val context = LocalContext.current
     var isExpanded by rememberSaveable(discussion.id) { mutableStateOf(defaultExpanded) }
     val formattedDate = remember(discussion.createdAt) { formatDiscussionDate(discussion.createdAt) }
-    val plainContent = remember(discussion.message) { parseHtmlToPlainText(discussion.message) }
+    val annotatedContent = remember(discussion.message) { parseHtmlToAnnotatedString(discussion.message) }
     val isNew = discussion.readState.equals("unread", ignoreCase = true)
     val hasAttachment = discussion.attachments.isNotEmpty()
 
@@ -524,7 +548,7 @@ fun NoticeAccordionItem(
                     .fillMaxWidth()
                     .padding(top = 12.dp)
             ) {
-                if (plainContent.isNotBlank()) {
+                if (annotatedContent.text.isNotBlank()) {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -533,7 +557,7 @@ fun NoticeAccordionItem(
                             .padding(16.dp)
                     ) {
                         Text(
-                            text = plainContent,
+                            text = annotatedContent,
                             style = SSUType.Body1Regular,
                             color = N500
                         )
