@@ -21,6 +21,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -210,10 +212,9 @@ private fun CalendarNoticeBanner(
         }
 
         Icon(
-            painter = painterResource(Res.drawable.icon_collapsed),
-            contentDescription = null,
-            tint = N500,
-            modifier = Modifier.size(16.dp),
+            imageVector = Icons.AutoMirrored.Outlined.KeyboardArrowRight,
+            tint = N400,
+            contentDescription = "상세보기",
         )
     }
 }
