@@ -49,6 +49,7 @@ import com.yourssu.ssutime.desktop.screen.my.DesktopHiddenTodosScreen
 import com.yourssu.ssutime.desktop.screen.my.DesktopMyPageScreen
 import com.yourssu.ssutime.desktop.screen.onboarding.DesktopOnBoardingScreen
 import com.yourssu.ssutime.desktop.screen.splash.DesktopSplashScreen
+import com.yourssu.ssutime.desktop.ui.component.DesktopFloatingCardLayout
 import com.yourssu.ssutime.desktop.ui.resources.Res
 import com.yourssu.ssutime.desktop.ui.resources.checkbox
 import com.yourssu.ssutime.desktop.ui.resources.desktop_open_link_error
@@ -610,19 +611,16 @@ private fun DesktopApp(
         when (route) {
             DesktopRoute.SPLASH -> {
                 Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .widthIn(max = 480.dp),
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center,
                 ) {
                     DesktopSplashScreen()
                 }
             }
 
             DesktopRoute.LOGIN -> {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .widthIn(max = 480.dp),
+                DesktopFloatingCardLayout(
+                    fillCardHeight = false,
                 ) {
                     DesktopLoginScreen(
                         idState = idState,
@@ -644,10 +642,8 @@ private fun DesktopApp(
             }
 
             DesktopRoute.ONBOARDING -> {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .widthIn(max = 480.dp),
+                DesktopFloatingCardLayout(
+                    fillCardHeight = true,
                 ) {
                     DesktopOnBoardingScreen(
                         onConfirmClick = {
@@ -691,10 +687,8 @@ private fun DesktopApp(
             }
 
             DesktopRoute.MY -> {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .widthIn(max = 560.dp),
+                DesktopFloatingCardLayout(
+                    fillCardHeight = true,
                 ) {
                     DesktopMyPageScreen(
                         profile = profile,
@@ -736,10 +730,8 @@ private fun DesktopApp(
             }
 
             DesktopRoute.HIDDEN_TODOS -> {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .widthIn(max = 560.dp),
+                DesktopFloatingCardLayout(
+                    fillCardHeight = true,
                 ) {
                     DesktopHiddenTodosScreen(
                         hiddenTodos = todoData.hiddenTodos,
@@ -750,10 +742,8 @@ private fun DesktopApp(
             }
 
             DesktopRoute.CYBER_LOGIN -> {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .widthIn(max = 560.dp),
+                DesktopFloatingCardLayout(
+                    fillCardHeight = true,
                 ) {
                     DesktopCyberLoginScreen(
                         isLoading = isCyberLoggingIn,

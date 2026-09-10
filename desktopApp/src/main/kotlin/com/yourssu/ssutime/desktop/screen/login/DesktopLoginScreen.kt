@@ -59,81 +59,85 @@ fun DesktopLoginScreen(
         idState.text.isNotEmpty() &&
         passwordState.text.isNotEmpty()
 
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-        modifier = modifier
-            .fillMaxSize()
-            .background(WHITE)
-            .onPreviewKeyEvent { event ->
-                if (
-                    event.key == Key.Enter &&
-                    event.type == KeyEventType.KeyUp &&
-                    canLogin
-                ) {
-                    onLoginClick()
-                    true
-                } else {
-                    false
-                }
-            }
-            .padding(horizontal = 16.dp),
+    Box(
+        modifier = modifier.fillMaxWidth(),
     ) {
-        Image(
-            painter = painterResource(Res.drawable.logo_red),
-            contentDescription = stringResource(Res.string.login_logo_content_description),
-        )
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+            modifier = Modifier
+                .fillMaxWidth()
+                .onPreviewKeyEvent { event ->
+                    if (
+                        event.key == Key.Enter &&
+                        event.type == KeyEventType.KeyUp &&
+                        canLogin
+                    ) {
+                        onLoginClick()
+                        true
+                    } else {
+                        false
+                    }
+                }
+                .padding(horizontal = 32.dp, vertical = 40.dp),
+        ) {
+            Image(
+                painter = painterResource(Res.drawable.logo_red),
+                contentDescription = stringResource(Res.string.login_logo_content_description),
+            )
 
-        Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(24.dp))
 
-        STextField(
-            state = idState,
-            placeholder = stringResource(Res.string.login_id_placeholder),
-        )
+            STextField(
+                state = idState,
+                placeholder = stringResource(Res.string.login_id_placeholder),
+            )
 
-        Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(10.dp))
 
-        SSecureTextField(
-            state = passwordState,
-            placeholder = stringResource(Res.string.login_password_placeholder),
-        )
+            SSecureTextField(
+                state = passwordState,
+                placeholder = stringResource(Res.string.login_password_placeholder),
+            )
 
-        Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(12.dp))
 
-        SCheckBox(
-            labelText = stringResource(Res.string.login_auto_login),
-            checked = autoLoginState,
-            onCheckedChanged = onAutoLoginChanged,
-        )
+            SCheckBox(
+                labelText = stringResource(Res.string.login_auto_login),
+                checked = autoLoginState,
+                onCheckedChanged = onAutoLoginChanged,
+            )
 
-        Spacer(Modifier.height(30.dp))
+            Spacer(Modifier.height(30.dp))
 
-        if (message.isNotEmpty()) {
-            Text(
-                text = message,
-                style = SSUType.Caption1SemiBold.copy(color = messageColor),
+            if (message.isNotEmpty()) {
+                Text(
+                    text = message,
+                    style = SSUType.Caption1SemiBold.copy(color = messageColor),
+                )
+                Spacer(Modifier.height(8.dp))
+            }
+
+            SButton(
+                modifier = Modifier.fillMaxWidth(),
+                labelText = stringResource(Res.string.login_button),
+                enable = canLogin,
+                onClick = onLoginClick,
             )
         }
 
-        SButton(
-            modifier = Modifier.fillMaxWidth(),
-            labelText = stringResource(Res.string.login_button),
-            enable = canLogin,
-            onClick = onLoginClick,
-        )
-    }
-
-    if (isLoading) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color(0x80000000)),
-            contentAlignment = Alignment.Center,
-        ) {
-            CircularProgressIndicator(
-                color = MaterialTheme.colorScheme.secondary,
-                trackColor = MaterialTheme.colorScheme.surfaceVariant,
-            )
+        if (isLoading) {
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .background(Color(0x80000000)),
+                contentAlignment = Alignment.Center,
+            ) {
+                CircularProgressIndicator(
+                    color = MaterialTheme.colorScheme.secondary,
+                    trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                )
+            }
         }
     }
 }

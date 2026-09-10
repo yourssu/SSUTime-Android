@@ -148,7 +148,6 @@ fun DesktopMyPageScreen(
         modifier = modifier
             .fillMaxSize()
             .background(WHITE)
-            .safeDrawingPadding()
             .verticalScroll(rememberScrollState()),
     ) {
         Row(
