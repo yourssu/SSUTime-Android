@@ -60,13 +60,13 @@ fun DesktopLoginScreen(
         passwordState.text.isNotEmpty()
 
     Box(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxSize(),
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
             modifier = Modifier
-                .fillMaxWidth()
+                .fillMaxSize()
                 .onPreviewKeyEvent { event ->
                     if (
                         event.key == Key.Enter &&

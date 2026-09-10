@@ -619,9 +619,7 @@ private fun DesktopApp(
             }
 
             DesktopRoute.LOGIN -> {
-                DesktopFloatingCardLayout(
-                    fillCardHeight = false,
-                ) {
+                DesktopFloatingCardLayout {
                     DesktopLoginScreen(
                         idState = idState,
                         passwordState = passwordState,
@@ -642,9 +640,7 @@ private fun DesktopApp(
             }
 
             DesktopRoute.ONBOARDING -> {
-                DesktopFloatingCardLayout(
-                    fillCardHeight = true,
-                ) {
+                DesktopFloatingCardLayout {
                     DesktopOnBoardingScreen(
                         onConfirmClick = {
                             storedState = store.update(
@@ -687,9 +683,7 @@ private fun DesktopApp(
             }
 
             DesktopRoute.MY -> {
-                DesktopFloatingCardLayout(
-                    fillCardHeight = true,
-                ) {
+                DesktopFloatingCardLayout {
                     DesktopMyPageScreen(
                         profile = profile,
                         isLoading = isProfileLoading,
@@ -730,9 +724,7 @@ private fun DesktopApp(
             }
 
             DesktopRoute.HIDDEN_TODOS -> {
-                DesktopFloatingCardLayout(
-                    fillCardHeight = true,
-                ) {
+                DesktopFloatingCardLayout {
                     DesktopHiddenTodosScreen(
                         hiddenTodos = todoData.hiddenTodos,
                         onBack = { route = DesktopRoute.MY },
@@ -742,9 +734,7 @@ private fun DesktopApp(
             }
 
             DesktopRoute.CYBER_LOGIN -> {
-                DesktopFloatingCardLayout(
-                    fillCardHeight = true,
-                ) {
+                DesktopFloatingCardLayout {
                     DesktopCyberLoginScreen(
                         isLoading = isCyberLoggingIn,
                         errorMessage = cyberLoginError,
