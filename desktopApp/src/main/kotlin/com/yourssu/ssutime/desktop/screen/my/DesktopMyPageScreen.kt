@@ -49,6 +49,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.yourssu.ssutime.desktop.core.model.AppProfile
+import com.yourssu.ssutime.desktop.ui.component.DesktopBackButton
 import com.yourssu.ssutime.desktop.ui.resources.Res
 import com.yourssu.ssutime.desktop.ui.resources.avatar_container
 import com.yourssu.ssutime.desktop.ui.resources.common_cancel
@@ -147,27 +148,27 @@ fun DesktopMyPageScreen(
         modifier = modifier
             .fillMaxSize()
             .background(WHITE)
-            .padding(horizontal = 24.dp)
             .safeDrawingPadding()
             .verticalScroll(rememberScrollState()),
     ) {
-        Row(modifier = Modifier.padding(top = 8.dp)) {
-            Box(
-                modifier = Modifier
-                    .size(36.dp)
-                    .clip(CircleShape)
-                    .clickable(onClick = onBack),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    painter = painterResource(Res.drawable.ic_arrow_back),
-                    contentDescription = stringResource(
-                        Res.string.my_back_content_description,
-                    ),
-                    modifier = Modifier.size(24.dp),
-                )
-            }
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+        ) {
+            DesktopBackButton(
+                onClick = onBack,
+                contentDescription = stringResource(
+                    Res.string.my_back_content_description,
+                ),
+            )
         }
+
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp),
+        ) {
 
         Column(
             modifier = Modifier
@@ -361,6 +362,7 @@ fun DesktopMyPageScreen(
             onClick = { showLogoutDialog = true },
         )
         Spacer(Modifier.height(16.dp))
+        }
     }
 }
 

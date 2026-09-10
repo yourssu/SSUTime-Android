@@ -36,6 +36,7 @@ import com.yourssu.ssutime.desktop.core.model.AppTodo
 import com.yourssu.ssutime.desktop.core.model.AppTodoType
 import com.yourssu.ssutime.desktop.core.model.desktopItemKey
 import com.yourssu.ssutime.desktop.core.model.toSimply
+import com.yourssu.ssutime.desktop.ui.component.DesktopBackButton
 import com.yourssu.ssutime.desktop.ui.resources.Res
 import com.yourssu.ssutime.desktop.ui.resources.common_unknown_subject
 import com.yourssu.ssutime.desktop.ui.resources.ic_arrow_back
@@ -79,20 +80,7 @@ fun DesktopSubmittedScreen(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.fillMaxWidth(),
         ) {
-            Box(
-                modifier = Modifier
-                    .size(36.dp)
-                    .clip(CircleShape)
-                    .clickable(onClick = onBack),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    painter = painterResource(Res.drawable.ic_arrow_back),
-                    contentDescription = stringResource(Res.string.todo_detail_back),
-                    tint = Color.Unspecified,
-                    modifier = Modifier.size(24.dp),
-                )
-            }
+            DesktopBackButton(onClick = onBack)
             Spacer(Modifier.width(8.dp))
             Text(
                 text = stringResource(Res.string.main_submitted_title),

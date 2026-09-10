@@ -48,6 +48,7 @@ import com.yourssu.ssutime.desktop.core.model.canRequestAiSummary
 import com.yourssu.ssutime.desktop.core.model.dueDate
 import com.yourssu.ssutime.desktop.core.model.formatVideoDuration
 import com.yourssu.ssutime.desktop.core.model.toLmsUrl
+import com.yourssu.ssutime.desktop.ui.component.DesktopBackButton
 import com.yourssu.ssutime.desktop.screen.main.DesktopAiSummaryUiState
 import com.yourssu.ssutime.desktop.ui.component.SButton_Small
 import com.yourssu.ssutime.desktop.ui.resources.Res
@@ -119,21 +120,12 @@ fun DesktopTodoDetailScreen(
             .background(WHITE)
             .verticalScroll(scrollState),
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Box(
-                modifier = Modifier
-                    .size(36.dp)
-                    .clip(CircleShape)
-                    .clickable(onClick = onBack),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    painter = painterResource(Res.drawable.ic_arrow_back),
-                    contentDescription = stringResource(Res.string.todo_detail_back),
-                    tint = N600,
-                    modifier = Modifier.size(20.dp),
-                )
-            }
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 16.dp),
+        ) {
+            DesktopBackButton(onClick = onBack)
 
             TodoDetailOverview(
                 todo = todo,

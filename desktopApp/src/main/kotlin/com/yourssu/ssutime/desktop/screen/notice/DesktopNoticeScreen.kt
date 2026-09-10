@@ -43,6 +43,7 @@ import androidx.compose.ui.unit.dp
 import com.yourssu.data.DiscussionAttachment
 import com.yourssu.data.DiscussionInfo
 import com.yourssu.ssutime.desktop.core.model.AppSubject
+import com.yourssu.ssutime.desktop.ui.component.DesktopBackButton
 import com.yourssu.ssutime.desktop.ui.resources.Res
 import com.yourssu.ssutime.desktop.ui.resources.ic_arrow_back
 import com.yourssu.ssutime.desktop.ui.resources.icon_collapsed
@@ -99,20 +100,7 @@ fun DesktopNoticeScreen(
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 12.dp),
         ) {
-            Box(
-                modifier = Modifier
-                    .size(36.dp)
-                    .clip(CircleShape)
-                    .clickable(onClick = onBack),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    painter = painterResource(Res.drawable.ic_arrow_back),
-                    contentDescription = stringResource(Res.string.todo_detail_back),
-                    tint = N600,
-                    modifier = Modifier.size(20.dp),
-                )
-            }
+            DesktopBackButton(onClick = onBack)
 
             Spacer(modifier = Modifier.height(8.dp))
 

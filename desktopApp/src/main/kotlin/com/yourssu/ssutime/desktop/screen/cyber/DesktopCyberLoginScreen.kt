@@ -33,6 +33,7 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
+import com.yourssu.ssutime.desktop.ui.component.DesktopBackButton
 import com.yourssu.ssutime.desktop.ui.component.SButton
 import com.yourssu.ssutime.desktop.ui.component.SSecureTextField
 import com.yourssu.ssutime.desktop.ui.component.STextField
@@ -85,25 +86,22 @@ fun DesktopCyberLoginScreen(
                     } else {
                         false
                     }
-                }
-                .padding(horizontal = 24.dp, vertical = 20.dp),
+                },
         ) {
-            Box(
+            Row(
                 modifier = Modifier
-                    .size(36.dp)
-                    .clip(CircleShape)
-                    .clickable(onClick = onBack),
-                contentAlignment = Alignment.Center,
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
             ) {
-                Icon(
-                    painter = painterResource(Res.drawable.ic_arrow_back),
-                    contentDescription = stringResource(Res.string.todo_detail_back),
-                    tint = N600,
-                    modifier = Modifier.size(20.dp),
-                )
+                DesktopBackButton(onClick = onBack)
             }
 
-            Spacer(Modifier.height(20.dp))
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp),
+            ) {
+                Spacer(Modifier.height(8.dp))
 
             Text(
                 text = stringResource(Res.string.cyber_login_title),
@@ -165,6 +163,7 @@ fun DesktopCyberLoginScreen(
                     onLoginClick(idState.text.toString(), pwState.text.toString())
                 },
             )
+            }
         }
 
         if (isLoading) {

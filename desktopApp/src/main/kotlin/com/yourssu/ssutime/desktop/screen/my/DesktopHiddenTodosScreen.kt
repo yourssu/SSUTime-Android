@@ -33,6 +33,7 @@ import com.yourssu.ssutime.desktop.core.model.aiSummaryKey
 import com.yourssu.ssutime.desktop.core.model.desktopItemKey
 import com.yourssu.ssutime.desktop.screen.calendar.badgeBackgroundColor
 import com.yourssu.ssutime.desktop.screen.calendar.badgeTextColor
+import com.yourssu.ssutime.desktop.ui.component.DesktopBackButton
 import com.yourssu.ssutime.desktop.ui.resources.Res
 import com.yourssu.ssutime.desktop.ui.resources.common_unknown_subject
 import com.yourssu.ssutime.desktop.ui.resources.done
@@ -74,20 +75,7 @@ fun DesktopHiddenTodosScreen(
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 12.dp),
         ) {
-            Box(
-                modifier = Modifier
-                    .size(36.dp)
-                    .clip(CircleShape)
-                    .clickable(onClick = onBack),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    painter = painterResource(Res.drawable.ic_arrow_back),
-                    contentDescription = stringResource(Res.string.todo_detail_back),
-                    tint = N600,
-                    modifier = Modifier.size(20.dp),
-                )
-            }
+            DesktopBackButton(onClick = onBack)
 
             Spacer(modifier = Modifier.height(8.dp))
 
