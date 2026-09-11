@@ -129,7 +129,7 @@
     <string name="my_hidden_todos">숨긴 할 일</string>
     <string name="todo_hide_from_list">목록에서 숨기기</string>
     <string name="todo_hide_popup_title">과제를 숨길까요?</string>
-    <string name="todo_hide_popup_message">마이페이지의 [숨긴 과제]에서 복원할 수 있어요.</string>
+    <string name="todo_hide_popup_message">마이페이지의 [숨긴 할 일]에서 복원할 수 있어요.</string>
     <string name="hidden_todos_empty">숨긴 할 일이 없어요</string>
     <string name="hidden_todos_restore">복원하기</string>
 

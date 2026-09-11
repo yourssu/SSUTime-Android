@@ -39,8 +39,11 @@ import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.ModalBottomSheetProperties
 import androidx.compose.material3.Scaffold
@@ -102,6 +105,7 @@ import com.yourssu.ssutime.v2.todo.toTodoDeadlineInstant
 import com.yourssu.ssutime.v2.ui.theme.N100
 import com.yourssu.ssutime.v2.ui.theme.N200
 import com.yourssu.ssutime.v2.ui.theme.N300
+import com.yourssu.ssutime.v2.ui.theme.N400
 import com.yourssu.ssutime.v2.ui.theme.N500
 import com.yourssu.ssutime.v2.ui.theme.R100
 import com.yourssu.ssutime.v2.ui.theme.R400
@@ -966,6 +970,11 @@ fun TodoItem(
                     )
                 }
                 Spacer(Modifier.weight(1f))
+                Icon(
+                    imageVector = Icons.AutoMirrored.Outlined.KeyboardArrowRight,
+                    tint = N400,
+                    contentDescription = "상세보기",
+                )
             }
         }
     }
