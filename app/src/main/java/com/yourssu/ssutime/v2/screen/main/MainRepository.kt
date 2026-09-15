@@ -8,6 +8,7 @@ import com.yourssu.data.AlertData
 import com.yourssu.data.LabsData
 import com.yourssu.data.TodoData
 import com.yourssu.data.TodoInfo
+import com.yourssu.data.network.AttachmentLinkResponse
 import com.yourssu.data.network.LmsSessionRequest
 import com.yourssu.data.network.UserTodoStatusResponse
 import com.yourssu.data.network.toReportWithAnalysisRequestOrNull
@@ -146,10 +147,12 @@ class MainRepository(
         key: String,
         summary: String,
         estimatedDurationMinutes: Int?,
+        attachmentLinks: List<AttachmentLinkResponse> = emptyList(),
     ) {
         val cache = AiSummaryCache(
             summary = summary,
             estimatedDurationMinutes = estimatedDurationMinutes,
+            attachmentLinks = attachmentLinks,
         )
         todoDataStore.updateData { currentData ->
             currentData.copy(

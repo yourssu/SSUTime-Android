@@ -309,6 +309,7 @@ fun MainScreen(
                             .padding(innerPadding),
                         submitted = viewModel.submitted,
                         isEnableSubmittedFile = isEnableSubmittedFile,
+                        onBackClick = mainContentNavController::popBackStack,
                     )
                 }
             }

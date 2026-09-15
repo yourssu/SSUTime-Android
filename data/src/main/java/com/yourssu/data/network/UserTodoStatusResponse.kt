@@ -19,7 +19,16 @@ data class ReportedTodoResponse(
     val aiSummary: String? = null,
     val estimatedDurationMinutes: Int? = -1,
     val status: String = "",
+    val attachmentLinks: List<AttachmentLinkResponse> = emptyList(),
 )
+
+@Serializable
+data class AttachmentLinkResponse(
+    val url: String = "",
+    val fileName: String = "",
+    val extension: String = "",
+)
+
 
 fun ReportedTodoResponse.matches(todo: TodoInfo): Boolean =
     subjectId == (todo.subject?.id ?: todo.subjectId).toLong() &&

@@ -9,6 +9,7 @@ import androidx.lifecycle.viewModelScope
 import com.yourssu.data.AiSummaryCache
 import com.yourssu.data.TodoInfo
 import com.yourssu.data.TodoType
+import com.yourssu.data.network.AttachmentLinkResponse
 import com.yourssu.data.network.ReportedTodoResponse
 import com.yourssu.data.network.matches
 import com.yourssu.ssutime.v2.analytics.SentryExceptionReporter
@@ -154,6 +155,7 @@ class TodoDetailViewModel(
                 key = key,
                 summary = success.summary,
                 estimatedDurationMinutes = success.estimatedDurationMinutes,
+                attachmentLinks = success.attachmentLinks,
             )
         }
         aiSummaryState = success
@@ -167,6 +169,7 @@ sealed interface AiSummaryUiState {
     data class Success(
         val summary: String,
         val estimatedDurationMinutes: Int?,
+        val attachmentLinks: List<AttachmentLinkResponse> = emptyList(),
     ) : AiSummaryUiState
     data object Error : AiSummaryUiState
 }
@@ -185,6 +188,7 @@ private fun ReportedTodoResponse.toAiSummarySuccessOrNull(): AiSummaryUiState.Su
     return AiSummaryUiState.Success(
         summary = summary,
         estimatedDurationMinutes = estimatedDurationMinutes,
+        attachmentLinks = attachmentLinks,
     )
 }
 
@@ -195,6 +199,7 @@ private fun AiSummaryCache.toAiSummarySuccessOrNull(): AiSummaryUiState.Success?
             AiSummaryUiState.Success(
                 summary = summary,
                 estimatedDurationMinutes = estimatedDurationMinutes,
+                attachmentLinks = attachmentLinks,
             )
         }
 

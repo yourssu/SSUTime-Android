@@ -397,7 +397,7 @@ fun SSUCyberAccountHelperBadge(
             Column {
                 Text(
                     text = stringResource(R.string.cyber_connect_title),
-                    style = SSUType.H4SemiBold,
+                    style = SSUType.Label2SemiBold,
                     color = R400
                 )
             }

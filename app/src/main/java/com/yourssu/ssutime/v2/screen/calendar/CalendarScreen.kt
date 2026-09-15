@@ -347,12 +347,12 @@ fun CalendarNoticeBanner(
         ) {
             Text(
                 text = "새로운 공지사항",
-                style = SSUType.Caption1SemiBold,
+                style = SSUType.Label2SemiBold,
                 color = N500
             )
             Text(
                 text = "$noticeCount",
-                style = SSUType.Caption1SemiBold,
+                style = SSUType.Label2SemiBold,
                 color = R400
             )
         }

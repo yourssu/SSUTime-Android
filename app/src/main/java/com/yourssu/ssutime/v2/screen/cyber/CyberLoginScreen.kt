@@ -12,8 +12,13 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.input.rememberTextFieldState
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -66,11 +71,24 @@ fun CyberLoginScreen(
             ) {
                 Spacer(Modifier.height(20.dp))
 
-                Text(
-                    text = stringResource(R.string.cyber_login_title),
-                    style = SSUType.H2SemiBold,
-                    color = BLACK,
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+                        contentDescription = "뒤로가기",
+                        tint = BLACK,
+                        modifier = Modifier
+                            .size(28.dp)
+                            .clickable(onClick = onBackClick)
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        text = stringResource(R.string.cyber_login_title),
+                        style = SSUType.H2SemiBold,
+                        color = BLACK,
+                    )
+                }
 
                 Spacer(Modifier.height(36.dp))
 

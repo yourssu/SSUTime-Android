@@ -1,5 +1,6 @@
 package com.yourssu.data
 
+import com.yourssu.data.network.AttachmentLinkResponse
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -31,4 +32,5 @@ data class TodoData(
 data class AiSummaryCache(
     val summary: String = "",
     val estimatedDurationMinutes: Int? = null,
+    val attachmentLinks: List<AttachmentLinkResponse> = emptyList(),
 )

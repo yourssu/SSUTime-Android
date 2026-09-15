@@ -31,6 +31,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.InlineTextContent
 import androidx.compose.foundation.text.appendInlineContent
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
@@ -249,11 +250,24 @@ fun NoticeScreen(
         ) {
             item {
                 Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = "공지사항",
-                    style = SSUType.H2SemiBold,
-                    color = BLACK
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+                        contentDescription = "뒤로가기",
+                        tint = BLACK,
+                        modifier = Modifier
+                            .size(28.dp)
+                            .clickable(onClick = onBackClick)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "공지사항",
+                        style = SSUType.H2SemiBold,
+                        color = BLACK
+                    )
+                }
                 Spacer(modifier = Modifier.height(16.dp))
 
                 if (effectiveSubjects.isNotEmpty()) {
