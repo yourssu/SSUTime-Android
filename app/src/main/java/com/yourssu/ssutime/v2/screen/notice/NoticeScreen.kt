@@ -30,6 +30,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.InlineTextContent
 import androidx.compose.foundation.text.appendInlineContent
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.filled.AttachFile
@@ -573,11 +574,13 @@ fun NoticeAccordionItem(
                             .background(N100)
                             .padding(16.dp)
                     ) {
-                        Text(
-                            text = annotatedContent,
-                            style = SSUType.Body1Regular,
-                            color = N500
-                        )
+                        SelectionContainer {
+                            Text(
+                                text = annotatedContent,
+                                style = SSUType.Body1Regular,
+                                color = N500
+                            )
+                        }
                     }
                 }
 

@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.outlined.AttachFile
@@ -244,14 +245,16 @@ fun DescriptionScreen(
         parseHtmlToAnnotatedString(description)
     }
 
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        Text(
-            text = annotatedDescription,
-            style = SSUType.Body1Regular
-        )
+    SelectionContainer {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Text(
+                text = annotatedDescription,
+                style = SSUType.Body1Regular
+            )
+        }
     }
 }
 
@@ -289,18 +292,20 @@ fun SummaryScreen(
             Column(
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                Text(
-                    text = when (state) {
-                        is AiSummaryUiState.Success -> state.summary
-                        AiSummaryUiState.Loading -> stringResource(R.string.ai_summary_loading)
-                        AiSummaryUiState.Analyzing -> stringResource(R.string.ai_summary_analyzing)
-                        AiSummaryUiState.Empty -> stringResource(R.string.ai_summary_empty)
-                        AiSummaryUiState.Error -> stringResource(R.string.ai_summary_error)
-                        null -> stringResource(R.string.ai_summary_loading)
-                    },
-                    style = SSUType.Body1Medium,
-                    color = N500,
-                )
+                SelectionContainer {
+                    Text(
+                        text = when (state) {
+                            is AiSummaryUiState.Success -> state.summary
+                            AiSummaryUiState.Loading -> stringResource(R.string.ai_summary_loading)
+                            AiSummaryUiState.Analyzing -> stringResource(R.string.ai_summary_analyzing)
+                            AiSummaryUiState.Empty -> stringResource(R.string.ai_summary_empty)
+                            AiSummaryUiState.Error -> stringResource(R.string.ai_summary_error)
+                            null -> stringResource(R.string.ai_summary_loading)
+                        },
+                        style = SSUType.Body1Medium,
+                        color = N500,
+                    )
+                }
 
                 if (state is AiSummaryUiState.Success && state.summary.isNotBlank() && state.attachmentLinks.isNotEmpty()) {
                     TodoAttachmentSection(
