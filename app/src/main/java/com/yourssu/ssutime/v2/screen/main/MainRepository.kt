@@ -85,6 +85,7 @@ class MainRepository(
 
     suspend fun markDiscussionAsRead(discussionId: Int) {
         updateTodoData { currentData ->
+            val updatedKeys = (currentData.readDiscussionIds + discussionId).distinct()
             val updatedSubjects = currentData.subjects.map { subject ->
                 val updatedDiscussions = subject.discussions.map { discussion ->
                     if (discussion.id == discussionId) {
@@ -95,7 +96,10 @@ class MainRepository(
                 }
                 subject.copy(discussions = updatedDiscussions)
             }
-            currentData.copy(subjects = updatedSubjects)
+            currentData.copy(
+                subjects = updatedSubjects,
+                readDiscussionIds = updatedKeys,
+            )
         }
     }
 

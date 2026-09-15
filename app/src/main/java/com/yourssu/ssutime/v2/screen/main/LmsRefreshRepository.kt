@@ -180,10 +180,19 @@ class LmsRefreshRepository(
             forceLogin = forceLogin,
         )
         val subjects = fetchSubjects(term, loginData, loadingState)
+        val previousData = mainRepository.getTodoData()
+        val locallyReadDiscussionIds = (
+            previousData.readDiscussionIds +
+            previousData.subjects
+                .flatMap { it.discussions }
+                .filter { it.readState.equals("read", ignoreCase = true) }
+                .map { it.id }
+        ).toSet()
+        val subjectInfos = buildSubjectInfos(subjects, locallyReadDiscussionIds)
         buildTodoData(
             subjects = subjects,
-            subjectInfos = buildSubjectInfos(subjects),
-            previousData = mainRepository.getTodoData(),
+            subjectInfos = subjectInfos,
+            previousData = previousData,
             loadedAt = Instant.now().toString(),
         )
     }
@@ -295,7 +304,15 @@ class LmsRefreshRepository(
                 throw e
             }
         }
-        val subjectInfos = buildSubjectInfos(subjects)
+        val cachedData = mainRepository.getTodoData()
+        val locallyReadDiscussionIds = (
+            cachedData.readDiscussionIds +
+            cachedData.subjects
+                .flatMap { it.discussions }
+                .filter { it.readState.equals("read", ignoreCase = true) }
+                .map { it.id }
+        ).toSet()
+        val subjectInfos = buildSubjectInfos(subjects, locallyReadDiscussionIds)
         val completedAt = Instant.now()
         val cyberLoginData = cyberRepository.getLoginData()
         val cyberResult = if (cyberLoginData.hasCredentials) {
@@ -648,11 +665,13 @@ class LmsRefreshRepository(
             reportedSubmitted.sortedByDeadlineThenName()
         }
 
-        val locallyReadDiscussionIds = previousData.subjects
-            .flatMap { it.discussions }
-            .filter { it.readState.equals("read", ignoreCase = true) }
-            .map { it.id }
-            .toSet()
+        val locallyReadDiscussionIds = (
+            previousData.readDiscussionIds +
+            previousData.subjects
+                .flatMap { it.discussions }
+                .filter { it.readState.equals("read", ignoreCase = true) }
+                .map { it.id }
+        ).toSet()
 
         val lmsSubjectInfos = buildSubjectInfos(subjects, locallyReadDiscussionIds)
         val allSubjectInfos = if (isCyberConnected) {
@@ -664,12 +683,20 @@ class LmsRefreshRepository(
         val hiddenKeysSet = previousData.hiddenTodoKeys.toSet()
         val (hiddenNewTodos, activeNewTodos) = allTodos.partition { it.todoUniqueKey() in hiddenKeysSet }
 
+        val allReadDiscussionIds = (
+            locallyReadDiscussionIds +
+            allSubjectInfos.flatMap { it.discussions }
+                .filter { it.readState.equals("read", ignoreCase = true) }
+                .map { it.id }
+        ).toList()
+
         return previousData.copy(
             todos = activeNewTodos,
             submitted = allSubmitted,
             subjects = allSubjectInfos,
             hiddenTodos = hiddenNewTodos,
             loadedAt = loadedAt,
+            readDiscussionIds = allReadDiscussionIds,
         )
     }
 
@@ -684,7 +711,8 @@ class LmsRefreshRepository(
                 professor = subject.professor,
                 discussions = subject.discussions.map { discussion ->
                     val isLocallyRead = discussion.id in locallyReadDiscussionIds
-                    val initialReadState = if (isLocallyRead) "read" else "unread"
+                    val isServerRead = discussion.read_state.equals("read", ignoreCase = true)
+                    val initialReadState = if (isLocallyRead || isServerRead) "read" else "unread"
                     DiscussionInfo(
                         id = discussion.id,
                         title = discussion.title,

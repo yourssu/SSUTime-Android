@@ -17,11 +17,17 @@ val Context.todoDataStore: DataStore<TodoData> by dataStore(
     serializer = TodoDataSerializer,
 )
 
+private val todoJson = Json {
+    ignoreUnknownKeys = true
+    coerceInputValues = true
+    encodeDefaults = true
+}
+
 object TodoDataSerializer : Serializer<TodoData> {
     override val defaultValue: TodoData = TodoData()
     override suspend fun readFrom(input: InputStream): TodoData =
         try {
-            Json.decodeFromString<TodoData>(
+            todoJson.decodeFromString<TodoData>(
                 input.readBytes().decodeToString()
             )
         } catch (serialization: SerializationException) {
@@ -31,7 +37,7 @@ object TodoDataSerializer : Serializer<TodoData> {
 
     override suspend fun writeTo(t: TodoData, output: OutputStream) {
         output.write(
-            Json.encodeToString(TodoData.serializer(), t)
+            todoJson.encodeToString(TodoData.serializer(), t)
                 .encodeToByteArray()
         )
     }

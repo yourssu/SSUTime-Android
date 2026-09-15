@@ -44,6 +44,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -452,6 +453,12 @@ fun NoticeAccordionItem(
     val annotatedContent = remember(discussion.message) { parseHtmlToAnnotatedString(discussion.message) }
     val isNew = discussion.readState.equals("unread", ignoreCase = true)
     val hasAttachment = discussion.attachments.isNotEmpty()
+
+    LaunchedEffect(discussion.id, defaultExpanded, isNew) {
+        if (defaultExpanded && isNew) {
+            onExpanded()
+        }
+    }
 
     val inlineAttachmentTag = stringResource(R.string.notice_inline_attachment_tag)
     val annotatedTitle = remember(discussion.title, hasAttachment, isNew, inlineAttachmentTag) {
