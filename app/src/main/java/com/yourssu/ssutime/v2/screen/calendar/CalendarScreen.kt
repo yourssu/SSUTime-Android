@@ -43,6 +43,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -53,6 +54,7 @@ import androidx.navigation.compose.rememberNavController
 import com.yourssu.data.TodoInfo
 import com.yourssu.data.TodoType
 import com.yourssu.data.todoUniqueKey
+import com.yourssu.ssutime.v2.R
 import com.yourssu.ssutime.v2.component.SSUTimeTopBar
 import com.yourssu.ssutime.v2.screen.main.MainViewModel
 import com.yourssu.ssutime.v2.screen.main.todo.TodoDetailScreen
@@ -110,6 +112,17 @@ fun TodoType.badgeTextColor(): Color = when (this) {
 }
 
 /**
+ * TodoType별 다국어 지원 문자열 리소스 ID 매핑
+ */
+fun TodoType.toDisplayNameRes(): Int = when (this) {
+    TodoType.COMMONS -> R.string.todo_type_lecture
+    TodoType.ASSIGNMENT -> R.string.todo_type_assignment
+    TodoType.QUIZ -> R.string.todo_type_quiz
+    TodoType.SUBMITTED -> R.string.todo_type_submitted
+    TodoType.SUBMITTED_LATE -> R.string.todo_type_submitted_late
+}
+
+/**
  * TodoInfo의 마감일을 LocalDate로 파싱
  */
 fun TodoInfo.toLocalDate(): LocalDate? {
@@ -118,12 +131,13 @@ fun TodoInfo.toLocalDate(): LocalDate? {
 }
 
 /**
- * TodoInfo의 마감 시각 텍스트 포맷 (예: "23시 59분까지")
+ * TodoInfo의 마감 시각 텍스트 포맷 (예: "23시 59분까지" / "Until 23:59")
  */
+@Composable
 fun TodoInfo.toDueTimeText(): String {
     val instant = due_date.toTodoDeadlineInstantOrNull() ?: return ""
     val zdt = instant.atZone(TODO_DEADLINE_ZONE_ID)
-    return "${zdt.hour}시 ${zdt.minute}분까지"
+    return stringResource(R.string.calendar_due_time_format, zdt.hour, zdt.minute)
 }
 
 @Composable
@@ -346,7 +360,7 @@ fun CalendarNoticeBanner(
             horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             Text(
-                text = "새로운 공지사항",
+                text = stringResource(R.string.calendar_new_notice),
                 style = SSUType.Label2SemiBold,
                 color = N500
             )
@@ -359,7 +373,7 @@ fun CalendarNoticeBanner(
 
         Icon(
             imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-            contentDescription = "공지사항 바로가기",
+            contentDescription = stringResource(R.string.calendar_notice_shortcut),
             tint = N500,
             modifier = Modifier.size(20.dp)
         )
@@ -387,7 +401,7 @@ fun CalendarMonthHeader(
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Text(
-                text = "${currentYearMonth.monthValue}월",
+                text = stringResource(R.string.calendar_month_format, currentYearMonth.monthValue),
                 style = SSUType.H3SemiBold,
                 color = N500
             )
@@ -405,7 +419,7 @@ fun CalendarMonthHeader(
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
-                        contentDescription = "이전 달",
+                        contentDescription = stringResource(R.string.calendar_prev_month),
                         tint = N500,
                         modifier = Modifier.size(16.dp)
                     )
@@ -421,7 +435,7 @@ fun CalendarMonthHeader(
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                        contentDescription = "다음 달",
+                        contentDescription = stringResource(R.string.calendar_next_month),
                         tint = N500,
                         modifier = Modifier.size(16.dp)
                     )
@@ -430,7 +444,7 @@ fun CalendarMonthHeader(
         }
 
         Text(
-            text = "${totalCount}건",
+            text = stringResource(R.string.calendar_total_count, totalCount),
             style = SSUType.H4SemiBold,
             color = N700
         )
@@ -444,7 +458,15 @@ fun CalendarMonthHeader(
 fun CalendarWeekHeader(
     modifier: Modifier = Modifier,
 ) {
-    val weekDays = listOf("일", "월", "화", "수", "목", "금", "토")
+    val weekDays = listOf(
+        stringResource(R.string.calendar_day_sun),
+        stringResource(R.string.calendar_day_mon),
+        stringResource(R.string.calendar_day_tue),
+        stringResource(R.string.calendar_day_wed),
+        stringResource(R.string.calendar_day_thu),
+        stringResource(R.string.calendar_day_fri),
+        stringResource(R.string.calendar_day_sat)
+    )
 
     Row(
         modifier = modifier.fillMaxWidth(),
@@ -586,7 +608,7 @@ fun CalendarDayCell(
             // 2개 초과 시 외 N건 표시
             if (moreCount > 0) {
                 Text(
-                    text = "+외 ${moreCount}건",
+                    text = stringResource(R.string.calendar_more_count, moreCount),
                     style = SSUType.Caption3Regular,
                     color = N400,
                     textAlign = TextAlign.Center,
@@ -663,7 +685,7 @@ fun CalendarDateDetailBottomSheet(
             // 헤더: 날짜 (D-Day)
             item {
                 Text(
-                    text = "${date.monthValue}월 ${date.dayOfMonth}일 ($dDayText)",
+                    text = stringResource(R.string.calendar_bottom_sheet_date_format, date.monthValue, date.dayOfMonth, dDayText),
                     style = SSUType.H2SemiBold,
                     color = N700
                 )
@@ -674,7 +696,7 @@ fun CalendarDateDetailBottomSheet(
             if (todos.isEmpty()) {
                 item {
                     Text(
-                        text = "마감 일정이 없습니다.",
+                        text = stringResource(R.string.calendar_empty_day_todos),
                         style = SSUType.Body1Medium,
                         color = N400,
                         modifier = Modifier.padding(vertical = 24.dp)
@@ -731,7 +753,7 @@ fun CalendarTodoDetailItem(
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = todo.type.kor,
+                    text = stringResource(todo.type.toDisplayNameRes()),
                     style = SSUType.Caption1SemiBold,
                     color = todo.type.badgeTextColor()
                 )
@@ -766,7 +788,7 @@ fun CalendarTodoDetailItem(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "마감 기한",
+                text = stringResource(R.string.main_deadline_label),
                 style = SSUType.Label3Medium,
                 color = N500
             )

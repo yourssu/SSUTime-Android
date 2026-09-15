@@ -47,6 +47,8 @@
     <string name="cyber_login_id_placeholder">Enter student ID issued by Cyber University</string>
     <string name="cyber_login_pw_placeholder">Enter Cyber University password</string>
     <string name="cyber_login_find_id">Find Student ID</string>
+    <string name="cyber_login_error_credentials">Login failed. Please check your student ID and password.</string>
+    <string name="cyber_login_error_general">An error occurred while logging in. Please try again.</string>
 
 
     <string name="network_error_title">Your internet connection is unstable</string>
@@ -181,4 +183,52 @@
     <string name="calendar_title">Calendar</string>
     <string name="calendar_coming_soon">Calendar feature is coming soon</string>
     <string name="cyber_connected">Connected</string>
+
+    <string name="common_back">Back</string>
+    <string name="common_attachment">Attachments</string>
+    <string name="common_download">Download</string>
+    <string name="common_attachment_numbered">Attachment %1$d</string>
+    <string name="common_open_link_no_app">No app found to open the link.</string>
+    <string name="common_warning_icon">Warning icon</string>
+
+    <string name="todo_detail_ai_summary_banner">AI summarized the attached file.</string>
+    <string name="todo_detail_ai_summary_icon_content_description">AI summary icon</string>
+    <string name="todo_detail_open_lms">Go to LMS</string>
+    <string name="todo_detail_late_submission_available">The deadline has passed, but late submission is available!</string>
+    <string name="todo_duration_hours">%1$d hr</string>
+    <string name="todo_duration_minutes">%1$d min</string>
+    <string name="todo_duration_seconds">%1$d sec</string>
+
+    <string name="notice_title">Announcements</string>
+    <string name="notice_empty">No announcements found.</string>
+    <string name="notice_select_subject">Select course</string>
+    <string name="notice_inline_attachment_tag">[Attachment]</string>
+    <string name="notice_has_attachment">Has attachments</string>
+    <string name="notice_collapse">Collapse</string>
+    <string name="notice_expand">Expand</string>
+    <string name="notice_attachment_invalid_path">Invalid attachment path.</string>
+
+    <string name="calendar_new_notice">New announcements</string>
+    <string name="calendar_notice_shortcut">Go to announcements</string>
+    <string name="calendar_month_format">%1$d</string>
+    <string name="calendar_total_count">%1$d tasks</string>
+    <string name="calendar_more_count">+%1$d more</string>
+    <string name="calendar_prev_month">Previous month</string>
+    <string name="calendar_next_month">Next month</string>
+    <string name="calendar_empty_day_todos">No tasks due on this day.</string>
+    <string name="calendar_day_sun">Sun</string>
+    <string name="calendar_day_mon">Mon</string>
+    <string name="calendar_day_tue">Tue</string>
+    <string name="calendar_day_wed">Wed</string>
+    <string name="calendar_day_thu">Thu</string>
+    <string name="calendar_day_fri">Fri</string>
+    <string name="calendar_day_sat">Sat</string>
+    <string name="calendar_due_time_format">Until %1$02d:%2$02d</string>
+    <string name="calendar_bottom_sheet_date_format">%1$d/%2$d (%3$s)</string>
+
+    <string name="my_lab_title">Lab</string>
+    <string name="my_lab_question">Lab?</string>
+    <string name="my_lab_submitted_files">View submitted attachments</string>
+    <string name="my_lab_description">Try experimental features. They may be added or removed without notice, and frequently used features may be officially added.</string>
+    <string name="my_system_notification">System notification</string>
 </resources>

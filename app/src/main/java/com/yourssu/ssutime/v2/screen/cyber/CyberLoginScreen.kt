@@ -47,6 +47,7 @@ fun CyberLoginScreen(
     modifier: Modifier = Modifier,
     isLoading: Boolean = false,
     errorMessage: String? = null,
+    errorMessageResId: Int? = null,
     onBackClick: () -> Unit = {},
     onLoginClick: (id: String, pw: String) -> Unit = { _, _ -> },
     onFindIdClick: () -> Unit = {},
@@ -76,7 +77,7 @@ fun CyberLoginScreen(
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
-                        contentDescription = "뒤로가기",
+                        contentDescription = stringResource(R.string.common_back),
                         tint = BLACK,
                         modifier = Modifier
                             .size(28.dp)
@@ -122,10 +123,11 @@ fun CyberLoginScreen(
                     )
                 }
 
-                if (!errorMessage.isNullOrBlank()) {
+                val displayErrorMessage = errorMessageResId?.let { stringResource(it) } ?: errorMessage
+                if (!displayErrorMessage.isNullOrBlank()) {
                     Spacer(Modifier.height(8.dp))
                     Text(
-                        text = errorMessage,
+                        text = displayErrorMessage,
                         style = SSUType.Caption1SemiBold.copy(color = R500),
                     )
                 }

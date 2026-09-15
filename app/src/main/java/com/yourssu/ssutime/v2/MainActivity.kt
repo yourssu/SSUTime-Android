@@ -226,11 +226,13 @@ class MainActivity : ComponentActivity() {
                         val cyberLoginViewModel: CyberLoginViewModel = koinViewModel()
                         val isLoading by cyberLoginViewModel.isLoading.collectAsState()
                         val errorMessage by cyberLoginViewModel.errorMessage.collectAsState()
+                        val errorMessageResId by cyberLoginViewModel.errorMessageResId.collectAsState()
                         val context = LocalContext.current
 
                         CyberLoginScreen(
                             isLoading = isLoading,
                             errorMessage = errorMessage,
+                            errorMessageResId = errorMessageResId,
                             onBackClick = { navController.popBackStack() },
                             onLoginClick = { id, pw ->
                                 cyberLoginViewModel.login(id, pw) {

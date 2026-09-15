@@ -71,7 +71,7 @@ fun SubmittedScreen(
         ) {
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
-                contentDescription = "뒤로가기",
+                contentDescription = stringResource(R.string.common_back),
                 tint = BLACK,
                 modifier = Modifier
                     .size(28.dp)
@@ -213,7 +213,7 @@ fun SubmittedItem(
                     ) {
                         Icon(
                             imageVector = Icons.Outlined.AttachFile,
-                            contentDescription = "첨부파일",
+                            contentDescription = stringResource(R.string.common_attachment),
                             tint = N400,
                             modifier = Modifier.size(20.dp)
                         )
@@ -240,7 +240,7 @@ fun SubmittedItem(
 
                         Icon(
                             imageVector = Icons.Outlined.FileDownload,
-                            contentDescription = item.display_name + " 다운로드",
+                            contentDescription = "${item.display_name} ${stringResource(R.string.common_download)}",
                             tint = N400,
                             modifier = Modifier.size(20.dp)
                         )

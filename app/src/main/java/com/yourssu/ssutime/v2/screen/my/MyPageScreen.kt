@@ -501,7 +501,7 @@ fun MyPageContent(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "실험실",
+                    text = stringResource(R.string.my_lab_title),
                     style = SSUType.H5SemiBold,
                     color = N500,
                 )
@@ -535,7 +535,7 @@ fun MyPageContent(
             }
 
             ToggleOption(
-                text = "제출한 첨부파일 확인하기",
+                text = stringResource(R.string.my_lab_submitted_files),
                 value = labsData.isEnableSubmittedFile,
                 onValueChanged = { enabled ->
                     viewModel.updateLabsData(labsData.copy(isEnableSubmittedFile = enabled))
@@ -851,7 +851,7 @@ fun PopupButton(
 @Preview(showBackground = true)
 fun previewToggleOption() {
     ToggleOption(
-        "시스템 알림", true, onValueChanged = {},
+        stringResource(R.string.my_system_notification), true, onValueChanged = {},
     ) { }
 }
 
@@ -896,11 +896,11 @@ fun LabsTooltip() {
             .padding(16.dp)
     ) {
         Text(
-            text = "실험실?",
+            text = stringResource(R.string.my_lab_question),
             style = SSUType.Caption1SemiBold
         )
         Text(
-            text = "실험적 기능들을 사용해보실 수 있어요. 예고 없이 추가되거나 사라질 수 있고 사용빈도가 높은 기능은 정식으로 추가될 수 있어요.",
+            text = stringResource(R.string.my_lab_description),
             style = SSUType.Body2Medium
         )
     }

@@ -274,10 +274,10 @@ fun SummaryScreen(
         ) {
             Icon(
                 painter = painterResource(R.drawable.ai_sparkle),
-                contentDescription = "AI 요약 아이콘"
+                contentDescription = stringResource(R.string.todo_detail_ai_summary_icon_content_description)
             )
             Text(
-                text = "첨부된 파일 내용을 ai가 요약했어요.",
+                text = stringResource(R.string.todo_detail_ai_summary_banner),
                 style = SSUType.Caption1SemiBold.copy(color = N500)
             )
         }
@@ -330,7 +330,7 @@ fun TodoAttachmentSection(
         modifier = modifier.fillMaxWidth()
     ) {
         Text(
-            text = "첨부파일",
+            text = stringResource(R.string.common_attachment),
             style = SSUType.Caption1SemiBold,
             color = N400
         )
@@ -342,7 +342,8 @@ fun TodoAttachmentSection(
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             attachments.forEachIndexed { index, attachment ->
-                val fileName = attachment.fileName.takeIf { it.isNotBlank() } ?: "첨부파일 ${index + 1}"
+                val fileName = attachment.fileName.takeIf { it.isNotBlank() }
+                    ?: stringResource(R.string.common_attachment_numbered, index + 1)
                 TodoAttachmentItem(
                     fileName = fileName,
                     onClick = {
@@ -375,7 +376,7 @@ fun TodoAttachmentItem(
     ) {
         Icon(
             imageVector = Icons.Outlined.AttachFile,
-            contentDescription = "첨부파일",
+            contentDescription = stringResource(R.string.common_attachment),
             tint = N400,
             modifier = Modifier.size(20.dp)
         )
@@ -395,7 +396,7 @@ fun TodoAttachmentItem(
 
         Icon(
             imageVector = Icons.Outlined.FileDownload,
-            contentDescription = "다운로드",
+            contentDescription = stringResource(R.string.common_download),
             tint = N400,
             modifier = Modifier.size(20.dp)
         )
@@ -431,7 +432,7 @@ fun openTodoLmsUrl(context: Context, todo: TodoInfo) {
         }
         context.startActivity(intent)
     }.onFailure {
-        Toast.makeText(context, "LMS 링크를 열 수 있는 앱이 없습니다.", Toast.LENGTH_SHORT).show()
+        Toast.makeText(context, context.getString(R.string.common_open_link_no_app), Toast.LENGTH_SHORT).show()
     }
 }
 
@@ -459,7 +460,7 @@ fun TodoDetailTabContent(
             contentAlignment = Alignment.TopEnd
         ) {
             SButton_Small(
-                labelText = "LMS 바로가기",
+                labelText = stringResource(R.string.todo_detail_open_lms),
                 textStyle = SSUType.Label3Medium,
                 onClick = {
                     openTodoLmsUrl(context, todo)
@@ -495,24 +496,25 @@ fun previewSummaryScreen() {
 /**
  * 영상(초 단위) 재생 시간 포맷팅
  */
-fun formatVideoDuration(secondsDouble: Double): String {
+fun formatVideoDuration(secondsDouble: Double, locale: java.util.Locale = java.util.Locale.getDefault()): String {
     val totalSeconds = secondsDouble.toInt()
     if (totalSeconds <= 0) return ""
     val hours = totalSeconds / 3600
     val minutes = (totalSeconds % 3600) / 60
     val seconds = totalSeconds % 60
+    val isEnglish = locale.language == java.util.Locale.ENGLISH.language
 
     return buildString {
         if (hours > 0) {
-            append("${hours}시간")
+            append(if (isEnglish) "${hours}hr" else "${hours}시간")
         }
         if (minutes > 0) {
             if (isNotEmpty()) append(" ")
-            append("${minutes}분")
+            append(if (isEnglish) "${minutes}min" else "${minutes}분")
         }
         if (seconds > 0 || isEmpty()) {
             if (isNotEmpty()) append(" ")
-            append("${seconds}초")
+            append(if (isEnglish) "${seconds}sec" else "${seconds}초")
         }
     }
 }
@@ -554,7 +556,7 @@ fun TodoOverView(
             ) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
-                    contentDescription = "뒤로가기",
+                    contentDescription = stringResource(R.string.common_back),
                     tint = N600,
                     modifier = Modifier
                         .size(28.dp)
@@ -614,7 +616,7 @@ fun TodoOverView(
                         .background(R100)
                         .padding(14.dp),
                     textAlign = TextAlign.Center,
-                    text = "마감이 지났지만 지각 제출이 가능한 과제예요!",
+                    text = stringResource(R.string.todo_detail_late_submission_available),
                     style = SSUType.Caption1SemiBold.copy(color = R400)
                 )
             }
