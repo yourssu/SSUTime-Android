@@ -8,6 +8,7 @@ import com.yourssu.data.AlertData
 import com.yourssu.data.LabsData
 import com.yourssu.data.TodoData
 import com.yourssu.data.TodoInfo
+import com.yourssu.data.network.AssignmentAnalysisResponse
 import com.yourssu.data.network.AttachmentLinkResponse
 import com.yourssu.data.network.LmsSessionRequest
 import com.yourssu.data.network.UserTodoStatusResponse
@@ -168,9 +169,9 @@ class MainRepository(
     suspend fun reportTodoWithAnalysis(
         todo: TodoInfo,
         lmsSession: LmsSessionRequest,
-    ) {
-        val request = todo.toReportWithAnalysisRequestOrNull(lmsSession) ?: return
-        apiRepository.reportTodoWithAnalysis(request)
+    ): AssignmentAnalysisResponse? {
+        val request = todo.toReportWithAnalysisRequestOrNull(lmsSession) ?: return null
+        return apiRepository.reportTodoWithAnalysis(request)
     }
 
     suspend fun dismissWidgetHelperBadge() {

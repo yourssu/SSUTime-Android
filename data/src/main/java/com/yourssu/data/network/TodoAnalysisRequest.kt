@@ -37,10 +37,22 @@ data class LmsSessionCookieRequest(
 
 @Serializable
 data class AssignmentAnalysisResponse(
-    val analysisId: Long,
-    val status: String,
+    val analysisId: Long = -1L,
+    val status: String = "",
     val skippedFiles: List<String> = emptyList(),
+    val error: String? = null,
+    val message: String? = null,
 )
+
+val AssignmentAnalysisResponse.isSuccessful: Boolean
+    get() = error.isNullOrBlank() && (analysisId > 0L || status.isNotBlank())
+
+val AssignmentAnalysisResponse.hasNoAnalyzableAttachment: Boolean
+    get() = (error?.contains("analyzable", ignoreCase = true) == true ||
+        error?.contains("attachment", ignoreCase = true) == true ||
+        message?.contains("analyzable", ignoreCase = true) == true ||
+        message?.contains("attachment", ignoreCase = true) == true)
+
 
 fun TodoInfo.toReportWithAnalysisRequestOrNull(
     lmsSession: LmsSessionRequest,

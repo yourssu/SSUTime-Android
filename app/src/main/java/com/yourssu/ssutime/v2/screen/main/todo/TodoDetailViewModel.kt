@@ -9,8 +9,11 @@ import androidx.lifecycle.viewModelScope
 import com.yourssu.data.AiSummaryCache
 import com.yourssu.data.TodoInfo
 import com.yourssu.data.TodoType
+import com.yourssu.data.network.AssignmentAnalysisResponse
 import com.yourssu.data.network.AttachmentLinkResponse
 import com.yourssu.data.network.ReportedTodoResponse
+import com.yourssu.data.network.hasNoAnalyzableAttachment
+import com.yourssu.data.network.isSuccessful
 import com.yourssu.data.network.matches
 import com.yourssu.ssutime.v2.analytics.SentryExceptionReporter
 import com.yourssu.ssutime.v2.screen.main.LmsRefreshRepository
@@ -65,15 +68,34 @@ class TodoDetailViewModel(
 
             aiSummaryState = fallbackSuccess ?: AiSummaryUiState.Loading
 
-            runCatching {
+            val analysisResult = runCatching {
                 requestAiSummary(todo)
-            }.onSuccess {
-                pollAndCacheAiSummary(todo, key, fallbackSuccess)
-                return@launch
-            }.onFailure { exception ->
-                SentryExceptionReporter.capture(exception)
-                Log.e(javaClass.name, "AI 요약 요청에 실패했습니다: ${todo.title}", exception)
+            }
+
+            if (analysisResult.isFailure) {
+                val exception = analysisResult.exceptionOrNull()
+                if (exception != null) {
+                    SentryExceptionReporter.capture(exception)
+                    Log.e(javaClass.name, "AI 요약 요청에 실패했습니다: ${todo.title}", exception)
+                }
                 if (fallbackSuccess != null) {
+                    return@launch
+                }
+            } else {
+                val analysisResponse = analysisResult.getOrNull()
+                if (analysisResponse?.hasNoAnalyzableAttachment == true) {
+                    Log.i(javaClass.name, "분석 가능한 첨부파일이 없습니다: ${todo.title}")
+                    val reportedTodo = runCatching { findReportedTodo(todo) }.getOrNull()
+                    reportedTodo?.toAiSummarySuccessOrNull()?.let { success ->
+                        cacheAndShowAiSummary(key, success)
+                        return@launch
+                    }
+                    aiSummaryState = fallbackSuccess ?: AiSummaryUiState.Empty
+                    return@launch
+                }
+
+                if (analysisResponse?.isSuccessful == true) {
+                    pollAndCacheAiSummary(todo, key, fallbackSuccess)
                     return@launch
                 }
             }
@@ -111,9 +133,9 @@ class TodoDetailViewModel(
             .firstOrNull { response -> response.todo.matches(todo) }
             ?.todo
 
-    private suspend fun requestAiSummary(todo: TodoInfo) {
+    private suspend fun requestAiSummary(todo: TodoInfo): AssignmentAnalysisResponse? {
         val lmsSession = lmsRefreshRepository.getLmsSessionRequest()
-        mainRepository.reportTodoWithAnalysis(
+        return mainRepository.reportTodoWithAnalysis(
             todo = todo,
             lmsSession = lmsSession,
         )
