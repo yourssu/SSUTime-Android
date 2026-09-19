@@ -13,6 +13,7 @@ import com.yourssu.ssutime.desktop.core.model.AppTodoData
 import com.yourssu.ssutime.desktop.core.model.AppTodoType
 import com.yourssu.ssutime.desktop.core.model.canRequestAiSummary
 import com.yourssu.ssutime.desktop.core.model.dueDate
+import com.yourssu.ssutime.desktop.core.model.submittedTodoComparator
 import com.yourssu.ssutime.desktop.core.network.LmsCookie
 import com.yourssu.ssutime.desktop.core.network.SsuTimeApi
 import com.yourssu.ssutime.desktop.core.network.toConfirmedAiSummaryOrNull
@@ -43,6 +44,7 @@ class LmsAppService(
         previousData: AppTodoData = AppTodoData(),
         cyberResult: CyberTodoResult = CyberTodoResult(),
         onRequireReLogin: (suspend () -> Unit)? = null,
+        postHogDistinctId: String? = null,
     ): LmsRefreshSnapshot {
         val terms = try {
             getLmsTerms()
@@ -60,6 +62,7 @@ class LmsAppService(
             getLmsTodoList(
                 term = currentTerm,
                 loadingState = loadingState,
+                postHogDistinctId = postHogDistinctId,
             )
         } catch (e: Exception) {
             if (onRequireReLogin != null) {
@@ -67,6 +70,7 @@ class LmsAppService(
                 getLmsTodoList(
                     term = currentTerm,
                     loadingState = loadingState,
+                    postHogDistinctId = postHogDistinctId,
                 )
             } else {
                 throw e
@@ -94,11 +98,13 @@ class LmsAppService(
         previousData: AppTodoData = AppTodoData(),
         cyberResult: CyberTodoResult = CyberTodoResult(),
         onRequireReLogin: (suspend () -> Unit)? = null,
+        postHogDistinctId: String? = null,
     ): AppTodoData {
         val subjects = try {
             getLmsTodoList(
                 term = term,
                 loadingState = loadingState,
+                postHogDistinctId = postHogDistinctId,
             )
         } catch (e: Exception) {
             if (onRequireReLogin != null) {
@@ -106,6 +112,7 @@ class LmsAppService(
                 getLmsTodoList(
                     term = term,
                     loadingState = loadingState,
+                    postHogDistinctId = postHogDistinctId,
                 )
             } else {
                 throw e
@@ -431,7 +438,7 @@ private fun toAppTodoData(
     }
 
     val allTodos = (lmsTodos + cyberResult.todos).sortedWith(appTodoComparator())
-    val allSubmitted = (lmsSubmitted + cyberResult.submitted).sortedWith(appTodoComparator())
+    val allSubmitted = (lmsSubmitted + cyberResult.submitted).sortedWith(submittedTodoComparator())
 
     val hiddenKeysSet = previousData.hiddenTodoKeys.toSet()
     val (hidden, active) = allTodos.partition { it.todoUniqueKey() in hiddenKeysSet }

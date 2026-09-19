@@ -26,10 +26,12 @@ import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import com.yourssu.ssutime.desktop.analytics.DesktopAnalytics
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -106,6 +108,10 @@ fun DesktopCalendarPanel(
     onTodoClick: (AppTodo) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
+    LaunchedEffect(Unit) {
+        DesktopAnalytics.viewCalendar()
+    }
+
     var currentYearMonth by remember { mutableStateOf(YearMonth.now(KOREA_ZONE_ID)) }
     val today = remember { LocalDate.now(KOREA_ZONE_ID) }
     var selectedDate by remember { mutableStateOf<LocalDate?>(null) }
@@ -160,7 +166,10 @@ fun DesktopCalendarPanel(
             yearMonth = currentYearMonth,
             today = today,
             eventsByDate = eventsByDate,
-            onDayClick = { date -> selectedDate = date },
+            onDayClick = { date ->
+                DesktopAnalytics.calendarDateClick()
+                selectedDate = date
+            },
         )
     }
 

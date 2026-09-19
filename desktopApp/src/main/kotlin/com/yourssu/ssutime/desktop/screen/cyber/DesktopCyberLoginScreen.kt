@@ -22,6 +22,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import com.yourssu.ssutime.desktop.analytics.DesktopAnalytics
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -138,7 +139,10 @@ fun DesktopCyberLoginScreen(
                         .clickable(
                             interactionSource = remember { MutableInteractionSource() },
                             indication = null,
-                            onClick = onFindIdClick,
+                            onClick = {
+                                DesktopAnalytics.cyberFindIdClick()
+                                onFindIdClick()
+                            },
                         )
                         .padding(horizontal = 4.dp, vertical = 4.dp),
                 )

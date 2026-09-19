@@ -1,3 +1,4 @@
+import java.util.Properties
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 val desktopPackageVersion = providers
@@ -8,6 +9,16 @@ val desktopPackageVersion = providers
             .map(String::trim),
     )
 
+val localProperties = Properties().apply {
+    val localPropertiesFile = rootProject.file("local.properties")
+    if (localPropertiesFile.exists()) {
+        localPropertiesFile.inputStream().use(::load)
+    }
+}
+val postHogApiKey = System.getenv("POSTHOG_API_KEY")
+    ?: localProperties.getProperty("posthog")
+    ?: ""
+
 plugins {
     alias(libs.plugins.jetbrains.kotlin.jvm)
     alias(libs.plugins.compose.multiplatform)
@@ -15,9 +26,33 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
 }
 
+val generateBuildConfig = tasks.register("generateBuildConfig") {
+    val outputDir = layout.buildDirectory.dir("generated/source/buildConfig")
+    inputs.property("posthogApiKey", postHogApiKey)
+    inputs.property("desktopVersion", desktopPackageVersion)
+    outputs.dir(outputDir)
+    doLast {
+        val file = outputDir.get().file("com/yourssu/ssutime/desktop/DesktopBuildConfig.kt").asFile
+        file.parentFile.mkdirs()
+        file.writeText(
+            """
+            package com.yourssu.ssutime.desktop
+
+            object DesktopBuildConfig {
+                const val POSTHOG_API_KEY: String = "${postHogApiKey.replace("\\", "\\\\").replace("\"", "\\\"")}"
+                const val VERSION_NAME: String = "${desktopPackageVersion.get()}"
+            }
+            """.trimIndent() + "\n",
+        )
+    }
+}
+
 kotlin {
     compilerOptions {
         jvmTarget.set(JvmTarget.JVM_17)
+    }
+    sourceSets.named("main") {
+        kotlin.srcDir(generateBuildConfig.map { it.outputs.files })
     }
 }
 

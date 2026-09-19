@@ -30,6 +30,7 @@ data class DesktopStoredState(
     val protectedCyberPassword: String = "",
     val isCyberConnected: Boolean = false,
     val isEnableSubmittedFile: Boolean = false,
+    val anonymousDistinctId: String = "",
 )
 
 data class StoredCredentials(
@@ -98,6 +99,7 @@ class DesktopSessionStore(
             autoLogin = false,
             todoData = AppTodoData(),
             profile = null,
+            anonymousDistinctId = "",
         )
         write(next)
         return next

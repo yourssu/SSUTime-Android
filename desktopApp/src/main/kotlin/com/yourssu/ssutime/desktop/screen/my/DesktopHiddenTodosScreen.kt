@@ -22,6 +22,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import com.yourssu.ssutime.desktop.analytics.DesktopAnalytics
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -65,6 +67,10 @@ fun DesktopHiddenTodosScreen(
     onRestoreClick: (AppTodo) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    LaunchedEffect(Unit) {
+        DesktopAnalytics.viewHiddenTasks()
+    }
+
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -79,43 +85,31 @@ fun DesktopHiddenTodosScreen(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = stringResource(Res.string.my_hidden_todos),
-                    style = SSUType.H2SemiBold,
-                    color = BLACK,
-                )
-                Spacer(Modifier.width(8.dp))
-                Text(
-                    text = "${hiddenTodos.size}",
-                    style = SSUType.H2SemiBold,
-                    color = R400,
-                )
-            }
+            Text(
+                text = stringResource(Res.string.my_hidden_todos),
+                style = SSUType.H2SemiBold,
+                color = BLACK,
+            )
         }
 
         if (hiddenTodos.isEmpty()) {
-            Column(
+            Box(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .padding(bottom = 60.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center,
+                    .fillMaxWidth()
+                    .weight(1f),
+                contentAlignment = Alignment.Center,
             ) {
-                Image(
-                    painter = painterResource(Res.drawable.done),
-                    contentDescription = null,
-                )
-                Spacer(Modifier.height(16.dp))
                 Text(
                     text = stringResource(Res.string.hidden_todos_empty),
-                    style = SSUType.H3Medium,
-                    color = BLACK,
+                    style = SSUType.H4Medium,
+                    color = N500,
                 )
             }
         } else {
             LazyColumn(
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
@@ -125,7 +119,10 @@ fun DesktopHiddenTodosScreen(
                 ) { _, todo ->
                     DesktopHiddenTodoItem(
                         todo = todo,
-                        onRestoreClick = { onRestoreClick(todo) },
+                        onRestoreClick = {
+                            DesktopAnalytics.restoreClick()
+                            onRestoreClick(todo)
+                        },
                     )
                 }
             }

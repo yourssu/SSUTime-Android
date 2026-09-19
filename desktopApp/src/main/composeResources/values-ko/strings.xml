@@ -152,6 +152,14 @@
     <string name="notice_empty">등록된 공지사항이 없습니다.</string>
     <string name="notice_attachment">첨부파일</string>
     <string name="notice_select_subject">과목 선택</string>
+    <string name="common_attachment">첨부파일</string>
+    <string name="common_download">다운로드</string>
+    <string name="common_attachment_numbered">첨부파일 %1$d</string>
+    <string name="notice_inline_attachment_tag">[첨부]</string>
+    <string name="notice_has_attachment">첨부파일 있음</string>
+    <string name="notice_collapse">접기</string>
+    <string name="notice_expand">펼치기</string>
+    <string name="notice_attachment_invalid_path">첨부파일 경로가 유효하지 않습니다.</string>
     <string name="todo_detail_lms_link">LMS 바로가기</string>
     <string name="todo_detail_back">뒤로가기</string>
     <string name="todo_detail_description_tab">상세 설명</string>

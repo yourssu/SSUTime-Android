@@ -27,6 +27,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -35,6 +36,7 @@ import androidx.compose.ui.unit.dp
 import com.yourssu.ssutime.desktop.core.model.AppTodo
 import com.yourssu.ssutime.desktop.core.model.AppTodoType
 import com.yourssu.ssutime.desktop.core.model.desktopItemKey
+import com.yourssu.ssutime.desktop.core.model.submittedTodoComparator
 import com.yourssu.ssutime.desktop.core.model.toSimply
 import com.yourssu.ssutime.desktop.ui.component.DesktopBackButton
 import com.yourssu.ssutime.desktop.ui.resources.Res
@@ -70,6 +72,10 @@ fun DesktopSubmittedScreen(
     onOpenUrl: (String) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
+    val sortedSubmitted = remember(submitted) {
+        submitted.sortedWith(submittedTodoComparator())
+    }
+
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -88,7 +94,7 @@ fun DesktopSubmittedScreen(
             )
             Spacer(Modifier.width(6.dp))
             Text(
-                text = submitted.size.toString(),
+                text = sortedSubmitted.size.toString(),
                 style = SSUType.H3SemiBold.copy(color = R400),
             )
             Spacer(Modifier.weight(1f))
@@ -101,14 +107,14 @@ fun DesktopSubmittedScreen(
 
         Spacer(Modifier.height(16.dp))
 
-        if (submitted.isNotEmpty()) {
+        if (sortedSubmitted.isNotEmpty()) {
             LazyColumn(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
                 contentPadding = PaddingValues(bottom = 24.dp),
             ) {
                 itemsIndexed(
-                    items = submitted,
+                    items = sortedSubmitted,
                     key = { index, item -> item.desktopItemKey(index) },
                 ) { _, todo ->
                     DesktopSubmittedItem(

@@ -1,5 +1,9 @@
 package com.yourssu.ssutime.desktop.screen.todo
 
+import androidx.compose.foundation.text.selection.SelectionContainer
+import com.yourssu.ssutime.desktop.analytics.DesktopAnalytics
+import com.yourssu.ssutime.desktop.analytics.toDetailType
+
 import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -45,11 +49,13 @@ import com.yourssu.ssutime.desktop.core.model.AppTodo
 import com.yourssu.ssutime.desktop.core.model.AppTodoType
 import com.yourssu.ssutime.desktop.core.model.aiSummaryKey
 import com.yourssu.ssutime.desktop.core.model.canRequestAiSummary
+import com.yourssu.ssutime.desktop.core.model.desktopItemKey
 import com.yourssu.ssutime.desktop.core.model.dueDate
 import com.yourssu.ssutime.desktop.core.model.formatVideoDuration
 import com.yourssu.ssutime.desktop.core.model.toLmsUrl
 import com.yourssu.ssutime.desktop.ui.component.DesktopBackButton
 import com.yourssu.ssutime.desktop.screen.main.DesktopAiSummaryUiState
+import com.yourssu.ssutime.desktop.ui.component.SButton
 import com.yourssu.ssutime.desktop.ui.component.SButton_Small
 import com.yourssu.ssutime.desktop.ui.resources.Res
 import com.yourssu.ssutime.desktop.ui.resources.ai_estimated_duration
@@ -103,8 +109,16 @@ fun DesktopTodoDetailScreen(
     onHideTodo: (AppTodo) -> Unit,
     onOpenUrl: (String) -> Unit,
     modifier: Modifier = Modifier,
+    entrySource: String = "home",
 ) {
     var showHideDialog by remember { mutableStateOf(false) }
+
+    LaunchedEffect(todo.desktopItemKey()) {
+        DesktopAnalytics.viewTaskDetail(
+            detailType = todo.toDetailType(),
+            entrySource = entrySource,
+        )
+    }
 
     LaunchedEffect(todo.aiSummaryKey()) {
         if (todo.canRequestAiSummary) {
@@ -145,6 +159,7 @@ fun DesktopTodoDetailScreen(
             todo = todo,
             aiSummaryState = aiSummaryState,
             onOpenUrl = {
+                DesktopAnalytics.lmsLinkClick()
                 onOpenUrl(todo.toLmsUrl())
             },
         )
@@ -155,6 +170,7 @@ fun DesktopTodoDetailScreen(
             DesktopHideTodoPopup(
                 onCancel = { showHideDialog = false },
                 onConfirm = {
+                    DesktopAnalytics.hideConfirm()
                     showHideDialog = false
                     onHideTodo(todo)
                 },
@@ -300,12 +316,31 @@ private fun TodoDetailTabSection(
         DesktopAiSummaryUiState.Empty, DesktopAiSummaryUiState.Error, null -> false
     }
 
-    val availableTabs = remember(shouldShowAiSummaryTab) {
+    val availableTabs = remember(shouldShowAiSummaryTab, todo.description) {
         if (shouldShowAiSummaryTab) {
             listOf(TodoDetailTab.DESCRIPTION, TodoDetailTab.AI_SUMMARY)
         } else {
-            listOf(TodoDetailTab.DESCRIPTION)
+            if (todo.description.isBlank()) {
+                emptyList()
+            } else {
+                listOf(TodoDetailTab.DESCRIPTION)
+            }
         }
+    }
+
+    if (availableTabs.isEmpty()) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+        ) {
+            SButton(
+                modifier = Modifier.fillMaxWidth(),
+                labelText = stringResource(Res.string.todo_detail_lms_link),
+                onClick = onOpenUrl,
+            )
+        }
+        return
     }
 
     var selectedTabIndex by remember(availableTabs) { mutableIntStateOf(0) }
@@ -331,7 +366,13 @@ private fun TodoDetailTabSection(
                 Tab(
                     modifier = Modifier.background(WHITE),
                     selected = isSelected,
-                    onClick = { selectedTabIndex = index },
+                    onClick = {
+                        if (selectedTabIndex != index) {
+                            val tabName = if (tab == TodoDetailTab.DESCRIPTION) "lms_content" else "ai_summary"
+                            DesktopAnalytics.taskDetailTabClick(tabName = tabName)
+                            selectedTabIndex = index
+                        }
+                    },
                     text = {
                         Text(
                             text = when (tab) {
@@ -355,11 +396,13 @@ private fun TodoDetailTabSection(
                 val parsedDescription = remember(todo.description) {
                     parseHtmlToPlainText(todo.description).ifBlank { "상세 설명이 없습니다." }
                 }
-                Text(
-                    text = parsedDescription,
-                    style = SSUType.Body1Regular,
-                    color = N600,
-                )
+                SelectionContainer {
+                    Text(
+                        text = parsedDescription,
+                        style = SSUType.Body1Regular,
+                        color = N600,
+                    )
+                }
             }
 
             TodoDetailTab.AI_SUMMARY -> {
@@ -386,18 +429,20 @@ private fun TodoDetailTabSection(
                     }
 
                     Crossfade(targetState = aiSummaryState) { state ->
-                        Text(
-                            text = when (state) {
-                                is DesktopAiSummaryUiState.Success -> state.summary
-                                DesktopAiSummaryUiState.Loading -> stringResource(Res.string.ai_summary_loading)
-                                DesktopAiSummaryUiState.Analyzing -> stringResource(Res.string.ai_summary_analyzing)
-                                DesktopAiSummaryUiState.Empty -> stringResource(Res.string.ai_summary_empty)
-                                DesktopAiSummaryUiState.Error -> stringResource(Res.string.ai_summary_error)
-                                null -> stringResource(Res.string.ai_summary_loading)
-                            },
-                            style = SSUType.Body1Medium,
-                            color = N500,
-                        )
+                        SelectionContainer {
+                            Text(
+                                text = when (state) {
+                                    is DesktopAiSummaryUiState.Success -> state.summary
+                                    DesktopAiSummaryUiState.Loading -> stringResource(Res.string.ai_summary_loading)
+                                    DesktopAiSummaryUiState.Analyzing -> stringResource(Res.string.ai_summary_analyzing)
+                                    DesktopAiSummaryUiState.Empty -> stringResource(Res.string.ai_summary_empty)
+                                    DesktopAiSummaryUiState.Error -> stringResource(Res.string.ai_summary_error)
+                                    null -> stringResource(Res.string.ai_summary_loading)
+                                },
+                                style = SSUType.Body1Medium,
+                                color = N500,
+                            )
+                        }
                     }
                 }
             }

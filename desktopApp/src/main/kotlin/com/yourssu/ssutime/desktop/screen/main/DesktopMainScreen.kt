@@ -41,6 +41,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
@@ -48,6 +49,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import com.yourssu.ssutime.desktop.analytics.DesktopAnalytics
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -166,7 +168,19 @@ fun DesktopMainScreen(
 ) {
     var showingSubmitted by remember { mutableStateOf(false) }
     var selectedTodo by remember { mutableStateOf<AppTodo?>(null) }
+    var selectedTodoEntrySource by remember { mutableStateOf("home") }
     var showingNotice by remember { mutableStateOf(false) }
+
+    LaunchedEffect(todoData.todos, todoData.loadedAt) {
+        val urgentCount = todoData.todos.count {
+            runCatching { remainingDays(it.dueDate) <= 1L }.getOrDefault(false)
+        }
+        DesktopAnalytics.viewHome(
+            taskCount = todoData.todos.size,
+            urgentCount = urgentCount,
+            entrySource = "home",
+        )
+    }
 
     val unreadNoticeCount = remember(todoData.subjects) {
         todoData.subjects.flatMap { it.discussions }.count {
@@ -212,6 +226,7 @@ fun DesktopMainScreen(
                                 onHideTodo(todo)
                             },
                             onOpenUrl = onOpenUrl,
+                            entrySource = selectedTodoEntrySource,
                         )
                     } else if (showingSubmitted) {
                         DesktopSubmittedScreen(
@@ -225,9 +240,16 @@ fun DesktopMainScreen(
                             todoData = todoData,
                             isLoading = isLoading && !showBlockingLoading,
                             loadingProgress = loadingProgress,
-                            onRefresh = onRefresh,
-                            onSubmittedClick = { showingSubmitted = true },
+                            onRefresh = {
+                                DesktopAnalytics.refreshClick()
+                                onRefresh()
+                            },
+                            onSubmittedClick = {
+                                DesktopAnalytics.submitCompleteClick()
+                                showingSubmitted = true
+                            },
                             onTodoClick = { todo ->
+                                selectedTodoEntrySource = "home"
                                 selectedTodo = todo
                                 onExpandTodo(todo)
                             },
@@ -265,6 +287,7 @@ fun DesktopMainScreen(
                             onNoticeClick = { showingNotice = true },
                             onTodoClick = { todo ->
                                 showingSubmitted = false
+                                selectedTodoEntrySource = "calendar"
                                 selectedTodo = todo
                                 onExpandTodo(todo)
                             },
@@ -406,7 +429,10 @@ private fun HomeTodoListColumn(
                 .padding(horizontal = 16.dp, vertical = 12.dp),
         ) {
             SSUCyberConnectPopup(
-                onClick = onNavigateToCyberLogin,
+                onClick = {
+                    DesktopAnalytics.cyberConnectClick(entryPoint = "home_banner")
+                    onNavigateToCyberLogin()
+                },
                 onDismiss = { showCyberPopup = false },
             )
         }

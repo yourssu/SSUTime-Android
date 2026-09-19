@@ -153,6 +153,14 @@
     <string name="notice_empty">No notices posted.</string>
     <string name="notice_attachment">Attachment</string>
     <string name="notice_select_subject">Select course</string>
+    <string name="common_attachment">Attachments</string>
+    <string name="common_download">Download</string>
+    <string name="common_attachment_numbered">Attachment %1$d</string>
+    <string name="notice_inline_attachment_tag">[Attachment]</string>
+    <string name="notice_has_attachment">Has attachments</string>
+    <string name="notice_collapse">Collapse</string>
+    <string name="notice_expand">Expand</string>
+    <string name="notice_attachment_invalid_path">Invalid attachment path.</string>
     <string name="todo_detail_lms_link">Open in LMS</string>
     <string name="todo_detail_back">Back</string>
     <string name="todo_detail_description_tab">Description</string>

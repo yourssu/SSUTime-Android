@@ -123,3 +123,32 @@ fun formatVideoDuration(secondsDouble: Double): String {
     }
 }
 
+private fun String.toInstantOrNull(): java.time.Instant? {
+    if (isBlank()) return null
+    return runCatching { java.time.Instant.parse(this) }.getOrNull()
+}
+
+fun AppTodo.effectiveSubmittedInstant(): java.time.Instant? {
+    return submittedAt.toInstantOrNull() ?: dueDate.toInstantOrNull()
+}
+
+fun submittedTodoComparator(): Comparator<AppTodo> {
+    return Comparator { left, right ->
+        val leftTime = left.effectiveSubmittedInstant()
+        val rightTime = right.effectiveSubmittedInstant()
+        when {
+            leftTime != null && rightTime != null -> rightTime.compareTo(leftTime) // 최신순 (내림차순)
+            leftTime != null -> -1
+            rightTime != null -> 1
+            else -> {
+                val leftRaw = left.submittedAt.ifBlank { left.dueDate }
+                val rightRaw = right.submittedAt.ifBlank { right.dueDate }
+                rightRaw.compareTo(leftRaw)
+            }
+        }.takeIf { it != 0 }
+            ?: (left.subject?.name.orEmpty()).compareTo(right.subject?.name.orEmpty()).takeIf { it != 0 }
+            ?: left.title.compareTo(right.title).takeIf { it != 0 }
+            ?: left.todoId.compareTo(right.todoId)
+    }
+}
+

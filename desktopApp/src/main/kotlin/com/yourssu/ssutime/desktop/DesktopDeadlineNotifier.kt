@@ -1,5 +1,6 @@
 package com.yourssu.ssutime.desktop
 
+import com.yourssu.ssutime.desktop.analytics.DesktopAnalytics
 import com.yourssu.ssutime.desktop.core.model.AppTodo
 import com.yourssu.ssutime.desktop.core.model.AppTodoData
 import com.yourssu.ssutime.desktop.core.model.dueDate
@@ -48,6 +49,16 @@ class DesktopDeadlineNotifier(
         if (notifications.isEmpty()) return emptyList()
 
         return if (sendWindowsToasts(notifications)) {
+            notifications.forEach { notification ->
+                notification.representativeTodo?.let { repTodo ->
+                    DesktopAnalytics.notificationReceived(
+                        dDay = notification.dDay,
+                        notificationTaskCount = notification.notificationTaskCount,
+                        representativeTodo = repTodo,
+                        notificationType = notification.notificationType,
+                    )
+                }
+            }
             notifications.flatMap(DeadlineNotification::reminderKeys)
         } else {
             emptyList()
@@ -126,6 +137,10 @@ internal data class DeadlineNotification(
     val title: String,
     val body: String,
     val reminderKeys: List<String>,
+    val dDay: Int = 0,
+    val notificationTaskCount: Int = 1,
+    val representativeTodo: AppTodo? = null,
+    val notificationType: String = "deadline_soon",
 )
 
 private data class Reminder(
@@ -197,6 +212,10 @@ private fun List<Reminder>.toDeadlineNotifications(): List<DeadlineNotification>
                     title = "오늘 마감, 아직 안 했죠?",
                     body = "${reminder.todo.displayName()} 오늘 마감이에요!",
                     reminderKeys = listOf(reminder.key),
+                    dDay = 0,
+                    notificationTaskCount = 1,
+                    representativeTodo = reminder.todo,
+                    notificationType = "due_today",
                 )
             }
         } else {
@@ -216,6 +235,10 @@ private fun List<Reminder>.toDeadlineNotifications(): List<DeadlineNotification>
                     title = "마감이 다가오고 있어요!",
                     body = message,
                     reminderKeys = sorted.map(Reminder::key),
+                    dDay = daysBefore.toInt(),
+                    notificationTaskCount = group.size,
+                    representativeTodo = sorted.first().todo,
+                    notificationType = "deadline_soon",
                 ),
             )
         }

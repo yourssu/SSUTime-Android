@@ -25,6 +25,7 @@ import androidx.compose.ui.window.rememberWindowState
 import com.yourssu.data.DiscussionInfo
 import com.yourssu.data.isCyber
 import com.yourssu.data.todoUniqueKey
+import com.yourssu.ssutime.desktop.analytics.DesktopAnalytics
 import com.yourssu.ssutime.desktop.core.cyber.CyberTodoResult
 import com.yourssu.ssutime.desktop.core.cyber.DesktopCyberService
 import com.yourssu.ssutime.desktop.core.lms.LmsAppService
@@ -37,6 +38,7 @@ import com.yourssu.ssutime.desktop.core.model.AppTodoData
 import com.yourssu.ssutime.desktop.core.model.aiSummaries
 import com.yourssu.ssutime.desktop.core.model.aiSummaryKey
 import com.yourssu.ssutime.desktop.core.model.dueDate
+import com.yourssu.ssutime.desktop.core.model.submittedTodoComparator
 import com.yourssu.ssutime.desktop.core.network.SsuTimeApi
 import com.yourssu.ssutime.desktop.core.network.SsuTimeAuthApi
 import com.yourssu.ssutime.desktop.core.network.createSsuTimeHttpClient
@@ -174,6 +176,13 @@ private fun DesktopApp(
     val store = remember { DesktopSessionStore() }
     val cyberService = remember(store) { DesktopCyberService(store) }
     var storedState by remember { mutableStateOf(store.load()) }
+    val initialAnonId = remember {
+        val id = DesktopAnalytics.initializeAnonymousId(storedState.anonymousDistinctId)
+        if (storedState.anonymousDistinctId.isBlank()) {
+            storedState = store.update(storedState.copy(anonymousDistinctId = id))
+        }
+        id
+    }
     var route by remember { mutableStateOf(DesktopRoute.SPLASH) }
     var previousRoute by remember { mutableStateOf<DesktopRoute?>(null) }
     var session by remember { mutableStateOf<LoginSession?>(null) }
@@ -232,11 +241,14 @@ private fun DesktopApp(
                 } else {
                     CyberTodoResult()
                 }
+                val distinctId = DesktopAnalytics.currentPostHogDistinctId()
+                    ?: DesktopAnalytics.postHogDistinctId(storedState.userId)
                 val snapshot = lmsService.refreshTodos(
                     loadingState = { progress -> loadingProgress = progress },
                     previousData = todoData,
                     cyberResult = cyberResult,
                     onRequireReLogin = { ensureLmsSession(force = true) },
+                    postHogDistinctId = distinctId,
                 )
                 todoData = snapshot.todoData.copy(
                     aiSummaryCache = todoData.aiSummaries,
@@ -301,12 +313,15 @@ private fun DesktopApp(
                 } else {
                     CyberTodoResult()
                 }
+                val distinctId = DesktopAnalytics.currentPostHogDistinctId()
+                    ?: DesktopAnalytics.postHogDistinctId(storedState.userId)
                 val nextData = lmsService.loadTodosForTerm(
                     term = term,
                     loadingState = { progress -> loadingProgress = progress },
                     previousData = todoData,
                     cyberResult = cyberResult,
                     onRequireReLogin = { ensureLmsSession(force = true) },
+                    postHogDistinctId = distinctId,
                 )
                 todoData = nextData.copy(
                     aiSummaryCache = todoData.aiSummaries,
@@ -406,8 +421,15 @@ private fun DesktopApp(
         scope.launch {
             isLoggingIn = true
             loginMessage = ""
+            if (!fromSplash) {
+                DesktopAnalytics.loginAttempt(autoLogin = autoLogin)
+            }
             try {
                 val loginSession = loginService.login(id, password)
+                DesktopAnalytics.identifyUser(id)
+                if (!fromSplash) {
+                    DesktopAnalytics.loginSuccess()
+                }
                 finishLogin(
                     loginSession = loginSession,
                     id = id,
@@ -417,9 +439,13 @@ private fun DesktopApp(
             } catch (cancellation: CancellationException) {
                 throw cancellation
             } catch (exception: Exception) {
-                loginMessage = exception.message
+                val msg = exception.message
                     ?.takeIf(String::isNotBlank)
                     ?: unknownLoginError
+                loginMessage = msg
+                if (!fromSplash) {
+                    DesktopAnalytics.loginFailIfKnown(msg)
+                }
                 route = DesktopRoute.LOGIN
                 if (fromSplash) {
                     idState.edit { replace(0, length, id) }
@@ -484,6 +510,7 @@ private fun DesktopApp(
             cyberLoginError = null
             try {
                 cyberService.login(id, pw)
+                DesktopAnalytics.cyberLoginSuccess()
                 storedState = store.load()
                 val cyberResult = runCatching { cyberService.fetchCyberTodos() }.getOrNull()
                 if (cyberResult != null) {
@@ -493,7 +520,9 @@ private fun DesktopApp(
                     val nonCyberHidden = todoData.hiddenTodos.filterNot { it.isCyber() }
 
                     val allTodos = (nonCyberTodos + cyberResult.todos).distinctBy { it.todoUniqueKey() }
-                    val allSubmitted = (nonCyberSubmitted + cyberResult.submitted).distinctBy { it.todoUniqueKey() }
+                    val allSubmitted = (nonCyberSubmitted + cyberResult.submitted)
+                        .distinctBy { it.todoUniqueKey() }
+                        .sortedWith(submittedTodoComparator())
                     val allSubjects = (nonCyberSubjects + cyberResult.subjects).distinctBy { it.id }
 
                     val hiddenKeysSet = todoData.hiddenTodoKeys.toSet()
@@ -511,6 +540,7 @@ private fun DesktopApp(
             } catch (cancellation: CancellationException) {
                 throw cancellation
             } catch (e: Exception) {
+                DesktopAnalytics.cyberLoginFail()
                 cyberLoginError = e.displayMessage()
             } finally {
                 isCyberLoggingIn = false
@@ -520,6 +550,7 @@ private fun DesktopApp(
 
     fun disconnectCyber() {
         scope.launch {
+            DesktopAnalytics.cyberDisconnectClick()
             cyberService.logout()
             storedState = store.load()
             val cleanedTodos = todoData.todos.filterNot { it.isCyber() }
@@ -540,7 +571,11 @@ private fun DesktopApp(
         scope.launch {
             runCatching { authenticator.logout() }
             cyberService.logout()
-            storedState = store.logout(storedState)
+            DesktopAnalytics.resetUser()
+            DesktopAnalytics.flush()
+            val newAnonId = DesktopAnalytics.currentAnonymousId()
+            storedState = store.logout(storedState).copy(anonymousDistinctId = newAnonId)
+            store.update(storedState)
             session = null
             todoData = AppTodoData()
             profile = null
@@ -565,6 +600,7 @@ private fun DesktopApp(
             route = DesktopRoute.LOGIN
         } else {
             autoLoginState.value = true
+            DesktopAnalytics.identifyUser(credentials.userId)
             login(
                 id = credentials.userId,
                 password = credentials.password,
@@ -628,6 +664,7 @@ private fun DesktopApp(
                         messageColor = R500,
                         isLoading = isLoggingIn,
                         loginEnabled = !isLoggingIn,
+                        isOnboarding = !storedState.onboardingCompleted,
                         onLoginClick = {
                             login(
                                 id = idState.text.toString(),

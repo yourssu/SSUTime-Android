@@ -36,11 +36,13 @@ import androidx.compose.material3.TooltipBox
 import androidx.compose.material3.TooltipDefaults
 import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import com.yourssu.ssutime.desktop.analytics.DesktopAnalytics
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -132,11 +134,22 @@ fun DesktopMyPageScreen(
     val labsTooltipState = rememberTooltipState(isPersistent = true)
     val scope = rememberCoroutineScope()
 
+    LaunchedEffect(Unit) {
+        DesktopAnalytics.viewMyPage()
+    }
+
     if (showLogoutDialog) {
-        Dialog(onDismissRequest = { showLogoutDialog = false }) {
+        Dialog(onDismissRequest = {
+            DesktopAnalytics.logoutCancel()
+            showLogoutDialog = false
+        }) {
             LogoutPopup(
-                onCancel = { showLogoutDialog = false },
+                onCancel = {
+                    DesktopAnalytics.logoutCancel()
+                    showLogoutDialog = false
+                },
                 onConfirm = {
+                    DesktopAnalytics.logoutConfirm()
                     showLogoutDialog = false
                     onLogout()
                 },
@@ -200,6 +213,7 @@ fun DesktopMyPageScreen(
                 style = SSUType.H4SemiBold,
             )
 
+            /*
             if (terms.isNotEmpty()) {
                 TermDropdown(
                     terms = terms,
@@ -219,6 +233,21 @@ fun DesktopMyPageScreen(
                     style = SSUType.Caption1SemiBold,
                 )
             }
+            */
+            val currentTermText = selectedTerm?.name?.takeIf(String::isNotBlank)
+                ?: profile?.termName?.takeIf(String::isNotBlank)
+                ?: if (isLoading) {
+                    ""
+                } else {
+                    stringResource(Res.string.my_no_term_info)
+                }
+
+            if (currentTermText.isNotBlank()) {
+                Text(
+                    text = currentTermText,
+                    style = SSUType.Caption1SemiBold,
+                )
+            }
         }
 
         Spacer(Modifier.height(16.dp))
@@ -226,11 +255,17 @@ fun DesktopMyPageScreen(
         if (isCyberConnected) {
             SSUCyberAccountConnectedBadge(
                 cyberId = cyberUserId,
-                onDisconnect = onDisconnectCyber,
+                onDisconnect = {
+                    DesktopAnalytics.cyberDisconnectClick()
+                    onDisconnectCyber()
+                },
             )
         } else {
             SSUCyberAccountHelperBadge(
-                onClickBadge = onNavigateToCyberLogin,
+                onClickBadge = {
+                    DesktopAnalytics.cyberConnectClick(entryPoint = "mypage")
+                    onNavigateToCyberLogin()
+                },
             )
         }
 
@@ -282,7 +317,10 @@ fun DesktopMyPageScreen(
                 ToggleOption(
                     text = stringResource(Res.string.my_system_alert),
                     value = systemNotificationsEnabled,
-                    onValueChanged = onSystemNotificationsChanged,
+                    onValueChanged = { enabled ->
+                        DesktopAnalytics.settingSystemAlarm(enabled)
+                        onSystemNotificationsChanged(enabled)
+                    },
                 )
                 Spacer(Modifier.height(4.dp))
             }
@@ -299,7 +337,10 @@ fun DesktopMyPageScreen(
             )
             OptionButton(
                 text = stringResource(Res.string.my_contact),
-                onClick = { onOpenUrl(CONTACT_URL) },
+                onClick = {
+                    DesktopAnalytics.kakaoClick()
+                    onOpenUrl(CONTACT_URL)
+                },
             )
             OptionButton(
                 text = stringResource(Res.string.my_terms),
@@ -358,13 +399,17 @@ fun DesktopMyPageScreen(
         Spacer(Modifier.height(28.dp))
         OptionButton(
             text = stringResource(Res.string.my_logout),
-            onClick = { showLogoutDialog = true },
+            onClick = {
+                DesktopAnalytics.logoutClick()
+                showLogoutDialog = true
+            },
         )
         Spacer(Modifier.height(16.dp))
         }
     }
 }
 
+/*
 @Composable
 private fun TermDropdown(
     terms: List<Term>,
@@ -422,6 +467,7 @@ private fun TermDropdown(
         }
     }
 }
+*/
 
 @Composable
 private fun ToggleOption(

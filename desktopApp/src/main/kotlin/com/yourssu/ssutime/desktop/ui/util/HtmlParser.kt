@@ -20,3 +20,8 @@ fun parseHtmlToPlainText(html: String): String {
         .replace(Regex("\n{3,}"), "\n\n")
         .trim()
 }
+
+fun parseHtmlToAnnotatedString(html: String): androidx.compose.ui.text.AnnotatedString {
+    return androidx.compose.ui.text.AnnotatedString(parseHtmlToPlainText(html))
+}
+
