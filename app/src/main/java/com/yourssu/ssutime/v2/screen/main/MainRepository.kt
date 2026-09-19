@@ -8,6 +8,8 @@ import com.yourssu.data.AlertData
 import com.yourssu.data.LabsData
 import com.yourssu.data.TodoData
 import com.yourssu.data.TodoInfo
+import com.yourssu.data.network.AssignmentAnalysisResponse
+import com.yourssu.data.network.AttachmentLinkResponse
 import com.yourssu.data.network.LmsSessionRequest
 import com.yourssu.data.network.UserTodoStatusResponse
 import com.yourssu.data.network.toReportWithAnalysisRequestOrNull
@@ -84,6 +86,7 @@ class MainRepository(
 
     suspend fun markDiscussionAsRead(discussionId: Int) {
         updateTodoData { currentData ->
+            val updatedKeys = (currentData.readDiscussionIds + discussionId).distinct()
             val updatedSubjects = currentData.subjects.map { subject ->
                 val updatedDiscussions = subject.discussions.map { discussion ->
                     if (discussion.id == discussionId) {
@@ -94,7 +97,10 @@ class MainRepository(
                 }
                 subject.copy(discussions = updatedDiscussions)
             }
-            currentData.copy(subjects = updatedSubjects)
+            currentData.copy(
+                subjects = updatedSubjects,
+                readDiscussionIds = updatedKeys,
+            )
         }
     }
 
@@ -146,10 +152,12 @@ class MainRepository(
         key: String,
         summary: String,
         estimatedDurationMinutes: Int?,
+        attachmentLinks: List<AttachmentLinkResponse> = emptyList(),
     ) {
         val cache = AiSummaryCache(
             summary = summary,
             estimatedDurationMinutes = estimatedDurationMinutes,
+            attachmentLinks = attachmentLinks,
         )
         todoDataStore.updateData { currentData ->
             currentData.copy(
@@ -161,9 +169,9 @@ class MainRepository(
     suspend fun reportTodoWithAnalysis(
         todo: TodoInfo,
         lmsSession: LmsSessionRequest,
-    ) {
-        val request = todo.toReportWithAnalysisRequestOrNull(lmsSession) ?: return
-        apiRepository.reportTodoWithAnalysis(request)
+    ): AssignmentAnalysisResponse? {
+        val request = todo.toReportWithAnalysisRequestOrNull(lmsSession) ?: return null
+        return apiRepository.reportTodoWithAnalysis(request)
     }
 
     suspend fun dismissWidgetHelperBadge() {

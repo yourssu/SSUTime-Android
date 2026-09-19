@@ -17,8 +17,11 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -40,7 +43,9 @@ import com.yourssu.ssutime.v2.ui.theme.R500
 import com.yourssu.ssutime.v2.ui.theme.SSUType
 import com.yourssu.ssutime.v2.ui.theme.WHITE
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.koin.compose.KoinApplicationPreview
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -55,9 +60,14 @@ fun LoginScreen(
     val pwState = remember { viewModel.pwState }
     val errorMessage = remember { viewModel.errorMessage }
     val isLoading by remember { viewModel.isLoading }
+    var hasTrackedViewLogin by rememberSaveable { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
-        Analytics.viewLogin()
+        if (!hasTrackedViewLogin) {
+            hasTrackedViewLogin = true
+            val isOnboarding = viewModel.checkIsOnboarding()
+            Analytics.viewLogin(isOnboarding = isOnboarding)
+        }
     }
 
     Column(
@@ -109,12 +119,14 @@ fun LoginScreen(
             labelText = stringResource(R.string.login_button),
             enable = idState.text.isNotEmpty() && pwState.text.isNotEmpty(),
             onClick = {
-                coroutine.launch {
+                Analytics.applicationScope.launch {
                     Analytics.loginAttempt(autoLogin = viewModel.autoLoginState.value)
                     if (viewModel.login()) {
                         Analytics.identifyUser(idState.text.toString())
                         Analytics.loginSuccess()
-                        registerFCMTokenAndContinue(viewModel, coroutine, successLogin)
+                        withContext(Dispatchers.Main) {
+                            registerFCMTokenAndContinue(viewModel, Analytics.applicationScope, successLogin)
+                        }
                     } else {
                         Analytics.loginFailIfKnown(errorMessage.value)
                     }
@@ -167,7 +179,9 @@ private fun registerFCMTokenAndContinue(
                 SentryExceptionReporter.capture(exception)
                 Log.e("FCM", "FCM token registration failed", exception)
             }
-            onComplete()
+            withContext(Dispatchers.Main) {
+                onComplete()
+            }
         }
     })
 }

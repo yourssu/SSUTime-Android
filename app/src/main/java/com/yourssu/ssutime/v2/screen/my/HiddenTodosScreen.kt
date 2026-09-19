@@ -19,6 +19,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -33,6 +34,7 @@ import com.yourssu.data.SubjectInfo
 import com.yourssu.data.TodoInfo
 import com.yourssu.data.TodoType
 import com.yourssu.ssutime.v2.R
+import com.yourssu.ssutime.v2.analytics.Analytics
 import com.yourssu.ssutime.v2.component.SSUTimeTopBar
 import com.yourssu.ssutime.v2.screen.calendar.badgeBackgroundColor
 import com.yourssu.ssutime.v2.screen.calendar.badgeTextColor
@@ -53,10 +55,17 @@ fun HiddenTodosScreen(
 ) {
     val hiddenTodos by viewModel.hiddenTodos.collectAsStateWithLifecycle()
 
+    LaunchedEffect(Unit) {
+        Analytics.viewHiddenTasks()
+    }
+
     HiddenTodosContent(
         modifier = modifier,
         hiddenTodos = hiddenTodos,
-        onRestoreClick = { todo -> viewModel.restoreTodo(todo) }
+        onRestoreClick = { todo ->
+            Analytics.restoreClick()
+            viewModel.restoreTodo(todo)
+        }
     )
 }
 

@@ -19,6 +19,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.outlined.AttachFile
 import androidx.compose.material.icons.outlined.FileDownload
 import androidx.compose.material3.HorizontalDivider
@@ -37,6 +38,7 @@ import com.yourssu.data.TodoInfo
 import com.yourssu.data.TodoType
 import com.yourssu.ssutime.v2.R
 import com.yourssu.ssutime.v2.todo.localizedLabel
+import com.yourssu.ssutime.v2.ui.theme.BLACK
 import com.yourssu.ssutime.v2.ui.theme.G100
 import com.yourssu.ssutime.v2.ui.theme.G400
 import com.yourssu.ssutime.v2.ui.theme.N100
@@ -56,6 +58,7 @@ fun SubmittedScreen(
     modifier: Modifier = Modifier,
     submitted: List<TodoInfo> = emptyList(),
     isEnableSubmittedFile: Boolean = false,
+    onBackClick: () -> Unit = {},
 ) {
     Column(
         modifier = modifier
@@ -64,8 +67,17 @@ fun SubmittedScreen(
             .padding(16.dp)
     ) {
         Row(
-            verticalAlignment = Alignment.Bottom
+            verticalAlignment = Alignment.CenterVertically
         ) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+                contentDescription = stringResource(R.string.common_back),
+                tint = BLACK,
+                modifier = Modifier
+                    .size(28.dp)
+                    .clickable(onClick = onBackClick)
+            )
+            Spacer(Modifier.width(8.dp))
             Text(
                 text = stringResource(R.string.main_submitted_title),
                 style = SSUType.H3SemiBold
@@ -201,7 +213,7 @@ fun SubmittedItem(
                     ) {
                         Icon(
                             imageVector = Icons.Outlined.AttachFile,
-                            contentDescription = "첨부파일",
+                            contentDescription = stringResource(R.string.common_attachment),
                             tint = N400,
                             modifier = Modifier.size(20.dp)
                         )
@@ -228,7 +240,7 @@ fun SubmittedItem(
 
                         Icon(
                             imageVector = Icons.Outlined.FileDownload,
-                            contentDescription = item.display_name + " 다운로드",
+                            contentDescription = "${item.display_name} ${stringResource(R.string.common_download)}",
                             tint = N400,
                             modifier = Modifier.size(20.dp)
                         )

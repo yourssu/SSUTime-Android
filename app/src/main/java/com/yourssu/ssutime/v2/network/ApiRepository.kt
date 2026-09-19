@@ -28,22 +28,26 @@ import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
+import io.ktor.http.isSuccess
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.json.Json
 
 private const val BASE_URL_DEV = "https://ssutimev2-api-dev.yourssu.com"
 private const val BASE_URL_PROD = "https://ssutimev2-api.yourssu.com"
 
+private val defaultJson = Json {
+    prettyPrint = true
+    isLenient = true
+    ignoreUnknownKeys = true
+    coerceInputValues = true
+}
+
 class ApiRepository(
     val baseUrl: String = if (BuildConfig.DEBUG_MODE) BASE_URL_DEV else BASE_URL_PROD,
 ) {
     val client = HttpClient(Android) {
         install(ContentNegotiation) {
-            json(Json {
-                prettyPrint = true
-                isLenient = true
-                ignoreUnknownKeys = true
-            })
+            json(defaultJson)
         }
     }
 
@@ -150,7 +154,7 @@ class ApiRepository(
         return response.body()
     }
 
-    suspend fun reportTodoWithAnalysis(todo: TodoReportWithAnalysisRequest): AssignmentAnalysisResponse {
+    suspend fun reportTodoWithAnalysis(todo: TodoReportWithAnalysisRequest): AssignmentAnalysisResponse? {
         val response = client.post(
             urlString = "$baseUrl/todo/report-with-analysis"
         ) {
@@ -159,11 +163,20 @@ class ApiRepository(
             setBody(todo)
         }
         Log.i("ApiRepository", todo.title + " Analysis Reqeust Status Code : ${response.status.value}")
-        Json.encodeToString(todo).chunked(3000).forEachIndexed { index, chunk ->
+        defaultJson.encodeToString(todo).chunked(3000).forEachIndexed { index, chunk ->
             Log.d("AI_REQUEST", "$chunk")
         }
         val responseText = response.bodyAsText()
         Log.i("ApiRepository RES", responseText)
-        return Json.decodeFromString(responseText)
+
+        if (!response.status.isSuccess()) {
+            Log.w("ApiRepository", "Analysis request returned error status: ${response.status.value}")
+        }
+
+        return runCatching {
+            defaultJson.decodeFromString<AssignmentAnalysisResponse>(responseText)
+        }.onFailure { exception ->
+            Log.w("ApiRepository", "Failed to decode AssignmentAnalysisResponse: $responseText", exception)
+        }.getOrNull()
     }
 }

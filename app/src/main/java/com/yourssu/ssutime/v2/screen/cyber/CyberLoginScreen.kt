@@ -12,8 +12,13 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.input.rememberTextFieldState
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -26,6 +31,7 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.yourssu.ssutime.v2.R
+import com.yourssu.ssutime.v2.analytics.Analytics
 import com.yourssu.ssutime.v2.component.SButton
 import com.yourssu.ssutime.v2.component.SSUTimeTopBar
 import com.yourssu.ssutime.v2.component.SSecureTextField
@@ -42,6 +48,7 @@ fun CyberLoginScreen(
     modifier: Modifier = Modifier,
     isLoading: Boolean = false,
     errorMessage: String? = null,
+    errorMessageResId: Int? = null,
     onBackClick: () -> Unit = {},
     onLoginClick: (id: String, pw: String) -> Unit = { _, _ -> },
     onFindIdClick: () -> Unit = {},
@@ -66,11 +73,24 @@ fun CyberLoginScreen(
             ) {
                 Spacer(Modifier.height(20.dp))
 
-                Text(
-                    text = stringResource(R.string.cyber_login_title),
-                    style = SSUType.H2SemiBold,
-                    color = BLACK,
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+                        contentDescription = stringResource(R.string.common_back),
+                        tint = BLACK,
+                        modifier = Modifier
+                            .size(28.dp)
+                            .clickable(onClick = onBackClick)
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        text = stringResource(R.string.cyber_login_title),
+                        style = SSUType.H2SemiBold,
+                        color = BLACK,
+                    )
+                }
 
                 Spacer(Modifier.height(36.dp))
 
@@ -99,15 +119,19 @@ fun CyberLoginScreen(
                         modifier = Modifier.clickable(
                             interactionSource = remember { MutableInteractionSource() },
                             indication = null,
-                            onClick = onFindIdClick,
+                            onClick = {
+                                Analytics.cyberFindIdClick()
+                                onFindIdClick()
+                            },
                         ),
                     )
                 }
 
-                if (!errorMessage.isNullOrBlank()) {
+                val displayErrorMessage = errorMessageResId?.let { stringResource(it) } ?: errorMessage
+                if (!displayErrorMessage.isNullOrBlank()) {
                     Spacer(Modifier.height(8.dp))
                     Text(
-                        text = errorMessage,
+                        text = displayErrorMessage,
                         style = SSUType.Caption1SemiBold.copy(color = R500),
                     )
                 }

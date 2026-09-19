@@ -1,6 +1,7 @@
 package com.yourssu.ssutime.v2.component
 
-import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
@@ -8,6 +9,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -52,25 +54,30 @@ fun SButton_Small(
     enable: Boolean = true,
     textStyle: TextStyle = SSUType.Label2Medium
 ) {
-    Button(
-        colors = ButtonDefaults.buttonColors(
-            disabledContentColor = WHITE,
-            disabledContainerColor = N300,
-            containerColor = R500
-        ),
-        enabled = enable,
-        modifier = modifier,
-        contentPadding = PaddingValues(vertical = 0.dp, horizontal = 12.dp),
-        onClick = onClick,
-        shape = RoundedCornerShape(8.dp)
-    ) {
-        Text(
-            modifier = Modifier
-                .padding(0.dp),
-            text = labelText,
-            style = textStyle.copy(color = WHITE)
-        )
-    }
+
+    Text(
+        modifier = Modifier
+            .clip(RoundedCornerShape(8.dp))
+            .background(R500)
+            .clickable { onClick() }
+            .padding(horizontal = 8.dp, vertical = 8.dp),
+        text = labelText,
+        style = textStyle.copy(color = WHITE)
+    )
+//    Button(
+//        colors = ButtonDefaults.buttonColors(
+//            disabledContentColor = WHITE,
+//            disabledContainerColor = N300,
+//            containerColor = R500
+//        ),
+//        enabled = enable,
+//        modifier = modifier,
+//        contentPadding = PaddingValues(vertical = 0.dp, horizontal = 12.dp),
+//        onClick = onClick,
+//        shape = RoundedCornerShape(8.dp)
+//    ) {
+//
+//    }
 }
 
 @Preview

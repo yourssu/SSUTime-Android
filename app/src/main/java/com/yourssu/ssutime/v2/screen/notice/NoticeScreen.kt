@@ -30,7 +30,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.InlineTextContent
 import androidx.compose.foundation.text.appendInlineContent
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
@@ -42,6 +44,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -53,6 +56,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.Placeholder
 import androidx.compose.ui.text.PlaceholderVerticalAlign
@@ -68,6 +72,8 @@ import androidx.compose.ui.unit.sp
 import com.yourssu.data.DiscussionAttachment
 import com.yourssu.data.DiscussionInfo
 import com.yourssu.data.SubjectInfo
+import com.yourssu.ssutime.v2.R
+import com.yourssu.ssutime.v2.analytics.Analytics
 import com.yourssu.ssutime.v2.component.SSUTimeTopBar
 import com.yourssu.ssutime.v2.ui.theme.BLACK
 import com.yourssu.ssutime.v2.ui.theme.N100
@@ -132,7 +138,7 @@ internal fun parseHtmlToAnnotatedString(html: String): AnnotatedString {
  */
 fun openAttachmentUrl(context: Context, url: String) {
     if (url.isBlank()) {
-        Toast.makeText(context, "첨부파일 경로가 유효하지 않습니다.", Toast.LENGTH_SHORT).show()
+        Toast.makeText(context, context.getString(R.string.notice_attachment_invalid_path), Toast.LENGTH_SHORT).show()
         return
     }
     runCatching {
@@ -141,7 +147,7 @@ fun openAttachmentUrl(context: Context, url: String) {
         }
         context.startActivity(intent)
     }.onFailure {
-        Toast.makeText(context, "링크를 열 수 있는 앱이 없습니다.", Toast.LENGTH_SHORT).show()
+        Toast.makeText(context, context.getString(R.string.common_open_link_no_app), Toast.LENGTH_SHORT).show()
     }
 }
 
@@ -233,6 +239,10 @@ fun NoticeScreen(
     val validIndex = selectedSubjectIndex.coerceIn(0, (effectiveSubjects.size - 1).coerceAtLeast(0))
     val currentSubject = effectiveSubjects.getOrNull(validIndex)
 
+    LaunchedEffect(Unit) {
+        Analytics.viewNotice()
+    }
+
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -249,11 +259,24 @@ fun NoticeScreen(
         ) {
             item {
                 Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = "공지사항",
-                    style = SSUType.H2SemiBold,
-                    color = BLACK
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+                        contentDescription = stringResource(R.string.common_back),
+                        tint = BLACK,
+                        modifier = Modifier
+                            .size(28.dp)
+                            .clickable(onClick = onBackClick)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = stringResource(R.string.notice_title),
+                        style = SSUType.H2SemiBold,
+                        color = BLACK
+                    )
+                }
                 Spacer(modifier = Modifier.height(16.dp))
 
                 if (effectiveSubjects.isNotEmpty()) {
@@ -283,7 +306,7 @@ fun NoticeScreen(
                             onAttachmentClick(discussion)
                             val targetUrl = discussion.attachments.firstOrNull()?.url?.takeIf { it.isNotBlank() }
                                 ?: discussion.url
-                            openAttachmentUrl(context, targetUrl)
+                             openAttachmentUrl(context, targetUrl)
                         }
                     )
 
@@ -306,7 +329,7 @@ fun NoticeScreen(
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = "등록된 공지사항이 없습니다.",
+                            text = stringResource(R.string.notice_empty),
                             style = SSUType.Body1Medium,
                             color = N400
                         )
@@ -375,7 +398,7 @@ fun NoticeSubjectDropdown(
 
             Icon(
                 imageVector = if (expanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
-                contentDescription = "과목 선택",
+                contentDescription = stringResource(R.string.notice_select_subject),
                 tint = N400,
                 modifier = Modifier.size(24.dp)
             )
@@ -436,12 +459,19 @@ fun NoticeAccordionItem(
     val isNew = discussion.readState.equals("unread", ignoreCase = true)
     val hasAttachment = discussion.attachments.isNotEmpty()
 
-    val annotatedTitle = remember(discussion.title, hasAttachment, isNew) {
+    LaunchedEffect(discussion.id, defaultExpanded, isNew) {
+        if (defaultExpanded && isNew) {
+            onExpanded()
+        }
+    }
+
+    val inlineAttachmentTag = stringResource(R.string.notice_inline_attachment_tag)
+    val annotatedTitle = remember(discussion.title, hasAttachment, isNew, inlineAttachmentTag) {
         buildAnnotatedString {
             append(discussion.title)
             if (hasAttachment) {
                 append("\u00A0")
-                appendInlineContent(INLINE_ATTACHMENT_ID, "[첨부]")
+                appendInlineContent(INLINE_ATTACHMENT_ID, inlineAttachmentTag)
             }
             if (isNew) {
                 append("\u00A0")
@@ -461,7 +491,7 @@ fun NoticeAccordionItem(
             ) {
                 Icon(
                     imageVector = Icons.Default.AttachFile,
-                    contentDescription = "첨부파일 있음",
+                    contentDescription = stringResource(R.string.notice_has_attachment),
                     tint = N400,
                     modifier = Modifier.size(16.dp)
                 )
@@ -500,6 +530,9 @@ fun NoticeAccordionItem(
                 .clickable {
                     val nextExpanded = !isExpanded
                     isExpanded = nextExpanded
+                    if (nextExpanded) {
+                        Analytics.noticeExpand(isUnread = isNew)
+                    }
                     if (nextExpanded && isNew) {
                         onExpanded()
                     }
@@ -531,7 +564,7 @@ fun NoticeAccordionItem(
 
             Icon(
                 imageVector = if (isExpanded) Icons.Default.KeyboardArrowDown else Icons.Default.KeyboardArrowUp,
-                contentDescription = if (isExpanded) "접기" else "펼치기",
+                contentDescription = if (isExpanded) stringResource(R.string.notice_collapse) else stringResource(R.string.notice_expand),
                 tint = N400,
                 modifier = Modifier.size(24.dp)
             )
@@ -556,11 +589,13 @@ fun NoticeAccordionItem(
                             .background(N100)
                             .padding(16.dp)
                     ) {
-                        Text(
-                            text = annotatedContent,
-                            style = SSUType.Body1Regular,
-                            color = N500
-                        )
+                        SelectionContainer {
+                            Text(
+                                text = annotatedContent,
+                                style = SSUType.Body1Regular,
+                                color = N500
+                            )
+                        }
                     }
                 }
 
@@ -593,7 +628,7 @@ fun DiscussionAttachmentSection(
         modifier = modifier.fillMaxWidth()
     ) {
         Text(
-            text = "첨부파일",
+            text = stringResource(R.string.common_attachment),
             style = SSUType.Caption1SemiBold,
             color = N400
         )
@@ -605,7 +640,7 @@ fun DiscussionAttachmentSection(
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             attachments.forEachIndexed { index, attachment ->
-                val fileName = attachment.name.takeIf { it.isNotBlank() } ?: "첨부파일 ${index + 1}"
+                val fileName = attachment.name.takeIf { it.isNotBlank() } ?: stringResource(R.string.common_attachment_numbered, index + 1)
                 DiscussionAttachmentItem(
                     fileName = fileName,
                     onClick = {
@@ -638,7 +673,7 @@ fun DiscussionAttachmentItem(
     ) {
         Icon(
             imageVector = Icons.Outlined.AttachFile,
-            contentDescription = "첨부파일",
+            contentDescription = stringResource(R.string.common_attachment),
             tint = N400,
             modifier = Modifier.size(20.dp)
         )
@@ -658,7 +693,7 @@ fun DiscussionAttachmentItem(
 
         Icon(
             imageVector = Icons.Outlined.FileDownload,
-            contentDescription = "다운로드",
+            contentDescription = stringResource(R.string.common_download),
             tint = N400,
             modifier = Modifier.size(20.dp)
         )

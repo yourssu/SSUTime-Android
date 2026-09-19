@@ -17,10 +17,14 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBackIosNew
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.outlined.AttachFile
+import androidx.compose.material.icons.outlined.FileDownload
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.PrimaryTabRow
@@ -56,15 +60,21 @@ import com.yourssu.data.SubjectInfo
 import com.yourssu.data.TodoInfo
 import com.yourssu.data.TodoType
 import com.yourssu.data.isCyber
+import com.yourssu.data.network.AttachmentLinkResponse
+import com.yourssu.data.todoUniqueKey
 import com.yourssu.ssutime.v2.R
-
+import com.yourssu.ssutime.v2.analytics.Analytics
+import com.yourssu.ssutime.v2.analytics.toDetailType
+import com.yourssu.ssutime.v2.component.SButton
 import com.yourssu.ssutime.v2.component.SButton_Small
 import com.yourssu.ssutime.v2.getStringDateWithTime
 import com.yourssu.ssutime.v2.screen.my.PopupButton
+import com.yourssu.ssutime.v2.screen.notice.openAttachmentUrl
 import com.yourssu.ssutime.v2.todo.toTodoDeadlineInstant
 import com.yourssu.ssutime.v2.ui.theme.N100
 import com.yourssu.ssutime.v2.ui.theme.N200
 import com.yourssu.ssutime.v2.ui.theme.N300
+import com.yourssu.ssutime.v2.ui.theme.N400
 import com.yourssu.ssutime.v2.ui.theme.N500
 import com.yourssu.ssutime.v2.ui.theme.N600
 import com.yourssu.ssutime.v2.ui.theme.R100
@@ -80,14 +90,23 @@ fun TodoDetailScreen(
     viewModel: TodoDetailViewModel = koinViewModel(),
     onPreviousClick: () -> Unit = {},
     todo: TodoInfo,
+    entrySource: String = "home",
 ) {
     var showHidePopup by remember { mutableStateOf(false) }
+
+    LaunchedEffect(todo.todoUniqueKey()) {
+        Analytics.viewTaskDetail(
+            detailType = todo.toDetailType(),
+            entrySource = entrySource,
+        )
+    }
 
     if (showHidePopup) {
         Dialog(onDismissRequest = { showHidePopup = false }) {
             HideTodoPopup(
                 onCancel = { showHidePopup = false },
                 onConfirm = {
+                    Analytics.hideConfirm()
                     showHidePopup = false
                     viewModel.hideTodo(todo) {
                         onPreviousClick()
@@ -127,19 +146,13 @@ fun TodoDetailContent(
         Column(
             modifier = Modifier.padding(16.dp)
         ) {
-            Icon(
-                modifier = Modifier.clickable { onPreviousClick() },
-                imageVector = Icons.Filled.ArrowBackIosNew,
-                contentDescription = "뒤로가기"
-            )
-
             TodoOverView(
                 todo = todo,
                 aiSummaryState = aiSummaryState,
                 onHideClick = onHideClick,
+                onPreviousClick = onPreviousClick,
             )
         }
-        Spacer(Modifier.fillMaxWidth().height(12.dp).background(color = N100))
 
         TodoDetailTabArea(
             todo = todo,
@@ -156,6 +169,7 @@ fun TodoDetailTabArea(
     todo: TodoInfo,
     aiSummaryState: AiSummaryUiState?,
 ) {
+
     val shouldShowAiSummaryTab = todo.canRequestAiSummary() && when (aiSummaryState) {
         is AiSummaryUiState.Success -> true
         AiSummaryUiState.Loading, AiSummaryUiState.Analyzing -> true
@@ -166,52 +180,79 @@ fun TodoDetailTabArea(
         if (shouldShowAiSummaryTab) {
             listOf(TodoDetailTab.DESCRIPTION, TodoDetailTab.AI_SUMMARY)
         } else {
-            listOf(TodoDetailTab.DESCRIPTION)
-        }
-    }
-
-    Column(
-        modifier = Modifier.padding(16.dp)
-    ) {
-        var selectedDestination by rememberSaveable { mutableIntStateOf(0) }
-        val safeIndex = selectedDestination.coerceIn(0, availableTabs.lastIndex)
-        val currentTab = availableTabs[safeIndex]
-
-        PrimaryTabRow(
-            selectedTabIndex = safeIndex,
-            indicator = {
-                TabRowDefaults.SecondaryIndicator(
-                    modifier = Modifier.tabIndicatorOffset(safeIndex),
-                    color = N500,
-                    height = 2.dp
-                )
-            },
-        ) {
-            availableTabs.forEachIndexed { index, destination ->
-                val isSelected = safeIndex == index
-                Tab(
-                    modifier = Modifier.background(WHITE),
-                    selected = isSelected,
-                    unselectedContentColor = WHITE,
-                    selectedContentColor = WHITE,
-                    onClick = {
-                        selectedDestination = index
-                    },
-                    text = {
-                        Text(
-                            text = destination.label,
-                            style = SSUType.Label2SemiBold.copy(color = if (isSelected) N500 else N300),
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    },
-                )
+            if(todo.description.isEmpty()) {
+                emptyList<TodoDetailTab>()
+            } else {
+                listOf(TodoDetailTab.DESCRIPTION)
             }
         }
-        TodoDetailTabContent(
-            destination = currentTab,
-            todo = todo,
-            aiSummaryState = aiSummaryState,
+    }
+    if(availableTabs.isNotEmpty()) {
+
+        Spacer(Modifier.fillMaxWidth().height(12.dp).background(color = N100))
+
+        Column(
+            modifier = Modifier.padding(16.dp)
+        ) {
+            var selectedDestination by rememberSaveable { mutableIntStateOf(0) }
+            val safeIndex = selectedDestination.coerceIn(0, availableTabs.lastIndex)
+            val currentTab = availableTabs[safeIndex]
+
+            PrimaryTabRow(
+                selectedTabIndex = safeIndex,
+                indicator = {
+                    TabRowDefaults.SecondaryIndicator(
+                        modifier = Modifier.tabIndicatorOffset(safeIndex),
+                        color = N500,
+                        height = 2.dp
+                    )
+                },
+            ) {
+                availableTabs.forEachIndexed { index, destination ->
+                    val isSelected = safeIndex == index
+                    Tab(
+                        modifier = Modifier.background(WHITE),
+                        selected = isSelected,
+                        unselectedContentColor = WHITE,
+                        selectedContentColor = WHITE,
+                        onClick = {
+                            if (selectedDestination != index) {
+                                val tabName =
+                                    if (destination == TodoDetailTab.DESCRIPTION) "lms_content" else "ai_summary"
+                                Analytics.taskDetailTabClick(tabName = tabName)
+                                selectedDestination = index
+                            }
+                        },
+                        text = {
+                            Text(
+                                text = destination.label,
+                                style = SSUType.Label2SemiBold.copy(color = if (isSelected) N500 else N300),
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        },
+                    )
+                }
+            }
+            TodoDetailTabContent(
+                destination = currentTab,
+                todo = todo,
+                aiSummaryState = aiSummaryState,
+            )
+        }
+    } else {
+        val context = LocalContext.current
+        SButton(
+            modifier = Modifier
+                .padding(horizontal = 16.dp)
+                .padding(bottom = 16.dp)
+                .fillMaxWidth(),
+            labelText = stringResource(R.string.todo_detail_open_lms),
+            textStyle = SSUType.Label3Medium,
+            onClick = {
+                Analytics.lmsLinkClick()
+                openTodoLmsUrl(context, todo)
+            }
         )
     }
 }
@@ -244,14 +285,16 @@ fun DescriptionScreen(
         parseHtmlToAnnotatedString(description)
     }
 
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        Text(
-            text = annotatedDescription,
-            style = SSUType.Body1Regular
-        )
+    SelectionContainer {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Text(
+                text = annotatedDescription,
+                style = SSUType.Body1Regular
+            )
+        }
     }
 }
 
@@ -259,6 +302,8 @@ fun DescriptionScreen(
 fun SummaryScreen(
     aiSummaryState: AiSummaryUiState? = null,
 ) {
+    val context = LocalContext.current
+
     Column(
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
@@ -272,10 +317,10 @@ fun SummaryScreen(
         ) {
             Icon(
                 painter = painterResource(R.drawable.ai_sparkle),
-                contentDescription = "AI 요약 아이콘"
+                contentDescription = stringResource(R.string.todo_detail_ai_summary_icon_content_description)
             )
             Text(
-                text = "첨부된 파일 내용을 ai가 요약했어요.",
+                text = stringResource(R.string.todo_detail_ai_summary_banner),
                 style = SSUType.Caption1SemiBold.copy(color = N500)
             )
         }
@@ -284,21 +329,125 @@ fun SummaryScreen(
             targetState = aiSummaryState,
             label = "AiSummaryText",
         ) { state ->
-            Text(
-                text = when (state) {
-                    is AiSummaryUiState.Success -> state.summary
-                    AiSummaryUiState.Loading -> stringResource(R.string.ai_summary_loading)
-                    AiSummaryUiState.Analyzing -> stringResource(R.string.ai_summary_analyzing)
-                    AiSummaryUiState.Empty -> stringResource(R.string.ai_summary_empty)
-                    AiSummaryUiState.Error -> stringResource(R.string.ai_summary_error)
-                    null -> stringResource(R.string.ai_summary_loading)
-                },
-                style = SSUType.Body1Medium,
-                color = N500,
-            )
+            Column(
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                SelectionContainer {
+                    Text(
+                        text = when (state) {
+                            is AiSummaryUiState.Success -> state.summary
+                            AiSummaryUiState.Loading -> stringResource(R.string.ai_summary_loading)
+                            AiSummaryUiState.Analyzing -> stringResource(R.string.ai_summary_analyzing)
+                            AiSummaryUiState.Empty -> stringResource(R.string.ai_summary_empty)
+                            AiSummaryUiState.Error -> stringResource(R.string.ai_summary_error)
+                            null -> stringResource(R.string.ai_summary_loading)
+                        },
+                        style = SSUType.Body1Medium,
+                        color = N500,
+                    )
+                }
+
+                if (state is AiSummaryUiState.Success && state.summary.isNotBlank() && state.attachmentLinks.isNotEmpty()) {
+                    TodoAttachmentSection(
+                        attachments = state.attachmentLinks,
+                        onOpenUrl = { url ->
+                            openAttachmentUrl(context, url)
+                        }
+                    )
+                }
+            }
         }
     }
 }
+
+/**
+ * 첨부파일 목록 섹션
+ */
+@Composable
+fun TodoAttachmentSection(
+    attachments: List<AttachmentLinkResponse>,
+    onOpenUrl: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    if (attachments.isEmpty()) return
+
+    Column(
+        modifier = modifier.fillMaxWidth()
+    ) {
+        Text(
+            text = stringResource(R.string.common_attachment),
+            style = SSUType.Caption1SemiBold,
+            color = N400
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            attachments.forEachIndexed { index, attachment ->
+                val fileName = attachment.fileName.takeIf { it.isNotBlank() }
+                    ?: stringResource(R.string.common_attachment_numbered, index + 1)
+                TodoAttachmentItem(
+                    fileName = fileName,
+                    onClick = {
+                        onOpenUrl(attachment.url)
+                    }
+                )
+            }
+        }
+    }
+}
+
+/**
+ * 개별 첨부파일 카드 아이템
+ */
+@Composable
+fun TodoAttachmentItem(
+    fileName: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(8.dp))
+            .border(1.dp, N200, RoundedCornerShape(8.dp))
+            .background(WHITE)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            imageVector = Icons.Outlined.AttachFile,
+            contentDescription = stringResource(R.string.common_attachment),
+            tint = N400,
+            modifier = Modifier.size(20.dp)
+        )
+
+        Spacer(modifier = Modifier.width(8.dp))
+
+        Text(
+            text = fileName,
+            style = SSUType.Label2Medium,
+            color = N500,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f)
+        )
+
+        Spacer(modifier = Modifier.width(8.dp))
+
+        Icon(
+            imageVector = Icons.Outlined.FileDownload,
+            contentDescription = stringResource(R.string.common_download),
+            tint = N400,
+            modifier = Modifier.size(20.dp)
+        )
+    }
+}
+
 
 /**
  * 할일 유형별 LMS 상세 페이지 URL 생성
@@ -328,7 +477,7 @@ fun openTodoLmsUrl(context: Context, todo: TodoInfo) {
         }
         context.startActivity(intent)
     }.onFailure {
-        Toast.makeText(context, "LMS 링크를 열 수 있는 앱이 없습니다.", Toast.LENGTH_SHORT).show()
+        Toast.makeText(context, context.getString(R.string.common_open_link_no_app), Toast.LENGTH_SHORT).show()
     }
 }
 
@@ -356,9 +505,10 @@ fun TodoDetailTabContent(
             contentAlignment = Alignment.TopEnd
         ) {
             SButton_Small(
-                labelText = "LMS 바로가기",
+                labelText = stringResource(R.string.todo_detail_open_lms),
                 textStyle = SSUType.Label3Medium,
                 onClick = {
+                    Analytics.lmsLinkClick()
                     openTodoLmsUrl(context, todo)
                 }
             )
@@ -366,33 +516,51 @@ fun TodoDetailTabContent(
     }
 }
 
-@Preview
+@Preview(showBackground = true)
 @Composable
 fun previewSummaryScreen() {
-    SummaryScreen()
+    SummaryScreen(
+        aiSummaryState = AiSummaryUiState.Success(
+            summary = "이 과제는 컴퓨터개론의 레포트 과제로, 수업시간에 다루었던 데이터와 케이스를 중심으로 개념과 해석을 정리해야 합니다.",
+            estimatedDurationMinutes = 30,
+            attachmentLinks = listOf(
+                AttachmentLinkResponse(
+                    url = "https://smartid.ssu.ac.kr",
+                    fileName = "중간과제_안내서.pdf",
+                    extension = "pdf"
+                ),
+                AttachmentLinkResponse(
+                    url = "https://smartid.ssu.ac.kr",
+                    fileName = "데이터셋.xlsx",
+                    extension = "xlsx"
+                )
+            )
+        )
+    )
 }
 
 /**
  * 영상(초 단위) 재생 시간 포맷팅
  */
-fun formatVideoDuration(secondsDouble: Double): String {
+fun formatVideoDuration(secondsDouble: Double, locale: java.util.Locale = java.util.Locale.getDefault()): String {
     val totalSeconds = secondsDouble.toInt()
     if (totalSeconds <= 0) return ""
     val hours = totalSeconds / 3600
     val minutes = (totalSeconds % 3600) / 60
     val seconds = totalSeconds % 60
+    val isEnglish = locale.language == java.util.Locale.ENGLISH.language
 
     return buildString {
         if (hours > 0) {
-            append("${hours}시간")
+            append(if (isEnglish) "${hours}hr" else "${hours}시간")
         }
         if (minutes > 0) {
             if (isNotEmpty()) append(" ")
-            append("${minutes}분")
+            append(if (isEnglish) "${minutes}min" else "${minutes}분")
         }
         if (seconds > 0 || isEmpty()) {
             if (isNotEmpty()) append(" ")
-            append("${seconds}초")
+            append(if (isEnglish) "${seconds}sec" else "${seconds}초")
         }
     }
 }
@@ -402,6 +570,7 @@ fun TodoOverView(
     todo: TodoInfo,
     aiSummaryState: AiSummaryUiState?,
     onHideClick: () -> Unit = {},
+    onPreviousClick: () -> Unit = {},
 ) {
     val estimatedDurationText = when {
         todo.type == TodoType.COMMONS && todo.duration > 0 -> {
@@ -418,7 +587,7 @@ fun TodoOverView(
 
     Box(
         modifier = Modifier
-            .padding(top = 20.dp)
+            .padding(top = 4.dp)
     ) {
         Column(
             verticalArrangement = Arrangement.spacedBy(5.dp)
@@ -428,12 +597,26 @@ fun TodoOverView(
                 style = SSUType.H5SemiBold.copy(color = N500),
             )
 
-            Text(
-                text = todo.title,
-                style = SSUType.H2SemiBold.copy(color = N600),
-            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+                    contentDescription = stringResource(R.string.common_back),
+                    tint = N600,
+                    modifier = Modifier
+                        .size(28.dp)
+                        .clickable(onClick = onPreviousClick)
+                )
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    text = todo.title,
+                    style = SSUType.H2SemiBold.copy(color = N600),
+                    modifier = Modifier.weight(1f, fill = false),
+                )
+            }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(5.dp))
 
             Box(
                 modifier = Modifier
@@ -479,7 +662,7 @@ fun TodoOverView(
                         .background(R100)
                         .padding(14.dp),
                     textAlign = TextAlign.Center,
-                    text = "마감이 지났지만 지각 제출이 가능한 과제예요!",
+                    text = stringResource(R.string.todo_detail_late_submission_available),
                     style = SSUType.Caption1SemiBold.copy(color = R400)
                 )
             }
@@ -548,11 +731,18 @@ fun HideTodoPopup(
 
 @Preview(showBackground = true)
 @Composable
-fun previewTodoDetailScreen() {
+fun previewTodoDetailScreen1() {
     TodoDetailContent(
         aiSummaryState = AiSummaryUiState.Success(
             summary = "이 과제는 컴퓨터개론의 레포트 과제로, 수업시간에 다루었던 데이터와 케이스를 중심으로 개념과 해석을 정리해야 합니다. 계산기가 필요할 수 있습니다.",
-            estimatedDurationMinutes = 30
+            estimatedDurationMinutes = 30,
+            attachmentLinks = listOf(
+                AttachmentLinkResponse(
+                    url = "https://smartid.ssu.ac.kr",
+                    fileName = "중간과제_안내서.pdf",
+                    extension = "pdf"
+                )
+            )
         ),
         onLoadAiSummary = {},
         onPreviousClick = {},
@@ -570,6 +760,37 @@ fun previewTodoDetailScreen() {
                     "말씀 드린데로 수업시간에 다루었던 데이터와 케이스를 중심으로 개념, 해석 및 등이 출제될 예정입니다.\n" +
                     "\n" +
                     "복잡한 수식 관련 문제는 출제하지 않았지만 간단한 계산을 위해서는 계산기가 필요할 수 있습니다",
+            url = "https://naver.com"
+        )
+    )
+}
+
+@Preview(showBackground = true)
+@Composable
+fun previewTodoDetailScreen2() {
+    TodoDetailContent(
+        aiSummaryState = AiSummaryUiState.Success(
+            summary = "이 과제는 컴퓨터개론의 레포트 과제로, 수업시간에 다루었던 데이터와 케이스를 중심으로 개념과 해석을 정리해야 합니다. 계산기가 필요할 수 있습니다.",
+            estimatedDurationMinutes = 30,
+            attachmentLinks = listOf(
+                AttachmentLinkResponse(
+                    url = "https://smartid.ssu.ac.kr",
+                    fileName = "중간과제_안내서.pdf",
+                    extension = "pdf"
+                )
+            )
+        ),
+        onLoadAiSummary = {},
+        onPreviousClick = {},
+        todo = TodoInfo(
+            todoId = 12345,
+            title = "컴퓨터 Report",
+            due_date = "2026-05-29T18:00:00Z",
+            type = TodoType.QUIZ,
+            subject = SubjectInfo(123456, "컴퓨터개론", "유어슈"),
+            submittedAt = "",
+            aiSummary = "",
+            description = "",
             url = "https://naver.com"
         )
     )

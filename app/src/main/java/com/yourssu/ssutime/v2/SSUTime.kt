@@ -100,7 +100,7 @@ val appModule = module {
     }
     viewModel { MyViewModel(get(), get(), get(), get()) }
     viewModel { SplashViewModel(get(), get()) }
-    viewModel { LoginViewModel(get(), get()) }
+    viewModel { LoginViewModel(get(), get(), get()) }
     viewModel { CyberLoginViewModel(get()) }
     viewModel { TodoDetailViewModel(get(), get(), get()) }
     viewModel {
@@ -159,7 +159,7 @@ val previewModule = module {
     }
     viewModel { MyViewModel(get(), get(), get(), get()) }
     viewModel { SplashViewModel(get(), get()) }
-    viewModel { LoginViewModel(get(), get()) }
+    viewModel { LoginViewModel(get(), get(), get()) }
     viewModel { CyberLoginViewModel(get()) }
     viewModel { TodoDetailViewModel(get(), get(), get()) }
     viewModel {

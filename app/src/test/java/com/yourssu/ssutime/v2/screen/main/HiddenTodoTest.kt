@@ -104,4 +104,44 @@ class HiddenTodoTest {
         assertEquals(listOf(todo1), visible)
         assertEquals(listOf(todo2), hidden)
     }
+
+    @Test
+    fun verifyDiscussionReadStatePersistence() {
+        val discussion = com.yourssu.data.DiscussionInfo(
+            id = 12345,
+            title = "공지1",
+            readState = "unread"
+        )
+        val subject = SubjectInfo(101, "과목", "교수", listOf(discussion))
+        val initialData = TodoData(
+            subjects = listOf(subject),
+            readDiscussionIds = listOf(12345)
+        )
+
+        // mark as read
+        val updatedSubjects = initialData.subjects.map { s ->
+            s.copy(discussions = s.discussions.map { d ->
+                if (d.id == 12345) d.copy(readState = "read") else d
+            })
+        }
+        val readData = initialData.copy(subjects = updatedSubjects)
+
+        // 직렬화 & 역직렬화
+        val serialized = json.encodeToString(TodoData.serializer(), readData)
+        val deserialized = json.decodeFromString(TodoData.serializer(), serialized)
+
+        assertEquals("read", deserialized.subjects.first().discussions.first().readState)
+        assertEquals(listOf(12345), deserialized.readDiscussionIds)
+
+        // locallyReadDiscussionIds 추출
+        val locallyReadDiscussionIds = (
+            deserialized.readDiscussionIds +
+            deserialized.subjects
+                .flatMap { it.discussions }
+                .filter { it.readState.equals("read", ignoreCase = true) }
+                .map { it.id }
+        ).toSet()
+
+        assertTrue(locallyReadDiscussionIds.contains(12345))
+    }
 }

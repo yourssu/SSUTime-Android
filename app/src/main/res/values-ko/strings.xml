@@ -46,6 +46,8 @@
     <string name="cyber_login_id_placeholder">숭실 사이버 대학에서 발급받은 학번을 입력하세요</string>
     <string name="cyber_login_pw_placeholder">숭실 사이버 대학 비밀번호 입력하세요</string>
     <string name="cyber_login_find_id">학번 찾기</string>
+    <string name="cyber_login_error_credentials">로그인에 실패했습니다. 학번과 비밀번호를 확인해주세요.</string>
+    <string name="cyber_login_error_general">로그인 중 오류가 발생했습니다. 다시 시도해주세요.</string>
 
 
     <string name="network_error_title">인터넷 연결이 불안정해요</string>
@@ -180,4 +182,52 @@
     <string name="calendar_title">캘린더</string>
     <string name="calendar_coming_soon">캘린더 기능을 준비하고 있어요</string>
     <string name="cyber_connected">연결됨</string>
+
+    <string name="common_back">뒤로가기</string>
+    <string name="common_attachment">첨부파일</string>
+    <string name="common_download">다운로드</string>
+    <string name="common_attachment_numbered">첨부파일 %1$d</string>
+    <string name="common_open_link_no_app">링크를 열 수 있는 앱이 없습니다.</string>
+    <string name="common_warning_icon">경고 아이콘</string>
+
+    <string name="todo_detail_ai_summary_banner">첨부된 파일 내용을 ai가 요약했어요.</string>
+    <string name="todo_detail_ai_summary_icon_content_description">AI 요약 아이콘</string>
+    <string name="todo_detail_open_lms">LMS 바로가기</string>
+    <string name="todo_detail_late_submission_available">마감이 지났지만 지각 제출이 가능한 과제예요!</string>
+    <string name="todo_duration_hours">%1$d시간</string>
+    <string name="todo_duration_minutes">%1$d분</string>
+    <string name="todo_duration_seconds">%1$d초</string>
+
+    <string name="notice_title">공지사항</string>
+    <string name="notice_empty">등록된 공지사항이 없습니다.</string>
+    <string name="notice_select_subject">과목 선택</string>
+    <string name="notice_inline_attachment_tag">[첨부]</string>
+    <string name="notice_has_attachment">첨부파일 있음</string>
+    <string name="notice_collapse">접기</string>
+    <string name="notice_expand">펼치기</string>
+    <string name="notice_attachment_invalid_path">첨부파일 경로가 유효하지 않습니다.</string>
+
+    <string name="calendar_new_notice">새로운 공지사항</string>
+    <string name="calendar_notice_shortcut">공지사항 바로가기</string>
+    <string name="calendar_month_format">%1$d월</string>
+    <string name="calendar_total_count">%1$d건</string>
+    <string name="calendar_more_count">+외 %1$d건</string>
+    <string name="calendar_prev_month">이전 달</string>
+    <string name="calendar_next_month">다음 달</string>
+    <string name="calendar_empty_day_todos">마감 일정이 없습니다.</string>
+    <string name="calendar_day_sun">일</string>
+    <string name="calendar_day_mon">월</string>
+    <string name="calendar_day_tue">화</string>
+    <string name="calendar_day_wed">수</string>
+    <string name="calendar_day_thu">목</string>
+    <string name="calendar_day_fri">금</string>
+    <string name="calendar_day_sat">토</string>
+    <string name="calendar_due_time_format">%1$d시 %2$d분까지</string>
+    <string name="calendar_bottom_sheet_date_format">%1$d월 %2$d일 (%3$s)</string>
+
+    <string name="my_lab_title">실험실</string>
+    <string name="my_lab_question">실험실?</string>
+    <string name="my_lab_submitted_files">제출한 첨부파일 확인하기</string>
+    <string name="my_lab_description">실험적 기능들을 사용해보실 수 있어요. 예고 없이 추가되거나 사라질 수 있고 사용빈도가 높은 기능은 정식으로 추가될 수 있어요.</string>
+    <string name="my_system_notification">시스템 알림</string>
 </resources>

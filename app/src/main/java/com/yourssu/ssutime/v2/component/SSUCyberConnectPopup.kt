@@ -59,7 +59,7 @@ fun SSUCyberConnectPopup(
         ) {
             Text(
                 text = stringResource(R.string.cyber_connect_title),
-                style = SSUType.Label2Medium,
+                style = SSUType.Label3SemiBold,
                 color = WHITE,
             )
             Spacer(modifier = Modifier.width(4.dp))

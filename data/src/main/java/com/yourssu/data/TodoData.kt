@@ -1,5 +1,6 @@
 package com.yourssu.data
 
+import com.yourssu.data.network.AttachmentLinkResponse
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -25,10 +26,12 @@ data class TodoData(
     val lastWidgetRefreshErrorMessage: String = "",
     val lastWidgetRefreshFinishedAt: String = "",
     val sentDeadlineReminderKeys: List<String> = emptyList(),
+    val readDiscussionIds: List<Int> = emptyList(),
 )
 
 @Serializable
 data class AiSummaryCache(
     val summary: String = "",
     val estimatedDurationMinutes: Int? = null,
+    val attachmentLinks: List<AttachmentLinkResponse> = emptyList(),
 )
