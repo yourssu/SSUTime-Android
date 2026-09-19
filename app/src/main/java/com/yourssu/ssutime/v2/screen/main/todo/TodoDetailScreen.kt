@@ -65,6 +65,7 @@ import com.yourssu.data.todoUniqueKey
 import com.yourssu.ssutime.v2.R
 import com.yourssu.ssutime.v2.analytics.Analytics
 import com.yourssu.ssutime.v2.analytics.toDetailType
+import com.yourssu.ssutime.v2.component.SButton
 import com.yourssu.ssutime.v2.component.SButton_Small
 import com.yourssu.ssutime.v2.getStringDateWithTime
 import com.yourssu.ssutime.v2.screen.my.PopupButton
@@ -152,7 +153,6 @@ fun TodoDetailContent(
                 onPreviousClick = onPreviousClick,
             )
         }
-        Spacer(Modifier.fillMaxWidth().height(12.dp).background(color = N100))
 
         TodoDetailTabArea(
             todo = todo,
@@ -169,6 +169,7 @@ fun TodoDetailTabArea(
     todo: TodoInfo,
     aiSummaryState: AiSummaryUiState?,
 ) {
+
     val shouldShowAiSummaryTab = todo.canRequestAiSummary() && when (aiSummaryState) {
         is AiSummaryUiState.Success -> true
         AiSummaryUiState.Loading, AiSummaryUiState.Analyzing -> true
@@ -179,56 +180,79 @@ fun TodoDetailTabArea(
         if (shouldShowAiSummaryTab) {
             listOf(TodoDetailTab.DESCRIPTION, TodoDetailTab.AI_SUMMARY)
         } else {
-            listOf(TodoDetailTab.DESCRIPTION)
-        }
-    }
-
-    Column(
-        modifier = Modifier.padding(16.dp)
-    ) {
-        var selectedDestination by rememberSaveable { mutableIntStateOf(0) }
-        val safeIndex = selectedDestination.coerceIn(0, availableTabs.lastIndex)
-        val currentTab = availableTabs[safeIndex]
-
-        PrimaryTabRow(
-            selectedTabIndex = safeIndex,
-            indicator = {
-                TabRowDefaults.SecondaryIndicator(
-                    modifier = Modifier.tabIndicatorOffset(safeIndex),
-                    color = N500,
-                    height = 2.dp
-                )
-            },
-        ) {
-            availableTabs.forEachIndexed { index, destination ->
-                val isSelected = safeIndex == index
-                Tab(
-                    modifier = Modifier.background(WHITE),
-                    selected = isSelected,
-                    unselectedContentColor = WHITE,
-                    selectedContentColor = WHITE,
-                    onClick = {
-                        if (selectedDestination != index) {
-                            val tabName = if (destination == TodoDetailTab.DESCRIPTION) "lms_content" else "ai_summary"
-                            Analytics.taskDetailTabClick(tabName = tabName)
-                            selectedDestination = index
-                        }
-                    },
-                    text = {
-                        Text(
-                            text = destination.label,
-                            style = SSUType.Label2SemiBold.copy(color = if (isSelected) N500 else N300),
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    },
-                )
+            if(todo.description.isEmpty()) {
+                emptyList<TodoDetailTab>()
+            } else {
+                listOf(TodoDetailTab.DESCRIPTION)
             }
         }
-        TodoDetailTabContent(
-            destination = currentTab,
-            todo = todo,
-            aiSummaryState = aiSummaryState,
+    }
+    if(availableTabs.isNotEmpty()) {
+
+        Spacer(Modifier.fillMaxWidth().height(12.dp).background(color = N100))
+
+        Column(
+            modifier = Modifier.padding(16.dp)
+        ) {
+            var selectedDestination by rememberSaveable { mutableIntStateOf(0) }
+            val safeIndex = selectedDestination.coerceIn(0, availableTabs.lastIndex)
+            val currentTab = availableTabs[safeIndex]
+
+            PrimaryTabRow(
+                selectedTabIndex = safeIndex,
+                indicator = {
+                    TabRowDefaults.SecondaryIndicator(
+                        modifier = Modifier.tabIndicatorOffset(safeIndex),
+                        color = N500,
+                        height = 2.dp
+                    )
+                },
+            ) {
+                availableTabs.forEachIndexed { index, destination ->
+                    val isSelected = safeIndex == index
+                    Tab(
+                        modifier = Modifier.background(WHITE),
+                        selected = isSelected,
+                        unselectedContentColor = WHITE,
+                        selectedContentColor = WHITE,
+                        onClick = {
+                            if (selectedDestination != index) {
+                                val tabName =
+                                    if (destination == TodoDetailTab.DESCRIPTION) "lms_content" else "ai_summary"
+                                Analytics.taskDetailTabClick(tabName = tabName)
+                                selectedDestination = index
+                            }
+                        },
+                        text = {
+                            Text(
+                                text = destination.label,
+                                style = SSUType.Label2SemiBold.copy(color = if (isSelected) N500 else N300),
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        },
+                    )
+                }
+            }
+            TodoDetailTabContent(
+                destination = currentTab,
+                todo = todo,
+                aiSummaryState = aiSummaryState,
+            )
+        }
+    } else {
+        val context = LocalContext.current
+        SButton(
+            modifier = Modifier
+                .padding(horizontal = 16.dp)
+                .padding(bottom = 16.dp)
+                .fillMaxWidth(),
+            labelText = stringResource(R.string.todo_detail_open_lms),
+            textStyle = SSUType.Label3Medium,
+            onClick = {
+                Analytics.lmsLinkClick()
+                openTodoLmsUrl(context, todo)
+            }
         )
     }
 }
@@ -707,7 +731,7 @@ fun HideTodoPopup(
 
 @Preview(showBackground = true)
 @Composable
-fun previewTodoDetailScreen() {
+fun previewTodoDetailScreen1() {
     TodoDetailContent(
         aiSummaryState = AiSummaryUiState.Success(
             summary = "이 과제는 컴퓨터개론의 레포트 과제로, 수업시간에 다루었던 데이터와 케이스를 중심으로 개념과 해석을 정리해야 합니다. 계산기가 필요할 수 있습니다.",
@@ -736,6 +760,37 @@ fun previewTodoDetailScreen() {
                     "말씀 드린데로 수업시간에 다루었던 데이터와 케이스를 중심으로 개념, 해석 및 등이 출제될 예정입니다.\n" +
                     "\n" +
                     "복잡한 수식 관련 문제는 출제하지 않았지만 간단한 계산을 위해서는 계산기가 필요할 수 있습니다",
+            url = "https://naver.com"
+        )
+    )
+}
+
+@Preview(showBackground = true)
+@Composable
+fun previewTodoDetailScreen2() {
+    TodoDetailContent(
+        aiSummaryState = AiSummaryUiState.Success(
+            summary = "이 과제는 컴퓨터개론의 레포트 과제로, 수업시간에 다루었던 데이터와 케이스를 중심으로 개념과 해석을 정리해야 합니다. 계산기가 필요할 수 있습니다.",
+            estimatedDurationMinutes = 30,
+            attachmentLinks = listOf(
+                AttachmentLinkResponse(
+                    url = "https://smartid.ssu.ac.kr",
+                    fileName = "중간과제_안내서.pdf",
+                    extension = "pdf"
+                )
+            )
+        ),
+        onLoadAiSummary = {},
+        onPreviousClick = {},
+        todo = TodoInfo(
+            todoId = 12345,
+            title = "컴퓨터 Report",
+            due_date = "2026-05-29T18:00:00Z",
+            type = TodoType.QUIZ,
+            subject = SubjectInfo(123456, "컴퓨터개론", "유어슈"),
+            submittedAt = "",
+            aiSummary = "",
+            description = "",
             url = "https://naver.com"
         )
     )
