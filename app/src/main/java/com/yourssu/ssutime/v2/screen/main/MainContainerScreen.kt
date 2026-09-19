@@ -28,6 +28,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.yourssu.data.CyberLoginData
 import com.yourssu.ssutime.v2.MainActivity
+import com.yourssu.ssutime.v2.analytics.Analytics
 import com.yourssu.ssutime.v2.component.SSUCyberConnectPopup
 import com.yourssu.ssutime.v2.component.SSUTimeBottomBar
 import com.yourssu.ssutime.v2.screen.calendar.CalendarScreen
@@ -128,7 +129,10 @@ fun MainContainerScreen(
                     .padding(horizontal = 16.dp, vertical = 12.dp)
             ) {
                 SSUCyberConnectPopup(
-                    onClick = onNavigateToCyberLogin,
+                    onClick = {
+                        Analytics.cyberConnectClick(entryPoint = "home_banner")
+                        onNavigateToCyberLogin()
+                    },
                     onDismiss = { showCyberPopup = false },
                 )
             }

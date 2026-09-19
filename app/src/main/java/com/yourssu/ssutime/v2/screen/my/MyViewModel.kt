@@ -28,6 +28,7 @@ import com.yourssu.ssutime.v2.screen.main.sortedForMainDisplay
 import io.github.chlwhdtn03.LmsApi
 import io.github.chlwhdtn03.data.Lms.Info
 import io.github.chlwhdtn03.data.Lms.Term
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -36,6 +37,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
 
@@ -181,14 +183,17 @@ class MyViewModel(
     }
 
     fun logout() {
-        viewModelScope.launch {
+        Analytics.applicationScope.launch {
             termSelectionStore.clear()
             mainRepository.clearTodoData()
             mainRepository.clearLabsData()
             loginRepository.logout()
             accessToken = ""
             Analytics.resetUser()
-            isLogout.value = true
+            Analytics.flush()
+            withContext(Dispatchers.Main) {
+                isLogout.value = true
+            }
         }
     }
 

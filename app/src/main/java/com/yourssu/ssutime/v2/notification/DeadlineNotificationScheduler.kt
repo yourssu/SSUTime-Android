@@ -427,6 +427,7 @@ private fun Context.mainActivityPendingIntent(
         putExtra(MainActivity.EXTRA_NOTIFICATION_TASK_COUNT, notificationTaskCount)
         putExtra(MainActivity.EXTRA_NOTIFICATION_TASK_TYPE, representativeTodo.type.kor)
         putExtra(MainActivity.EXTRA_NOTIFICATION_SUBJECT_NAME, representativeTodo.subject?.name.orEmpty())
+        putExtra(MainActivity.EXTRA_NOTIFICATION_TYPE, if (dDay == 0) "due_today" else "deadline_soon")
     },
     PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
 )

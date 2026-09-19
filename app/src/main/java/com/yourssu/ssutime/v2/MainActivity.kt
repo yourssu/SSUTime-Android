@@ -106,6 +106,11 @@ class MainActivity : ComponentActivity() {
             }
     }
 
+    override fun onStop() {
+        super.onStop()
+        Analytics.flush()
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
         super.onCreate(savedInstanceState)
@@ -298,6 +303,7 @@ class MainActivity : ComponentActivity() {
         const val EXTRA_NOTIFICATION_TASK_COUNT = "extra_notification_task_count"
         const val EXTRA_NOTIFICATION_TASK_TYPE = "extra_notification_task_type"
         const val EXTRA_NOTIFICATION_SUBJECT_NAME = "extra_notification_subject_name"
+        const val EXTRA_NOTIFICATION_TYPE = "extra_notification_type"
 
         const val ENTRY_SOURCE_APP = "app"
         const val ENTRY_SOURCE_WIDGET = "widget"
@@ -341,6 +347,7 @@ private fun Intent.captureEntryAnalytics() {
                 dDay = getIntExtra(MainActivity.EXTRA_NOTIFICATION_D_DAY, 0),
                 notificationTaskCount = getIntExtra(MainActivity.EXTRA_NOTIFICATION_TASK_COUNT, 1),
                 representativeTodo = representativeTodo,
+                notificationType = getStringExtra(MainActivity.EXTRA_NOTIFICATION_TYPE),
             )
         }
     }

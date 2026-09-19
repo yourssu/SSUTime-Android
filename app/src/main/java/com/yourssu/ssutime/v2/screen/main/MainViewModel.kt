@@ -42,6 +42,7 @@ class MainViewModel(
     var showWidgetBadge = mutableStateOf(false)
     var onboardingInitialRefreshInProgress = mutableStateOf(false)
     var requiredShowAlertBottomSheet = mutableStateOf(false)
+    var isCallAlertRepopup = mutableStateOf(false)
     var isEnableSubmittedFile = mutableStateOf(false)
     private var handledHomeEntryVersion: Int? = null
 
@@ -59,7 +60,9 @@ class MainViewModel(
 
         viewModelScope.launch {
             val alertData = mainRepository.getAlertData()
-            requiredShowAlertBottomSheet.value = shouldShowCallingAlertBottomSheet(alertData)
+            val shouldShow = shouldShowCallingAlertBottomSheet(alertData)
+            requiredShowAlertBottomSheet.value = shouldShow
+            isCallAlertRepopup.value = shouldShow && alertData.valid
             showWidgetBadge.value = alertData.showWidgetHelperBadge
         }
 
@@ -109,6 +112,7 @@ class MainViewModel(
             mainRepository.updateAlertData(dataToSave)
         }
         requiredShowAlertBottomSheet.value = false
+        isCallAlertRepopup.value = false
     }
 
     fun showNetworkErrorScreen() {

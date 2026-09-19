@@ -73,6 +73,7 @@ import com.yourssu.data.DiscussionAttachment
 import com.yourssu.data.DiscussionInfo
 import com.yourssu.data.SubjectInfo
 import com.yourssu.ssutime.v2.R
+import com.yourssu.ssutime.v2.analytics.Analytics
 import com.yourssu.ssutime.v2.component.SSUTimeTopBar
 import com.yourssu.ssutime.v2.ui.theme.BLACK
 import com.yourssu.ssutime.v2.ui.theme.N100
@@ -237,6 +238,10 @@ fun NoticeScreen(
     var selectedSubjectIndex by rememberSaveable { mutableIntStateOf(0) }
     val validIndex = selectedSubjectIndex.coerceIn(0, (effectiveSubjects.size - 1).coerceAtLeast(0))
     val currentSubject = effectiveSubjects.getOrNull(validIndex)
+
+    LaunchedEffect(Unit) {
+        Analytics.viewNotice()
+    }
 
     Column(
         modifier = modifier
@@ -525,6 +530,9 @@ fun NoticeAccordionItem(
                 .clickable {
                     val nextExpanded = !isExpanded
                     isExpanded = nextExpanded
+                    if (nextExpanded) {
+                        Analytics.noticeExpand(isUnread = isNew)
+                    }
                     if (nextExpanded && isNew) {
                         onExpanded()
                     }

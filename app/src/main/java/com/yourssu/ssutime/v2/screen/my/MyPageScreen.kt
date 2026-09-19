@@ -372,10 +372,16 @@ fun MyPageContent(
         if (cyberLoginData.hasCredentials) {
             SSUCyberAccountConnectedBadge(
                 cyberId = cyberLoginData.id,
-                onDisconnect = { viewModel.logoutCyber() },
+                onDisconnect = {
+                    Analytics.cyberDisconnectClick()
+                    viewModel.logoutCyber()
+                },
             )
         } else {
-            SSUCyberAccountHelperBadge { onNavigateToCyberLogin() }
+            SSUCyberAccountHelperBadge {
+                Analytics.cyberConnectClick(entryPoint = "mypage")
+                onNavigateToCyberLogin()
+            }
         }
 
 

@@ -55,6 +55,7 @@ import com.yourssu.data.TodoInfo
 import com.yourssu.data.TodoType
 import com.yourssu.data.todoUniqueKey
 import com.yourssu.ssutime.v2.R
+import com.yourssu.ssutime.v2.analytics.Analytics
 import com.yourssu.ssutime.v2.component.SSUTimeTopBar
 import com.yourssu.ssutime.v2.screen.main.MainViewModel
 import com.yourssu.ssutime.v2.screen.main.todo.TodoDetailScreen
@@ -211,6 +212,7 @@ fun CalendarScreen(
                         modifier = Modifier.fillMaxSize(),
                         onPreviousClick = calendarNavController::popBackStack,
                         todo = currentTodoInfo,
+                        entrySource = "calendar",
                     )
                 }
             } else {
@@ -239,6 +241,10 @@ fun CalendarScreenContent(
         mutableStateOf<LocalDate?>(null)
     }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    LaunchedEffect(Unit) {
+        Analytics.viewCalendar()
+    }
 
     // 날짜별 할일 매핑 (todos 리스트가 변경될 때마다 재계산)
     val eventsByDate = remember(todos) {
@@ -305,6 +311,7 @@ fun CalendarScreenContent(
                     today = today,
                     eventsByDate = eventsByDate,
                     onDayClick = { date ->
+                        Analytics.calendarDateClick()
                         selectedDate = date
                     }
                 )

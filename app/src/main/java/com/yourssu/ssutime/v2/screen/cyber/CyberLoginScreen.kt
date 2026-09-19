@@ -31,6 +31,7 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.yourssu.ssutime.v2.R
+import com.yourssu.ssutime.v2.analytics.Analytics
 import com.yourssu.ssutime.v2.component.SButton
 import com.yourssu.ssutime.v2.component.SSUTimeTopBar
 import com.yourssu.ssutime.v2.component.SSecureTextField
@@ -118,7 +119,10 @@ fun CyberLoginScreen(
                         modifier = Modifier.clickable(
                             interactionSource = remember { MutableInteractionSource() },
                             indication = null,
-                            onClick = onFindIdClick,
+                            onClick = {
+                                Analytics.cyberFindIdClick()
+                                onFindIdClick()
+                            },
                         ),
                     )
                 }

@@ -61,7 +61,10 @@ import com.yourssu.data.TodoInfo
 import com.yourssu.data.TodoType
 import com.yourssu.data.isCyber
 import com.yourssu.data.network.AttachmentLinkResponse
+import com.yourssu.data.todoUniqueKey
 import com.yourssu.ssutime.v2.R
+import com.yourssu.ssutime.v2.analytics.Analytics
+import com.yourssu.ssutime.v2.analytics.toDetailType
 import com.yourssu.ssutime.v2.component.SButton_Small
 import com.yourssu.ssutime.v2.getStringDateWithTime
 import com.yourssu.ssutime.v2.screen.my.PopupButton
@@ -86,14 +89,23 @@ fun TodoDetailScreen(
     viewModel: TodoDetailViewModel = koinViewModel(),
     onPreviousClick: () -> Unit = {},
     todo: TodoInfo,
+    entrySource: String = "home",
 ) {
     var showHidePopup by remember { mutableStateOf(false) }
+
+    LaunchedEffect(todo.todoUniqueKey()) {
+        Analytics.viewTaskDetail(
+            detailType = todo.toDetailType(),
+            entrySource = entrySource,
+        )
+    }
 
     if (showHidePopup) {
         Dialog(onDismissRequest = { showHidePopup = false }) {
             HideTodoPopup(
                 onCancel = { showHidePopup = false },
                 onConfirm = {
+                    Analytics.hideConfirm()
                     showHidePopup = false
                     viewModel.hideTodo(todo) {
                         onPreviousClick()
@@ -196,7 +208,11 @@ fun TodoDetailTabArea(
                     unselectedContentColor = WHITE,
                     selectedContentColor = WHITE,
                     onClick = {
-                        selectedDestination = index
+                        if (selectedDestination != index) {
+                            val tabName = if (destination == TodoDetailTab.DESCRIPTION) "lms_content" else "ai_summary"
+                            Analytics.taskDetailTabClick(tabName = tabName)
+                            selectedDestination = index
+                        }
                     },
                     text = {
                         Text(
@@ -468,6 +484,7 @@ fun TodoDetailTabContent(
                 labelText = stringResource(R.string.todo_detail_open_lms),
                 textStyle = SSUType.Label3Medium,
                 onClick = {
+                    Analytics.lmsLinkClick()
                     openTodoLmsUrl(context, todo)
                 }
             )

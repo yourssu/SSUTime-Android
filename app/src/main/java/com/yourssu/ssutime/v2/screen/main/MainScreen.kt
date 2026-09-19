@@ -151,6 +151,12 @@ fun MainScreen(
     )
     LaunchedEffect(homeEntryVersion) {
         if (skipLoadFromMyPageBack) {
+            Analytics.viewHome(
+                taskCount = viewModel.todos.size,
+                urgentCount = viewModel.todos.urgentTodoCount(),
+                entrySource = homeEntrySource,
+            )
+            onInitialLmsRefreshSkipConsumed()
             return@LaunchedEffect
         }
 
@@ -172,6 +178,11 @@ fun MainScreen(
             )
         } else {
             viewModel.showNetworkErrorScreen()
+            Analytics.viewHome(
+                taskCount = viewModel.todos.size,
+                urgentCount = viewModel.todos.urgentTodoCount(),
+                entrySource = homeEntrySource,
+            )
         }
         if (skipInitialLmsRefresh) {
             onInitialLmsRefreshSkipConsumed()
@@ -293,6 +304,7 @@ fun MainScreen(
                                 .padding(innerPadding),
                             onPreviousClick = mainContentNavController::popBackStack,
                             todo = currentTodoInfo,
+                            entrySource = "home",
                         )
                     } else {
                         LaunchedEffect(Unit) {
@@ -339,6 +351,11 @@ fun MainScreen(
         }
 
         if(viewModel.requiredShowAlertBottomSheet.value) {
+            if (viewModel.isCallAlertRepopup.value) {
+                LaunchedEffect(Unit) {
+                    Analytics.callAlarmRepopupView()
+                }
+            }
             CallingAlertBottomSheet(
                 onConfirmClick = {
                     Analytics.callAlarmSetting(

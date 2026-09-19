@@ -11,19 +11,30 @@ import com.yourssu.ssutime.v2.accessToken
 import com.yourssu.ssutime.v2.analytics.SentryExceptionReporter
 import com.yourssu.ssutime.v2.lms.loginLms
 import com.yourssu.ssutime.v2.network.ApiRepository
+import com.yourssu.ssutime.v2.screen.onboarding.OnBoardingRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 class LoginViewModel(
     private val loginRepository: LoginRepository,
-    private val apiRepository: ApiRepository
+    private val apiRepository: ApiRepository,
+    private val onBoardingRepository: OnBoardingRepository? = null,
 ) : ViewModel() {
     val idState = TextFieldState()
     val pwState = TextFieldState()
     val autoLoginState = mutableStateOf(true)
     var errorMessage = mutableStateOf("")
     var isLoading = mutableStateOf(false)
+
+    suspend fun checkIsOnboarding(): Boolean {
+        return try {
+            val onBoardingData = onBoardingRepository?.getOnBoardingData()
+            !(onBoardingData?.isTipConfirmed ?: false)
+        } catch (e: Exception) {
+            false
+        }
+    }
 
     init {
         viewModelScope.launch {
@@ -53,6 +64,7 @@ class LoginViewModel(
                         accessToken = apiRepository.requestJwtToken(id, pw).accessToken
                 }
             } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
                 SentryExceptionReporter.capture(e)
                 loginErrorMessage = e.message ?: ""
                 false
