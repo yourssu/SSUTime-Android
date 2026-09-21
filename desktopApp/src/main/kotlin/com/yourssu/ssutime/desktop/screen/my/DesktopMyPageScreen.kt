@@ -115,7 +115,7 @@ fun DesktopMyPageScreen(
     selectedTerm: Term? = null,
     onTermSelected: (Term) -> Unit = {},
     onNavigateToHiddenTodos: () -> Unit = {},
-    onBack: () -> Unit,
+    onBack: () -> Unit = {},
     onOpenUrl: (String) -> Unit,
     onLogout: () -> Unit,
     modifier: Modifier = Modifier,
@@ -163,18 +163,7 @@ fun DesktopMyPageScreen(
             .background(WHITE)
             .verticalScroll(rememberScrollState()),
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-        ) {
-            DesktopBackButton(
-                onClick = onBack,
-                contentDescription = stringResource(
-                    Res.string.my_back_content_description,
-                ),
-            )
-        }
+        Spacer(Modifier.height(16.dp))
 
         Column(
             modifier = Modifier

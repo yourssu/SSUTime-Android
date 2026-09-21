@@ -1,3 +1,5 @@
+@file:OptIn(kotlin.time.ExperimentalTime::class)
+
 package com.yourssu.ssutime.desktop.screen.main
 
 import androidx.compose.animation.AnimatedVisibility
@@ -50,6 +52,11 @@ import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import com.yourssu.ssutime.desktop.analytics.DesktopAnalytics
+import com.yourssu.ssutime.desktop.core.model.AppProfile
+import com.yourssu.ssutime.desktop.screen.cyber.DesktopCyberLoginScreen
+import com.yourssu.ssutime.desktop.screen.my.DesktopHiddenTodosScreen
+import com.yourssu.ssutime.desktop.screen.my.DesktopMyPageScreen
+import io.github.chlwhdtn03.data.Lms.Term
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -146,6 +153,12 @@ sealed interface DesktopAiSummaryUiState {
     data object Error : DesktopAiSummaryUiState
 }
 
+private enum class MySubRoute {
+    PROFILE,
+    HIDDEN_TODOS,
+    CYBER_LOGIN,
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DesktopMainScreen(
@@ -155,7 +168,7 @@ fun DesktopMainScreen(
     loadingProgress: Float,
     errorMessage: String?,
     onRefresh: () -> Unit,
-    onProfileClick: () -> Unit,
+    onProfileClick: () -> Unit = {},
     onExpandTodo: (AppTodo) -> Unit,
     onHideTodo: (AppTodo) -> Unit = {},
     onDiscussionExpanded: (DiscussionInfo) -> Unit = {},
@@ -165,11 +178,31 @@ fun DesktopMainScreen(
     isEnableSubmittedFile: Boolean = false,
     modifier: Modifier = Modifier,
     showBlockingLoading: Boolean = false,
+    currentTab: DesktopNavTab = DesktopNavTab.TODO,
+    onTabSelect: (DesktopNavTab) -> Unit = {},
+    profile: AppProfile? = null,
+    isProfileLoading: Boolean = false,
+    profileError: String? = null,
+    terms: List<Term> = emptyList(),
+    selectedTerm: Term? = null,
+    onTermSelected: (Term) -> Unit = {},
+    onLogout: () -> Unit = {},
+    showSystemNotificationSetting: Boolean = false,
+    systemNotificationsEnabled: Boolean = false,
+    onSystemNotificationsChanged: (Boolean) -> Unit = {},
+    cyberUserId: String = "",
+    onDisconnectCyber: () -> Unit = {},
+    onEnableSubmittedFileChanged: (Boolean) -> Unit = {},
+    onRestoreTodo: (AppTodo) -> Unit = {},
+    isCyberLoggingIn: Boolean = false,
+    cyberLoginError: String? = null,
+    onLoginCyber: (String, String) -> Unit = { _, _ -> },
 ) {
     var showingSubmitted by remember { mutableStateOf(false) }
     var selectedTodo by remember { mutableStateOf<AppTodo?>(null) }
     var selectedTodoEntrySource by remember { mutableStateOf("home") }
     var showingNotice by remember { mutableStateOf(false) }
+    var mySubRoute by remember { mutableStateOf(MySubRoute.PROFILE) }
 
     LaunchedEffect(todoData.todos, todoData.loadedAt) {
         val urgentCount = todoData.todos.count {
@@ -188,127 +221,272 @@ fun DesktopMainScreen(
         }
     }
 
-    Scaffold(
+    val handleTabSelect: (DesktopNavTab) -> Unit = { tab ->
+        if (tab == DesktopNavTab.MY_PAGE) {
+            mySubRoute = MySubRoute.PROFILE
+            onProfileClick()
+        }
+        onTabSelect(tab)
+    }
+
+    Row(
         modifier = modifier
             .fillMaxSize()
+            .background(WHITE)
             .safeDrawingPadding(),
-        containerColor = WHITE,
-        topBar = {
-            SsuTimeTopBar(onProfileClick = onProfileClick)
-        },
-    ) { innerPadding ->
-        if (errorMessage != null) {
-            NetworkErrorContent(
-                modifier = Modifier.padding(innerPadding),
-                errorCause = errorMessage,
-                onRetry = onRefresh,
-            )
-        } else {
-            Row(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding),
-            ) {
-                // Left Column: Main Todo List or Todo Detail Screen or Submitted Screen
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxHeight(),
-                ) {
-                    if (selectedTodo != null) {
-                        DesktopTodoDetailScreen(
-                            todo = selectedTodo!!,
-                            aiSummaryState = aiSummaryStates[selectedTodo!!.aiSummaryKey()],
-                            onLoadAiSummary = onExpandTodo,
-                            onBack = { selectedTodo = null },
-                            onHideTodo = { todo ->
-                                selectedTodo = null
-                                onHideTodo(todo)
-                            },
-                            onOpenUrl = onOpenUrl,
-                            entrySource = selectedTodoEntrySource,
-                        )
-                    } else if (showingSubmitted) {
-                        DesktopSubmittedScreen(
-                            submitted = todoData.submitted,
-                            isEnableSubmittedFile = isEnableSubmittedFile,
-                            onBack = { showingSubmitted = false },
-                            onOpenUrl = onOpenUrl,
-                        )
-                    } else {
-                        HomeTodoListColumn(
-                            todoData = todoData,
-                            isLoading = isLoading && !showBlockingLoading,
-                            loadingProgress = loadingProgress,
-                            onRefresh = {
-                                DesktopAnalytics.refreshClick()
-                                onRefresh()
-                            },
-                            onSubmittedClick = {
-                                DesktopAnalytics.submitCompleteClick()
-                                showingSubmitted = true
-                            },
-                            onTodoClick = { todo ->
-                                selectedTodoEntrySource = "home"
-                                selectedTodo = todo
-                                onExpandTodo(todo)
-                            },
-                            isCyberConnected = isCyberConnected,
-                            onNavigateToCyberLogin = onNavigateToCyberLogin,
-                        )
+    ) {
+        // 좌측 수직 네비게이션 바
+        DesktopVerticalNavBar(
+            currentTab = currentTab,
+            onTabSelect = handleTabSelect,
+            unreadNoticeCount = unreadNoticeCount,
+        )
+
+        // Main Content Area (1분할 모드 고정)
+        Box(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxHeight()
+                .background(WHITE),
+        ) {
+
+            if (errorMessage != null && currentTab != DesktopNavTab.MY_PAGE) {
+                NetworkErrorContent(
+                    errorCause = errorMessage,
+                    onRetry = onRefresh,
+                )
+            } else {
+                when {
+                    currentTab == DesktopNavTab.MY_PAGE -> {
+                        when (mySubRoute) {
+                            MySubRoute.PROFILE -> {
+                                DesktopMyPageScreen(
+                                    profile = profile,
+                                    isLoading = isProfileLoading,
+                                    errorMessage = profileError,
+                                    terms = terms,
+                                    selectedTerm = selectedTerm,
+                                    onTermSelected = onTermSelected,
+                                    onNavigateToHiddenTodos = { mySubRoute = MySubRoute.HIDDEN_TODOS },
+                                    onOpenUrl = onOpenUrl,
+                                    onLogout = onLogout,
+                                    showSystemNotificationSetting = showSystemNotificationSetting,
+                                    systemNotificationsEnabled = systemNotificationsEnabled,
+                                    onSystemNotificationsChanged = onSystemNotificationsChanged,
+                                    isCyberConnected = isCyberConnected,
+                                    cyberUserId = cyberUserId,
+                                    onNavigateToCyberLogin = { mySubRoute = MySubRoute.CYBER_LOGIN },
+                                    onDisconnectCyber = onDisconnectCyber,
+                                    isEnableSubmittedFile = isEnableSubmittedFile,
+                                    onEnableSubmittedFileChanged = onEnableSubmittedFileChanged,
+                                )
+                            }
+
+                            MySubRoute.HIDDEN_TODOS -> {
+                                DesktopHiddenTodosScreen(
+                                    hiddenTodos = todoData.hiddenTodos,
+                                    onBack = { mySubRoute = MySubRoute.PROFILE },
+                                    onRestoreClick = onRestoreTodo,
+                                    )
+                            }
+
+                            MySubRoute.CYBER_LOGIN -> {
+                                DesktopCyberLoginScreen(
+                                    isLoading = isCyberLoggingIn,
+                                    errorMessage = cyberLoginError,
+                                    onBack = { mySubRoute = MySubRoute.PROFILE },
+                                    onLoginClick = onLoginCyber,
+                                    onFindIdClick = {
+                                        onOpenUrl("https://portal.kcu.ac/findId/findId.do")
+                                    },
+                                )
+                            }
+                        }
+                    }
+
+                    currentTab == DesktopNavTab.CALENDAR -> {
+                        // 1분할 캘린더 모드
+                        Column(modifier = Modifier.fillMaxSize()) {
+                            if (!showingNotice) {
+                                SsuTimeTopBar()
+                            }
+                            CalendarPaneContent(
+                                showingNotice = showingNotice,
+                                todoData = todoData,
+                                unreadNoticeCount = unreadNoticeCount,
+                                onNoticeClick = { showingNotice = true },
+                                onBackFromNotice = { showingNotice = false },
+                                onTodoClick = { todo ->
+                                    selectedTodoEntrySource = "calendar"
+                                    selectedTodo = todo
+                                    onExpandTodo(todo)
+                                    handleTabSelect(DesktopNavTab.TODO)
+                                },
+                                onOpenUrl = onOpenUrl,
+                                onDiscussionExpanded = onDiscussionExpanded,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .weight(1f),
+                            )
+                        }
+                    }
+
+                    else -> {
+                        // 1분할 Todo 모드 (currentTab == DesktopNavTab.TODO)
+                        Column(modifier = Modifier.fillMaxSize()) {
+                            if (selectedTodo == null && !showingSubmitted) {
+                                SsuTimeTopBar()
+                            }
+                            TodoPaneContent(
+                                selectedTodo = selectedTodo,
+                                showingSubmitted = showingSubmitted,
+                                todoData = todoData,
+                                aiSummaryStates = aiSummaryStates,
+                                isLoading = isLoading && !showBlockingLoading,
+                                loadingProgress = loadingProgress,
+                                isEnableSubmittedFile = isEnableSubmittedFile,
+                                isCyberConnected = isCyberConnected,
+                                selectedTodoEntrySource = selectedTodoEntrySource,
+                                onExpandTodo = onExpandTodo,
+                                onHideTodo = { todo ->
+                                    selectedTodo = null
+                                    onHideTodo(todo)
+                                },
+                                onOpenUrl = onOpenUrl,
+                                onRefresh = {
+                                    DesktopAnalytics.refreshClick()
+                                    onRefresh()
+                                },
+                                onBackFromDetail = { selectedTodo = null },
+                                onBackFromSubmitted = { showingSubmitted = false },
+                                onSubmittedClick = {
+                                    DesktopAnalytics.submitCompleteClick()
+                                    showingSubmitted = true
+                                },
+                                onTodoClick = { todo ->
+                                    selectedTodoEntrySource = "home"
+                                    selectedTodo = todo
+                                    onExpandTodo(todo)
+                                },
+                                onNavigateToCyberLogin = {
+                                    handleTabSelect(DesktopNavTab.MY_PAGE)
+                                    mySubRoute = MySubRoute.CYBER_LOGIN
+                                },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .weight(1f),
+                            )
+                        }
                     }
                 }
+            }
 
-                // Vertical Divider between columns
+            if (showBlockingLoading) {
                 Box(
                     modifier = Modifier
-                        .width(1.dp)
-                        .fillMaxHeight()
-                        .background(N200),
-                )
-
-                // Right Column: Calendar Panel or Notice Screen
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxHeight(),
+                        .fillMaxSize()
+                        .background(Color(0x80000000)),
+                    contentAlignment = Alignment.Center,
                 ) {
-                    if (showingNotice) {
-                        DesktopNoticeScreen(
-                            subjects = todoData.subjects,
-                            onBack = { showingNotice = false },
-                            onOpenUrl = onOpenUrl,
-                            onDiscussionExpanded = onDiscussionExpanded,
-                        )
-                    } else {
-                        DesktopCalendarPanel(
-                            todos = todoData.todos,
-                            noticeCount = unreadNoticeCount,
-                            onNoticeClick = { showingNotice = true },
-                            onTodoClick = { todo ->
-                                showingSubmitted = false
-                                selectedTodoEntrySource = "calendar"
-                                selectedTodo = todo
-                                onExpandTodo(todo)
-                            },
-                        )
-                    }
+                    CircularProgressIndicator(
+                        color = R500,
+                        trackColor = R100,
+                    )
                 }
             }
         }
+    }
+}
 
-        if (showBlockingLoading) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color(0x80000000)),
-                contentAlignment = Alignment.Center,
-            ) {
-                CircularProgressIndicator(
-                    color = R500,
-                    trackColor = R100,
-                )
-            }
+@Composable
+private fun TodoPaneContent(
+    selectedTodo: AppTodo?,
+    showingSubmitted: Boolean,
+    todoData: AppTodoData,
+    aiSummaryStates: Map<String, DesktopAiSummaryUiState>,
+    isLoading: Boolean,
+    loadingProgress: Float,
+    isEnableSubmittedFile: Boolean,
+    isCyberConnected: Boolean,
+    selectedTodoEntrySource: String,
+    onExpandTodo: (AppTodo) -> Unit,
+    onHideTodo: (AppTodo) -> Unit,
+    onOpenUrl: (String) -> Unit,
+    onRefresh: () -> Unit,
+    onBackFromDetail: () -> Unit,
+    onBackFromSubmitted: () -> Unit,
+    onSubmittedClick: () -> Unit,
+    onTodoClick: (AppTodo) -> Unit,
+    onNavigateToCyberLogin: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Box(
+        modifier = modifier
+            .fillMaxHeight()
+            .background(WHITE),
+    ) {
+        if (selectedTodo != null) {
+            DesktopTodoDetailScreen(
+                todo = selectedTodo,
+                aiSummaryState = aiSummaryStates[selectedTodo.aiSummaryKey()],
+                onLoadAiSummary = onExpandTodo,
+                onBack = onBackFromDetail,
+                onHideTodo = onHideTodo,
+                onOpenUrl = onOpenUrl,
+                entrySource = selectedTodoEntrySource,
+            )
+        } else if (showingSubmitted) {
+            DesktopSubmittedScreen(
+                submitted = todoData.submitted,
+                isEnableSubmittedFile = isEnableSubmittedFile,
+                onBack = onBackFromSubmitted,
+                onOpenUrl = onOpenUrl,
+            )
+        } else {
+            HomeTodoListColumn(
+                todoData = todoData,
+                isLoading = isLoading,
+                loadingProgress = loadingProgress,
+                onRefresh = onRefresh,
+                onSubmittedClick = onSubmittedClick,
+                onTodoClick = onTodoClick,
+                isCyberConnected = isCyberConnected,
+                onNavigateToCyberLogin = onNavigateToCyberLogin,
+            )
+        }
+    }
+}
+
+@Composable
+private fun CalendarPaneContent(
+    showingNotice: Boolean,
+    todoData: AppTodoData,
+    unreadNoticeCount: Int,
+    onNoticeClick: () -> Unit,
+    onBackFromNotice: () -> Unit,
+    onTodoClick: (AppTodo) -> Unit,
+    onOpenUrl: (String) -> Unit,
+    onDiscussionExpanded: (DiscussionInfo) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Box(
+        modifier = modifier
+            .fillMaxHeight(),
+    ) {
+        if (showingNotice) {
+            DesktopNoticeScreen(
+                subjects = todoData.subjects,
+                onBack = onBackFromNotice,
+                onOpenUrl = onOpenUrl,
+                onDiscussionExpanded = onDiscussionExpanded,
+            )
+        } else {
+            DesktopCalendarPanel(
+                todos = todoData.todos,
+                noticeCount = unreadNoticeCount,
+                onNoticeClick = onNoticeClick,
+                onTodoClick = onTodoClick,
+            )
         }
     }
 }
@@ -685,7 +863,6 @@ private fun AppTodoType.localizedLabel(): String = stringResource(
 
 @Composable
 private fun SsuTimeTopBar(
-    onProfileClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Row(
@@ -699,21 +876,6 @@ private fun SsuTimeTopBar(
             contentDescription = "SSUTime",
             modifier = Modifier.height(28.dp),
         )
-        Spacer(Modifier.weight(1f))
-        Box(
-            modifier = Modifier
-                .size(32.dp)
-                .clip(CircleShape)
-                .clickable(onClick = onProfileClick),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(
-                painter = painterResource(Res.drawable.ic_user),
-                contentDescription = stringResource(Res.string.my_avatar_content_description),
-                tint = Color.Unspecified,
-                modifier = Modifier.size(24.dp),
-            )
-        }
     }
 }
 

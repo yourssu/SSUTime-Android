@@ -18,6 +18,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
@@ -46,7 +47,10 @@ import com.yourssu.ssutime.desktop.lms.isLmsLoggedIn
 import com.yourssu.ssutime.desktop.screen.cyber.DesktopCyberLoginScreen
 import com.yourssu.ssutime.desktop.screen.login.DesktopLoginScreen
 import com.yourssu.ssutime.desktop.screen.main.DesktopAiSummaryUiState
+import com.yourssu.ssutime.desktop.screen.main.DEFAULT_WINDOW_HEIGHT_DP
+import com.yourssu.ssutime.desktop.screen.main.DEFAULT_WINDOW_WIDTH_DP
 import com.yourssu.ssutime.desktop.screen.main.DesktopMainScreen
+import com.yourssu.ssutime.desktop.screen.main.DesktopNavTab
 import com.yourssu.ssutime.desktop.screen.my.DesktopHiddenTodosScreen
 import com.yourssu.ssutime.desktop.screen.my.DesktopMyPageScreen
 import com.yourssu.ssutime.desktop.screen.onboarding.DesktopOnBoardingScreen
@@ -118,6 +122,11 @@ fun main() {
                 }
             }
 
+            val windowState = rememberWindowState(
+                width = DEFAULT_WINDOW_WIDTH_DP.dp,
+                height = DEFAULT_WINDOW_HEIGHT_DP.dp,
+            )
+
             Window(
                 onCloseRequest = {
                     if (isTrayReady) {
@@ -127,15 +136,14 @@ fun main() {
                     }
                 },
                 visible = isWindowVisible,
-                state = rememberWindowState(
-                    width = 960.dp,
-                    height = 760.dp,
-                ),
+                state = windowState,
                 title = "SSUTime",
                 icon = painterResource(Res.drawable.checkbox),
             ) {
+                LaunchedEffect(window) {
+                    window.minimumSize = Dimension(DEFAULT_WINDOW_WIDTH_DP, DEFAULT_WINDOW_HEIGHT_DP)
+                }
                 LaunchedEffect(window, isWindowVisible, windowActivationRequest) {
-                    window.minimumSize = Dimension(720, 560)
                     if (isWindowVisible) {
                         window.extendedState = Frame.NORMAL
                         window.toFront()
@@ -184,6 +192,7 @@ private fun DesktopApp(
         id
     }
     var route by remember { mutableStateOf(DesktopRoute.SPLASH) }
+    var currentTab by remember { mutableStateOf(DesktopNavTab.TODO) }
     var previousRoute by remember { mutableStateOf<DesktopRoute?>(null) }
     var session by remember { mutableStateOf<LoginSession?>(null) }
     var todoData by remember { mutableStateOf(storedState.todoData) }
@@ -584,6 +593,7 @@ private fun DesktopApp(
             aiSummaryStates.clear()
             idState.edit { replace(0, length, "") }
             passwordState.edit { replace(0, length, "") }
+            currentTab = DesktopNavTab.TODO
             route = DesktopRoute.LOGIN
         }
     }
@@ -698,10 +708,7 @@ private fun DesktopApp(
                     errorMessage = mainError,
                     showBlockingLoading = isRefreshing && todoData.loadedAt.isBlank(),
                     onRefresh = ::refreshTodos,
-                    onProfileClick = {
-                        route = DesktopRoute.MY
-                        loadProfile()
-                    },
+                    onProfileClick = ::loadProfile,
                     onExpandTodo = ::loadAiSummary,
                     onHideTodo = ::hideTodo,
                     onDiscussionExpanded = ::markDiscussionAsRead,
@@ -711,11 +718,41 @@ private fun DesktopApp(
                     },
                     isCyberConnected = storedState.isCyberConnected,
                     onNavigateToCyberLogin = {
-                        previousRoute = DesktopRoute.MAIN
                         cyberLoginError = null
-                        route = DesktopRoute.CYBER_LOGIN
                     },
                     isEnableSubmittedFile = storedState.isEnableSubmittedFile,
+                    currentTab = currentTab,
+                    onTabSelect = { tab ->
+                        currentTab = tab
+                        if (tab == DesktopNavTab.MY_PAGE) {
+                            loadProfile()
+                        }
+                    },
+                    profile = profile,
+                    isProfileLoading = isProfileLoading,
+                    profileError = profileError,
+                    terms = terms,
+                    selectedTerm = selectedTerm,
+                    onTermSelected = ::selectTerm,
+                    onLogout = ::logout,
+                    showSystemNotificationSetting = DesktopDeadlineNotifier.isSupported(),
+                    systemNotificationsEnabled = storedState.systemNotificationsEnabled,
+                    onSystemNotificationsChanged = { enabled ->
+                        storedState = store.update(
+                            storedState.copy(systemNotificationsEnabled = enabled),
+                        )
+                    },
+                    cyberUserId = storedState.cyberUserId,
+                    onDisconnectCyber = ::disconnectCyber,
+                    onEnableSubmittedFileChanged = { enabled ->
+                        storedState = store.update(
+                            storedState.copy(isEnableSubmittedFile = enabled),
+                        )
+                    },
+                    onRestoreTodo = ::restoreTodo,
+                    isCyberLoggingIn = isCyberLoggingIn,
+                    cyberLoginError = cyberLoginError,
+                    onLoginCyber = ::loginCyber,
                 )
             }
 
