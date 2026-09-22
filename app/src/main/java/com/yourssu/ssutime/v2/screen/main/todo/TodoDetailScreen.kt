@@ -179,11 +179,9 @@ fun TodoDetailTabArea(
     aiSummaryState: AiSummaryUiState?,
 ) {
 
-    val shouldShowAiSummaryTab = todo.canRequestAiSummary() && when (aiSummaryState) {
-        is AiSummaryUiState.Success -> true
-        AiSummaryUiState.Loading, AiSummaryUiState.Analyzing -> true
-        AiSummaryUiState.Empty, AiSummaryUiState.Error, null -> false
-    }
+    val shouldShowAiSummaryTab = todo.canRequestAiSummary() &&
+        aiSummaryState is AiSummaryUiState.Success &&
+        aiSummaryState.summary.isNotBlank()
 
     val availableTabs = remember(shouldShowAiSummaryTab) {
         if (shouldShowAiSummaryTab) {
