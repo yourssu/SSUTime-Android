@@ -150,6 +150,7 @@ fun TodoDetailContent(
     Column(
         modifier = modifier
             .fillMaxSize()
+            .background(WHITE)
             .verticalScroll(scrollState)
     ) {
         Column(
