@@ -877,20 +877,24 @@ fun NotificationTooltip() {
     ) {
         Text(
             text = stringResource(R.string.my_notification_tooltip_system_title),
-            style = SSUType.Caption1SemiBold
+            style = SSUType.Caption1SemiBold,
+            color = BLACK
         )
         Text(
             text = stringResource(R.string.my_notification_tooltip_system_desc),
-            style = SSUType.Body2Medium
+            style = SSUType.Body2Medium,
+            color = BLACK
         )
         Spacer(Modifier.height(12.dp))
         Text(
             text = stringResource(R.string.my_notification_tooltip_call_title),
-            style = SSUType.Caption1SemiBold
+            style = SSUType.Caption1SemiBold,
+            color = BLACK
         )
         Text(
             text = stringResource(R.string.my_notification_tooltip_call_desc),
-            style = SSUType.Body2Medium
+            style = SSUType.Body2Medium,
+            color = BLACK
         )
     }
 }
@@ -907,11 +911,13 @@ fun LabsTooltip() {
     ) {
         Text(
             text = stringResource(R.string.my_lab_question),
-            style = SSUType.Caption1SemiBold
+            style = SSUType.Caption1SemiBold,
+            color = BLACK
         )
         Text(
             text = stringResource(R.string.my_lab_description),
-            style = SSUType.Body2Medium
+            style = SSUType.Body2Medium,
+            color = BLACK
         )
     }
 }
@@ -933,7 +939,7 @@ fun LogoutPopup(
     ) {
         Text(
             text = stringResource(R.string.my_logout),
-            style = SSUType.H4SemiBold
+            style = SSUType.H4SemiBold,
         )
         Text(
             text = stringResource(R.string.my_logout_message),
