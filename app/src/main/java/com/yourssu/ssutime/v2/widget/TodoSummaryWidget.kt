@@ -11,7 +11,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.glance.ColorFilter
 import androidx.glance.GlanceComposable
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
@@ -285,7 +284,6 @@ private fun TodoMediumContent(
             Spacer(modifier = GlanceModifier.height(5.dp))
             WidgetUpdatedAt(
                 text = uiState.updatedAtText,
-                widgetSize = WidgetAnalyticsSize.Medium,
             )
         }
 
@@ -366,9 +364,6 @@ private fun TodoLargeContent(
         Spacer(modifier = GlanceModifier.height(2.dp))
         WidgetUpdatedAt(
             text = uiState.updatedAtText,
-            widgetSize = WidgetAnalyticsSize.Large,
-            fontSize = 9,
-            iconSize = 24.dp,
         )
         Spacer(modifier = GlanceModifier.height(2.dp))
 
@@ -511,16 +506,6 @@ private fun TodoSummaryRefreshErrorContent(
                 color = summaryPrimaryText,
                 textAlign = TextAlign.Center,
             ),
-        )
-        Spacer(modifier = GlanceModifier.height(10.dp))
-        Image(
-            provider = ImageProvider(R.drawable.refreshbtn),
-            contentDescription = context.getString(R.string.common_refresh),
-            contentScale = ContentScale.Fit,
-            colorFilter = ColorFilter.tint(summarySecondaryText),
-            modifier = GlanceModifier
-                .size(24.dp)
-                .clickable(widgetRefreshAction(size.analyticsSize)),
         )
     }
 }
@@ -703,11 +688,7 @@ private fun CompactTodoSlot(
 @GlanceComposable
 private fun WidgetUpdatedAt(
     text: String,
-    widgetSize: WidgetAnalyticsSize,
-    fontSize: Int = 9,
-    iconSize: Dp = 24.dp,
 ) {
-    val context = LocalContext.current
     Row(
         modifier = GlanceModifier.fillMaxWidth(),
         horizontalAlignment = Alignment.Horizontal.End,
@@ -718,16 +699,6 @@ private fun WidgetUpdatedAt(
             maxLines = 1,
             style = SSUType.G_Caption3Regular
                 .copy(color = summaryPrimaryText),
-        )
-        Spacer(modifier = GlanceModifier.width(4.dp))
-        Image(
-            provider = ImageProvider(R.drawable.refreshbtn),
-            contentDescription = context.getString(R.string.common_refresh),
-            contentScale = ContentScale.Fit,
-            colorFilter = ColorFilter.tint(summarySecondaryText),
-            modifier = GlanceModifier
-                .size(iconSize)
-                .clickable(widgetRefreshAction(widgetSize)),
         )
     }
 }

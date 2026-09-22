@@ -217,21 +217,6 @@ private fun DDayTodoContent(
             )
         }
     }
-
-    Box(
-        modifier = GlanceModifier
-            .fillMaxSize()
-            .padding(end = 18.dp, bottom = 18.dp),
-        contentAlignment = Alignment.BottomEnd,
-    ) {
-        Image(
-            provider = ImageProvider(R.drawable.ic_widget_refresh),
-            contentDescription = context.getString(R.string.common_refresh),
-            modifier = GlanceModifier
-                .size(34.dp)
-                .clickable(widgetRefreshAction(WidgetAnalyticsSize.Small)),
-        )
-    }
 }
 
 @Composable
@@ -329,14 +314,6 @@ private fun DDayRefreshErrorContent(message: String) {
                 color = widgetTextColor,
                 textAlign = TextAlign.Center,
             ),
-        )
-        Spacer(modifier = GlanceModifier.height(8.dp))
-        Image(
-            provider = ImageProvider(R.drawable.ic_widget_refresh),
-            contentDescription = context.getString(R.string.common_refresh),
-            modifier = GlanceModifier
-                .size(28.dp)
-                .clickable(widgetRefreshAction(WidgetAnalyticsSize.Small)),
         )
     }
 }
