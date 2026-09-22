@@ -11,6 +11,7 @@ import com.yourssu.data.todoUniqueKey
 import com.yourssu.ssutime.v2.accessToken
 import com.yourssu.ssutime.v2.analytics.SentryExceptionReporter
 import com.yourssu.ssutime.v2.network.ApiRepository
+import com.yourssu.ssutime.v2.notification.canPostCallAlert
 import com.yourssu.ssutime.v2.notification.showCallAlert
 import com.yourssu.ssutime.v2.screen.login.LoginRepository
 import com.yourssu.ssutime.v2.screen.main.LmsRefreshRepository
@@ -115,6 +116,11 @@ class LmsRefreshMessagingService : FirebaseMessagingService(), KoinComponent {
         val alertData = runBlocking { mainRepository.getAlertData() }
         if (!alertData.allowCallAlert) {
             Log.i(TAG, "전화 알림 설정이 꺼져 있어 FCM 마감 임박 전화 알림을 표시하지 않습니다.")
+            return
+        }
+
+        if (!canPostCallAlert()) {
+            Log.i(TAG, "시스템 설정에서 알림 또는 마감 전화 알림 채널이 비활성화되어 있어 FCM 마감 임박 전화 알림을 건너뜁니다.")
             return
         }
 

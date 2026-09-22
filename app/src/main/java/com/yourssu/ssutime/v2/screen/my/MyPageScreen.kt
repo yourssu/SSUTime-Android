@@ -78,6 +78,7 @@ import com.yourssu.ssutime.v2.R
 import com.yourssu.ssutime.v2.SSUCyberAccountConnectedBadge
 import com.yourssu.ssutime.v2.SSUCyberAccountHelperBadge
 import com.yourssu.ssutime.v2.analytics.Analytics
+import com.yourssu.ssutime.v2.notification.canPostCallAlert
 import com.yourssu.ssutime.v2.ui.theme.BLACK
 import com.yourssu.ssutime.v2.ui.theme.N100
 import com.yourssu.ssutime.v2.ui.theme.N200
@@ -235,7 +236,7 @@ fun MyPageContent(
     fun requestEnableCallAlert(thresholdMinutes: Long = alertData.callingAlertThresholdMinutes) {
         pendingCallAlertThresholdMinutes = thresholdMinutes
         when {
-            !context.canPostNotifications() -> {
+            !context.canPostCallAlert() -> {
                 openNotificationSettings(NotificationSettingsRequest.CallAlertPostNotifications)
             }
 
@@ -261,7 +262,7 @@ fun MyPageContent(
             }
 
             NotificationSettingsRequest.CallAlertPostNotifications -> {
-                if (context.canPostNotifications()) {
+                if (context.canPostCallAlert()) {
                     val thresholdMinutes = pendingCallAlertThresholdMinutes
                         ?: alertData.callingAlertThresholdMinutes
                     if (context.canUseFullScreenIntent()) {
@@ -274,7 +275,7 @@ fun MyPageContent(
             }
 
             NotificationSettingsRequest.CallAlertFullScreenIntent -> {
-                if (context.canPostNotifications() && context.canUseFullScreenIntent()) {
+                if (context.canPostCallAlert() && context.canUseFullScreenIntent()) {
                     enableCallAlert(
                         pendingCallAlertThresholdMinutes ?: alertData.callingAlertThresholdMinutes
                     )
@@ -644,12 +645,15 @@ private enum class NotificationSettingsRequest {
     CallAlertFullScreenIntent,
 }
 
-private fun Context.canPostNotifications(): Boolean =
-    Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
-        ContextCompat.checkSelfPermission(
-            this,
-            Manifest.permission.POST_NOTIFICATIONS,
-        ) == PackageManager.PERMISSION_GRANTED
+private fun Context.canPostNotifications(): Boolean {
+    val notificationManager = getSystemService(NotificationManager::class.java) ?: return false
+    return notificationManager.areNotificationsEnabled() &&
+        (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+            ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.POST_NOTIFICATIONS,
+            ) == PackageManager.PERMISSION_GRANTED)
+}
 
 private fun Context.canUseFullScreenIntent(): Boolean {
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
