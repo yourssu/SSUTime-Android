@@ -38,7 +38,7 @@
     <string name="onboarding_tip_assignment">LearningX [Assignment]</string>
     <string name="onboarding_tip_quiz">LearningX [Quiz]</string>
     <string name="onboarding_tip_lecture">LearningX [Lecture]</string>
-    <string name="onboarding_tip_cyber_excluded">Soongsil Cyber University lectures are not included.</string>
+    <string name="onboarding_tip_cyber_excluded">You can also view Soongsil Cyber University lectures!</string>
     <string name="cyber_connect_title">Connect Soongsil Cyber University</string>
     <string name="cyber_connect_login">Log in</string>
     <string name="cyber_title">Soongsil Cyber University</string>

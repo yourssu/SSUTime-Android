@@ -37,7 +37,7 @@
     <string name="onboarding_tip_assignment">LearningX [과제]</string>
     <string name="onboarding_tip_quiz">LearningX [퀴즈]</string>
     <string name="onboarding_tip_lecture">LearningX [강의]</string>
-    <string name="onboarding_tip_cyber_excluded">숭실 사이버 강의는 포함되지 않아요</string>
+    <string name="onboarding_tip_cyber_excluded">숭실 사이버 대학 강의도 볼 수 있어요!</string>
     <string name="cyber_connect_title">숭실 사이버 대학 연결하기</string>
     <string name="cyber_connect_login">로그인</string>
     <string name="cyber_title">숭실 사이버 대학</string>
