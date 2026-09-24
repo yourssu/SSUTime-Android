@@ -153,4 +153,31 @@ class CyberTodoMapperTest {
         // 1주차 1강(출석), 2주차 2강(100%), 3주차 1강(결석)은 submitted에 포함
         assertEquals(3, submitted.size)
     }
+
+    @Test
+    fun mapToSubjectInfo_removesTrailingParenthesesWithText() {
+        val subject = CyberSubject(
+            name = "AI리터러시와 비판적 사고(2026-2 숭실대 학점교류)",
+            category = "교양선택",
+            professor = "김교수",
+            credit = "3",
+            year = "2026",
+            semesterCode = "20",
+            courseCode = "05083",
+            deptCode = "001",
+            userNo = "12345",
+            progressPercent = 0,
+        )
+        val subjectInfo = CyberTodoMapper.mapToSubjectInfo(subject)
+        assertEquals("AI리터러시와 비판적 사고", subjectInfo.name)
+    }
+
+    @Test
+    fun cleanCyberSubjectName_removesVariousTrailingParentheses() {
+        assertEquals("AI리터러시와 비판적 사고", CyberTodoMapper.cleanCyberSubjectName("AI리터러시와 비판적 사고(2026-2 숭실대 학점교류)"))
+        assertEquals("AI리터러시와 비판적 사고", CyberTodoMapper.cleanCyberSubjectName("AI리터러시와 비판적 사고 (2026-2 숭실대 학점교류)"))
+        assertEquals("기초 프로그래밍", CyberTodoMapper.cleanCyberSubjectName("기초 프로그래밍 (학점교류)"))
+        assertEquals("운영체제", CyberTodoMapper.cleanCyberSubjectName("운영체제(2026-1)"))
+        assertEquals("인공지능개론", CyberTodoMapper.cleanCyberSubjectName("인공지능개론"))
+    }
 }

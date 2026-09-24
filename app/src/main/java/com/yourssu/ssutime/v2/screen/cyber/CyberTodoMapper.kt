@@ -112,10 +112,16 @@ object CyberTodoMapper {
         }
     }
 
+    private val TRAILING_PARENTHESES_REGEX = Regex("""\s*[(\uFF08][^)\uFF09]*[)\uFF09]\s*$""")
+
+    internal fun cleanCyberSubjectName(name: String): String {
+        return name.replace(TRAILING_PARENTHESES_REGEX, "").trim()
+    }
+
     fun mapToSubjectInfo(subject: CyberSubject): SubjectInfo {
         return SubjectInfo(
             id = toCyberSubjectId(subject),
-            name = subject.name,
+            name = cleanCyberSubjectName(subject.name),
             professor = subject.professor,
             discussions = emptyList(),
         )
