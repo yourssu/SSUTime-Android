@@ -197,6 +197,7 @@
     <string name="todo_detail_ai_summary_banner">첨부된 파일 내용을 ai가 요약했어요.</string>
     <string name="todo_detail_ai_summary_icon_content_description">AI 요약 아이콘</string>
     <string name="todo_detail_open_lms">LMS 바로가기</string>
+    <string name="todo_detail_open_cyber">숭사대 바로가기</string>
     <string name="todo_detail_late_submission_available">마감이 지났지만 지각 제출이 가능한 과제예요!</string>
     <string name="todo_duration_hours">%1$d시간</string>
     <string name="todo_duration_minutes">%1$d분</string>

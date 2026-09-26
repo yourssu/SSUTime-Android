@@ -513,8 +513,13 @@ fun TodoDetailTabContent(
             modifier = Modifier.fillMaxWidth(),
             contentAlignment = Alignment.TopEnd
         ) {
+            val buttonTextRes = if (todo.isCyber()) {
+                R.string.todo_detail_open_cyber
+            } else {
+                R.string.todo_detail_open_lms
+            }
             SButton_Small(
-                labelText = stringResource(R.string.todo_detail_open_lms),
+                labelText = stringResource(buttonTextRes),
                 textStyle = SSUType.Label3Medium,
                 onClick = {
                     Analytics.lmsLinkClick()
