@@ -106,6 +106,7 @@ fun TodoDetailScreen(
     if (showHidePopup) {
         Dialog(onDismissRequest = { showHidePopup = false }) {
             HideTodoPopup(
+                todoType = todo.type,
                 onCancel = { showHidePopup = false },
                 onConfirm = {
                     Analytics.hideConfirm()
@@ -696,9 +697,16 @@ fun TodoOverView(
 
 @Composable
 fun HideTodoPopup(
+    todoType: TodoType = TodoType.ASSIGNMENT,
     onCancel: () -> Unit = {},
     onConfirm: () -> Unit = {},
 ) {
+    val titleRes = when (todoType) {
+        TodoType.QUIZ -> R.string.quiz_hide_popup_title
+        TodoType.COMMONS -> R.string.common_hide_popup_title
+        else -> R.string.assignment_hide_popup_title
+    }
+
     Column(
         Modifier
             .width(300.dp)
@@ -709,7 +717,7 @@ fun HideTodoPopup(
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Text(
-            text = stringResource(R.string.todo_hide_popup_title),
+            text = stringResource(titleRes),
             style = SSUType.H4SemiBold
         )
         Text(

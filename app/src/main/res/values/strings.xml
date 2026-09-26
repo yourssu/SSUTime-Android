@@ -133,6 +133,9 @@
     <string name="my_hidden_todos">Hidden Tasks</string>
     <string name="todo_hide_from_list">Hide from list</string>
     <string name="todo_hide_popup_title">Hide assignment?</string>
+    <string name="assignment_hide_popup_title">Hide assignment?</string>
+    <string name="common_hide_popup_title">Hide video?</string>
+    <string name="quiz_hide_popup_title">Hide quiz?</string>
     <string name="todo_hide_popup_message">You can restore it from [Hidden Tasks] in My Page.</string>
     <string name="hidden_todos_empty">No hidden tasks</string>
     <string name="hidden_todos_restore">Restore</string>
