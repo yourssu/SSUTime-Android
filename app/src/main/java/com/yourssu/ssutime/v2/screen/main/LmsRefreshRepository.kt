@@ -26,6 +26,7 @@ import com.yourssu.ssutime.v2.screen.cyber.CyberRepository
 import com.yourssu.ssutime.v2.screen.cyber.CyberTodoResult
 import com.yourssu.ssutime.v2.screen.login.LoginRepository
 import com.yourssu.ssutime.v2.todo.sortedByDeadlineThenName
+import com.yourssu.ssutime.v2.todo.toTodoDeadlineInstantOrNull
 import io.github.chlwhdtn03.LmsApi
 import io.github.chlwhdtn03.data.Lms.Subject
 import io.github.chlwhdtn03.data.Lms.Submission
@@ -571,7 +572,8 @@ class LmsRefreshRepository(
         }
     }
 
-    private fun buildTodoData(
+    internal companion object {
+        fun buildTodoData(
         subjects: List<Subject>,
         subjectInfos: List<SubjectInfo>,
         previousData: TodoData,
@@ -680,8 +682,58 @@ class LmsRefreshRepository(
             lmsSubjectInfos
         }
 
+        // 현재 학기에 수강 중인 전체 과목 ID 집합 (이번 학기 과목에 대해서만 보존 적용)
+        val currentSubjectIds = subjects.map { it.id }.toSet()
+        val cyberSubjectIds = if (isCyberConnected) cyberResult.subjects.map { it.id }.toSet() else emptySet()
+        val allCurrentSubjectIds = currentSubjectIds + cyberSubjectIds
+        val currentNow = Instant.now()
+
+        // 1. 미완료 할 일 스마트 머지: 네트워크 일시 누락으로 빠진 미완료 할 일 보존
+        val previousCandidateTodos = previousData.todos + previousData.hiddenTodos
+        val preservedTodos = previousCandidateTodos.filter { prevTodo ->
+            val sid = prevTodo.subject?.id ?: prevTodo.subjectId
+            if (sid !in allCurrentSubjectIds) return@filter false
+
+            if (allTodos.any { isSameTodoItem(it, prevTodo) }) return@filter false
+            if (allSubmitted.any { isSameTodoItem(it, prevTodo) }) return@filter false
+
+            val deadlineInstant = prevTodo.due_date.toTodoDeadlineInstantOrNull()
+            if (deadlineInstant != null && deadlineInstant.isBefore(currentNow)) {
+                return@filter false
+            }
+
+            true
+        }.map { todo ->
+            val sid = todo.subject?.id ?: todo.subjectId
+            val updatedSubject = subjectInfoById[sid] ?: todo.subject
+            todo.copy(subject = updatedSubject)
+        }
+
+        val mergedAllTodos = (allTodos + preservedTodos)
+            .distinctBy { it.todoUniqueKey() }
+            .sortedByDeadlineThenName()
+
+        // 2. 제출 완료 할 일 스마트 머지: 일시 누락된 제출 목록 보존
+        val preservedSubmitted = previousData.submitted.filter { prevSub ->
+            val sid = prevSub.subject?.id ?: prevSub.subjectId
+            if (sid !in allCurrentSubjectIds) return@filter false
+
+            if (allSubmitted.any { isSameTodoItem(it, prevSub) }) return@filter false
+            if (mergedAllTodos.any { isSameTodoItem(it, prevSub) }) return@filter false
+
+            true
+        }.map { sub ->
+            val sid = sub.subject?.id ?: sub.subjectId
+            val updatedSubject = subjectInfoById[sid] ?: sub.subject
+            sub.copy(subject = updatedSubject)
+        }
+
+        val mergedAllSubmitted = (allSubmitted + preservedSubmitted)
+            .distinctBy { it.todoUniqueKey() }
+            .sortedByDeadlineThenName()
+
         val hiddenKeysSet = previousData.hiddenTodoKeys.toSet()
-        val (hiddenNewTodos, activeNewTodos) = allTodos.partition { it.todoUniqueKey() in hiddenKeysSet }
+        val (hiddenNewTodos, activeNewTodos) = mergedAllTodos.partition { it.todoUniqueKey() in hiddenKeysSet }
 
         val allReadDiscussionIds = (
             locallyReadDiscussionIds +
@@ -692,12 +744,32 @@ class LmsRefreshRepository(
 
         return previousData.copy(
             todos = activeNewTodos,
-            submitted = allSubmitted,
+            submitted = mergedAllSubmitted,
             subjects = allSubjectInfos,
             hiddenTodos = hiddenNewTodos,
             loadedAt = loadedAt,
             readDiscussionIds = allReadDiscussionIds,
         )
+    }
+
+    private fun isSameTodoItem(a: TodoInfo, b: TodoInfo): Boolean {
+        val aSubjectId = a.subject?.id ?: a.subjectId
+        val bSubjectId = b.subject?.id ?: b.subjectId
+        if (aSubjectId != bSubjectId && aSubjectId > 0 && bSubjectId > 0) return false
+
+        if (a.todoId > 0 && b.todoId > 0) return a.todoId == b.todoId
+        if (a.moduleItemId > 0 && b.moduleItemId > 0) return a.moduleItemId == b.moduleItemId
+        if (a.componentId > 0 && b.componentId > 0) return a.componentId == b.componentId
+
+        val aTitle = a.title.trim()
+        val bTitle = b.title.trim()
+        if (aTitle.isNotEmpty() && bTitle.isNotEmpty() && aTitle.equals(bTitle, ignoreCase = true)) {
+            if (a.due_date.isBlank() || b.due_date.isBlank() || a.due_date == b.due_date) {
+                return true
+            }
+        }
+
+        return false
     }
 
     private fun buildSubjectInfos(
@@ -734,6 +806,7 @@ class LmsRefreshRepository(
             )
         }
         .distinctBy { it.id }
+    }
 
     private suspend fun markBackgroundRefreshStarted(startedAt: Instant, requestId: String?) {
         mainRepository.updateTodoData { currentData ->
