@@ -56,7 +56,7 @@ private const val BACKGROUND_REFRESH_SUCCESS = "success"
 private const val BACKGROUND_REFRESH_FAILED = "failed"
 private const val LMS_API_TOKEN_ERROR_MESSAGE = "API 토큰값을 불러오지 못했습니다. 다시 시도해주세요."
 private const val LMS_API_TOKEN_MAX_RETRIES = 2
-private val BACKGROUND_REFRESH_LOCK_WINDOW: Duration = Duration.ofMinutes(10)
+private val BACKGROUND_REFRESH_LOCK_WINDOW: Duration = Duration.ofMinutes(3)
 private val TRAILING_COURSE_NUMBER = Regex("\\s*\\(\\d+\\)\\s*$")
 
 sealed interface LmsRefreshStage {

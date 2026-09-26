@@ -19,6 +19,8 @@ import com.yourssu.ssutime.v2.screen.main.MainRepository
 import com.yourssu.ssutime.v2.screen.main.RefreshSource
 import com.yourssu.ssutime.v2.screen.main.TodoRefreshResult
 import com.yourssu.ssutime.v2.screen.main.sortedForMainDisplay
+import com.yourssu.ssutime.v2.todo.toTodoDeadlineInstantOrNull
+import com.yourssu.ssutime.v2.widget.updateAllTodoWidgets
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -89,6 +91,12 @@ class LmsRefreshMessagingService : FirebaseMessagingService(), KoinComponent {
             is TodoRefreshResult.Failure -> Log.e(TAG, refreshResult.message, refreshResult.throwable)
             is TodoRefreshResult.Skipped -> Log.i(TAG, refreshResult.reason)
         }
+
+        runBlocking {
+            runCatching {
+                updateAllTodoWidgets(this@LmsRefreshMessagingService)
+            }
+        }
     }
 
     private fun registerTokenIfLoggedIn(token: String) {
@@ -138,8 +146,11 @@ class LmsRefreshMessagingService : FirebaseMessagingService(), KoinComponent {
     }
 }
 
-private fun List<TodoInfo>.selectMostUrgentTodo(): TodoInfo? =
-    sortedForMainDisplay().firstOrNull()
+private fun List<TodoInfo>.selectMostUrgentTodo(now: Instant = Instant.now()): TodoInfo? =
+    sortedForMainDisplay().firstOrNull { todo ->
+        val deadline = todo.due_date.toTodoDeadlineInstantOrNull()
+        deadline == null || deadline.isAfter(now)
+    }
 
 private fun RemoteMessage.toFallbackTodoInfo(): TodoInfo? {
     val title = data["todoTitle"]

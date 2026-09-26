@@ -777,6 +777,13 @@ internal fun TodoData.toTodoSummaryUiState(
         .sortedByDeadlineThenName()
         .map { it.toTodoSummaryItem(context, now) }
 
+    sortedTodos.firstOrNull { !it.isLate }?.let { primaryItem ->
+        val dueInstant = primaryItem.countdownTargetEpochMillis?.let { Instant.ofEpochMilli(it) }
+        if (dueInstant != null) {
+            scheduleWidgetDeadlineUpdate(context, dueInstant)
+        }
+    }
+
     return TodoSummaryUiState(
         primary = sortedTodos.firstOrNull(),
         items = sortedTodos.take(size.visibleTodoCount),
@@ -806,7 +813,7 @@ private fun TodoInfo.toTodoSummaryItem(context: Context, now: Instant): TodoSumm
         },
         countdownTargetEpochMillis = dueInstant
             .toEpochMilli()
-            .takeIf { remainingSeconds in 1..SUMMARY_SECONDS_PER_DAY },
+            .takeIf { rawRemainingSeconds in 1..SUMMARY_SECONDS_PER_DAY },
         dDayText = dDayText,
         isLate = rawRemainingSeconds < 0L,
     )

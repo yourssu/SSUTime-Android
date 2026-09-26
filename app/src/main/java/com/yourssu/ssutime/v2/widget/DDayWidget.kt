@@ -58,7 +58,7 @@ import com.yourssu.ssutime.v2.screen.main.TodoRefreshResult
 import com.yourssu.ssutime.v2.screen.main.todoDataStore
 import com.yourssu.ssutime.v2.todo.localizedLabel
 import com.yourssu.ssutime.v2.todo.sortedByDeadlineThenName
-import com.yourssu.ssutime.v2.todo.toTodoDeadlineInstant
+import com.yourssu.ssutime.v2.todo.toTodoDeadlineInstantOrNull
 import com.yourssu.ssutime.v2.ui.theme.SSUType
 import kotlinx.coroutines.flow.first
 import org.koin.core.component.KoinComponent
@@ -333,10 +333,10 @@ private data class DDayWidgetUiState(
 )
 
 private fun TodoData.toWidgetUiState(context: Context): DDayWidgetUiState {
-    val selectedTodo = todos.selectMostUrgentTodo()
     val now = Instant.now()
+    val selectedTodo = todos.selectMostUrgentTodo(now)
     val targetInstant = selectedTodo?.let {
-        it.due_date.toTodoDeadlineInstant()
+        it.due_date.toTodoDeadlineInstantOrNull()
     }
     val remainingDays = selectedTodo?.let {
         getRemainingDays(it.due_date, now)
@@ -345,7 +345,11 @@ private fun TodoData.toWidgetUiState(context: Context): DDayWidgetUiState {
         ChronoUnit.SECONDS.between(now, it)
     } ?: Long.MAX_VALUE
     val displayRemainingSeconds = remainingSeconds.coerceAtLeast(0L)
-    val isRemainingTimeText = selectedTodo != null && displayRemainingSeconds <= SECONDS_PER_DAY
+    val isRemainingTimeText = selectedTodo != null && remainingSeconds in 1..SECONDS_PER_DAY
+
+    if (selectedTodo != null && targetInstant != null && remainingSeconds > 0) {
+        scheduleWidgetDeadlineUpdate(context, targetInstant)
+    }
 
     return DDayWidgetUiState(
         hasTodo = selectedTodo != null,
@@ -374,8 +378,13 @@ private fun TodoData.toWidgetUiState(context: Context): DDayWidgetUiState {
     )
 }
 
-private fun List<TodoInfo>.selectMostUrgentTodo(): TodoInfo? =
-    sortedByDeadlineThenName().firstOrNull()
+internal fun List<TodoInfo>.selectMostUrgentTodo(now: Instant = Instant.now()): TodoInfo? {
+    val sorted = sortedByDeadlineThenName()
+    return sorted.firstOrNull { todo ->
+        val deadline = todo.due_date.toTodoDeadlineInstantOrNull()
+        deadline == null || deadline.isAfter(now)
+    }
+}
 
 private fun TodoInfo?.toDdayText(remainingDays: Long, remainingSeconds: Long): String {
     if (this == null) {

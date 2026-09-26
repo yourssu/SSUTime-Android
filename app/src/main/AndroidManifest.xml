@@ -74,6 +74,10 @@
             android:exported="false" />
 
         <receiver
+            android:name=".widget.WidgetDeadlineReceiver"
+            android:exported="false" />
+
+        <receiver
             android:name=".notification.DeadlineReminderRescheduleReceiver"
             android:exported="true">
             <intent-filter>

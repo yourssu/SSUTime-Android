@@ -6,7 +6,7 @@ import kotlinx.serialization.Serializable
 data class TodoInfo(
     val todoId: Int = 0, // 과제일때 유효한 ID
     val title: String, // 제목
-    val due_date: String, // 마감 기한
+    val due_date: String, // 약마감 기한
     val type: TodoType, // 제목
     val subject: SubjectInfo?, // 과목 정보
     val submittedAt: String = "", // 제출 시각
