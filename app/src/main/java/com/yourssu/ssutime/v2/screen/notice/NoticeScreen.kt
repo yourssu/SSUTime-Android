@@ -285,24 +285,20 @@ fun NoticeScreen(
         ) {
             item {
                 Spacer(modifier = Modifier.height(8.dp))
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
-                        contentDescription = stringResource(R.string.common_back),
-                        tint = BLACK,
-                        modifier = Modifier
-                            .size(28.dp)
-                            .clickable(onClick = onBackClick)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = stringResource(R.string.notice_title),
-                        style = SSUType.H2SemiBold,
-                        color = BLACK
-                    )
-                }
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+                    contentDescription = stringResource(R.string.common_back),
+                    tint = BLACK,
+                    modifier = Modifier
+                        .size(28.dp)
+                        .clickable(onClick = onBackClick)
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    text = stringResource(R.string.notice_title),
+                    style = SSUType.H2SemiBold,
+                    color = BLACK
+                )
                 Spacer(modifier = Modifier.height(16.dp))
 
                 if (effectiveSubjects.isNotEmpty()) {

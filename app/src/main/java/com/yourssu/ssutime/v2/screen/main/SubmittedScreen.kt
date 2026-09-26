@@ -66,18 +66,20 @@ fun SubmittedScreen(
             .background(WHITE)
             .padding(16.dp)
     ) {
+        Icon(
+            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+            contentDescription = stringResource(R.string.common_back),
+            tint = BLACK,
+            modifier = Modifier
+                .size(28.dp)
+                .clickable(onClick = onBackClick)
+        )
+
+        Spacer(Modifier.height(16.dp))
+
         Row(
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
-                contentDescription = stringResource(R.string.common_back),
-                tint = BLACK,
-                modifier = Modifier
-                    .size(28.dp)
-                    .clickable(onClick = onBackClick)
-            )
-            Spacer(Modifier.width(8.dp))
             Text(
                 text = stringResource(R.string.main_submitted_title),
                 style = SSUType.H3SemiBold

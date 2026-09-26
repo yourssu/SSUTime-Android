@@ -251,12 +251,17 @@ fun TodoDetailTabArea(
         }
     } else {
         val context = LocalContext.current
+        val buttonTextRes = if (todo.isCyber()) {
+            R.string.todo_detail_open_cyber
+        } else {
+            R.string.todo_detail_open_lms
+        }
         SButton(
             modifier = Modifier
                 .padding(horizontal = 16.dp)
                 .padding(bottom = 16.dp)
                 .fillMaxWidth(),
-            labelText = stringResource(R.string.todo_detail_open_lms),
+            labelText = stringResource(buttonTextRes),
             textStyle = SSUType.Label3Medium,
             onClick = {
                 Analytics.lmsLinkClick()
@@ -603,34 +608,31 @@ fun TodoOverView(
         modifier = Modifier
             .padding(top = 4.dp)
     ) {
-        Column(
-            verticalArrangement = Arrangement.spacedBy(5.dp)
-        ) {
+        Column {
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+                contentDescription = stringResource(R.string.common_back),
+                tint = N600,
+                modifier = Modifier
+                    .size(28.dp)
+                    .clickable(onClick = onPreviousClick)
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
             Text(
                 text = todo.subject?.name ?: stringResource(R.string.common_unknown_subject),
                 style = SSUType.H5SemiBold.copy(color = N500),
             )
 
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
-                    contentDescription = stringResource(R.string.common_back),
-                    tint = N600,
-                    modifier = Modifier
-                        .size(28.dp)
-                        .clickable(onClick = onPreviousClick)
-                )
-                Spacer(Modifier.width(8.dp))
-                Text(
-                    text = todo.title,
-                    style = SSUType.H2SemiBold.copy(color = N600),
-                    modifier = Modifier.weight(1f, fill = false),
-                )
-            }
+            Spacer(modifier = Modifier.height(4.dp))
 
-            Spacer(modifier = Modifier.height(5.dp))
+            Text(
+                text = todo.title,
+                style = SSUType.H2SemiBold.copy(color = N600),
+            )
+
+            Spacer(modifier = Modifier.height(10.dp))
 
             Box(
                 modifier = Modifier

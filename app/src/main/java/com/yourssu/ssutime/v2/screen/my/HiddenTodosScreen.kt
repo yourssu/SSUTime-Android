@@ -91,11 +91,10 @@ fun HiddenTodosContent(
             onLogoClick = onBackClick,
         )
 
-        Row(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
@@ -105,18 +104,22 @@ fun HiddenTodosContent(
                     .size(28.dp)
                     .clickable(onClick = onBackClick)
             )
-            Spacer(Modifier.width(8.dp))
-            Text(
-                text = stringResource(R.string.my_hidden_todos),
-                style = SSUType.H2SemiBold,
-                color = BLACK
-            )
-            Spacer(Modifier.width(8.dp))
-            Text(
-                text = "${hiddenTodos.size}",
-                style = SSUType.H2SemiBold,
-                color = R400
-            )
+            Spacer(Modifier.height(16.dp))
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = stringResource(R.string.my_hidden_todos),
+                    style = SSUType.H2SemiBold,
+                    color = BLACK
+                )
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    text = "${hiddenTodos.size}",
+                    style = SSUType.H2SemiBold,
+                    color = R400
+                )
+            }
         }
 
         if (hiddenTodos.isEmpty()) {

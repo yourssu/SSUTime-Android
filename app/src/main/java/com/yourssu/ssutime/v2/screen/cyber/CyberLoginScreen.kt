@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
@@ -71,26 +70,24 @@ fun CyberLoginScreen(
                     .fillMaxSize()
                     .padding(horizontal = 16.dp),
             ) {
-                Spacer(Modifier.height(20.dp))
+                Spacer(Modifier.height(8.dp))
 
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
-                        contentDescription = stringResource(R.string.common_back),
-                        tint = BLACK,
-                        modifier = Modifier
-                            .size(28.dp)
-                            .clickable(onClick = onBackClick)
-                    )
-                    Spacer(Modifier.width(8.dp))
-                    Text(
-                        text = stringResource(R.string.cyber_login_title),
-                        style = SSUType.H2SemiBold,
-                        color = BLACK,
-                    )
-                }
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+                    contentDescription = stringResource(R.string.common_back),
+                    tint = BLACK,
+                    modifier = Modifier
+                        .size(28.dp)
+                        .clickable(onClick = onBackClick)
+                )
+
+                Spacer(Modifier.height(16.dp))
+
+                Text(
+                    text = stringResource(R.string.cyber_login_title),
+                    style = SSUType.H2SemiBold,
+                    color = BLACK,
+                )
 
                 Spacer(Modifier.height(36.dp))
 
