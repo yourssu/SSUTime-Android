@@ -59,7 +59,7 @@
     <string name="main_date_placeholder">00월 00일 기준</string>
     <string name="main_widget_badge_title">슈타임 위젯 등록하기</string>
     <string name="main_widget_badge_description">마감 D-day를 보여드려요</string>
-    <string name="main_urgent_tasks_title">가장 급한 과제예요!</string>
+    <string name="main_urgent_tasks_title">가장 급한 할 일이에요</string>
     <string name="main_relaxed_tasks_title">여유가 있는 할 일 리스트</string>
     <string name="main_todo_list_title">과제 목록</string>
     <string name="main_empty_todos">제출할 과제가 없어요</string>
