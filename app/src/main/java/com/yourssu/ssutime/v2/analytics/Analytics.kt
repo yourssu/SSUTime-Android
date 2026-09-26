@@ -77,9 +77,8 @@ object Analytics {
         flushImmediately = true,
     )
 
-    fun loginFail(errorType: LoginFailErrorType) = capture(
+    fun loginFail(errorType: LoginFailErrorType? = null) = capture(
         event = "login_fail",
-        properties = mapOf("error_type" to errorType.value),
         flushImmediately = true,
     )
 
@@ -89,12 +88,10 @@ object Analytics {
 
     fun alarmPermission(
         isAllowed: Boolean,
-        entryPoint: String = "onboarding",
     ) = capture(
         event = "alarm_permission",
         properties = mapOf(
             "is_allowed" to isAllowed,
-            "entry_point" to entryPoint,
         ),
         flushImmediately = true,
     )
@@ -102,6 +99,8 @@ object Analytics {
     fun refreshClick() = capture("refresh_click")
 
     fun pullToRefresh() = capture("pull_to_refresh")
+
+    fun submittedAttachmentDownload() = capture("submitted_attachment_download")
 
     fun viewTaskDetail(
         detailType: String,
@@ -120,6 +119,8 @@ object Analytics {
     )
 
     fun lmsLinkClick() = capture("lms_link_click")
+
+    fun taskAttachmentClick() = capture("task_attachment_click")
 
     fun hideConfirm() = capture(
         event = "hide_confirm",
@@ -161,6 +162,11 @@ object Analytics {
 
     fun viewCalendar() = capture("view_calendar")
 
+    fun calendarMonthChange(direction: String) = capture(
+        event = "calendar_month_change",
+        properties = mapOf("direction" to direction),
+    )
+
     fun calendarDateClick() = capture("calendar_date_click")
 
     fun viewNotice() = capture("view_notice")
@@ -195,6 +201,8 @@ object Analytics {
     )
 
     fun cyberFindIdClick() = capture("cyber_find_id_click")
+
+    fun cyberBannerDismiss() = capture("cyber_banner_dismiss")
 
     fun cyberDisconnectClick() = capture(
         event = "cyber_disconnect_click",
@@ -296,9 +304,26 @@ object Analytics {
         flushImmediately = true,
     )
 
-    fun callAlarmSetting(selectedTime: String) = capture(
+    fun callAlarmSetting(
+        selectedTime: String,
+        entryPoint: String = "repopup",
+    ) = capture(
         event = "call_alarm_setting",
-        properties = mapOf("selected_time" to selectedTime),
+        properties = mapOf(
+            "entry_point" to entryPoint,
+            "selected_time" to selectedTime,
+        ),
+        flushImmediately = true,
+    )
+
+    fun settingLabMode(isEnabled: Boolean) = capture(
+        event = "setting_lab_mode",
+        properties = mapOf("is_enabled" to isEnabled),
+        flushImmediately = true,
+    )
+
+    fun withdrawClick() = capture(
+        event = "withdraw_click",
         flushImmediately = true,
     )
 

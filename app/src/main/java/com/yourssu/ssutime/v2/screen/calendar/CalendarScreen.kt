@@ -302,8 +302,14 @@ fun CalendarScreenContent(
                 CalendarMonthHeader(
                     currentYearMonth = currentYearMonth,
                     totalCount = totalMonthEventCount,
-                    onPreviousMonth = { currentYearMonth = currentYearMonth.minusMonths(1) },
-                    onNextMonth = { currentYearMonth = currentYearMonth.plusMonths(1) }
+                    onPreviousMonth = {
+                        Analytics.calendarMonthChange(direction = "prev")
+                        currentYearMonth = currentYearMonth.minusMonths(1)
+                    },
+                    onNextMonth = {
+                        Analytics.calendarMonthChange(direction = "next")
+                        currentYearMonth = currentYearMonth.plusMonths(1)
+                    }
                 )
                 Spacer(modifier = Modifier.height(16.dp))
             }

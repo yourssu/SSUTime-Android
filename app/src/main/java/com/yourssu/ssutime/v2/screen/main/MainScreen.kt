@@ -363,7 +363,8 @@ fun MainScreen(
         }
 
         if(viewModel.requiredShowAlertBottomSheet.value) {
-            if (viewModel.isCallAlertRepopup.value) {
+            val isRepopup = viewModel.isCallAlertRepopup.value
+            if (isRepopup) {
                 LaunchedEffect(Unit) {
                     Analytics.callAlarmRepopupView()
                 }
@@ -372,6 +373,7 @@ fun MainScreen(
                 onConfirmClick = {
                     Analytics.callAlarmSetting(
                         selectedTime = Analytics.selectedTimeFromMinutes(it) ?: "reject",
+                        entryPoint = if (isRepopup) "repopup" else "onboarding",
                     )
                     val allowSystem = ContextCompat.checkSelfPermission(
                         context,

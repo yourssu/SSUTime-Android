@@ -152,6 +152,7 @@ fun MainContainerScreen(
                         onNavigateToCyberLogin()
                     },
                     onDismiss = {
+                        Analytics.cyberBannerDismiss()
                         showCyberPopup = false
                         coroutineScope.launch {
                             cyberRepository.dismissBanner()

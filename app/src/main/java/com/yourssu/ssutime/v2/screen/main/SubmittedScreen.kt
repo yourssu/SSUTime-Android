@@ -37,6 +37,7 @@ import com.yourssu.data.SubjectInfo
 import com.yourssu.data.TodoInfo
 import com.yourssu.data.TodoType
 import com.yourssu.ssutime.v2.R
+import com.yourssu.ssutime.v2.analytics.Analytics
 import com.yourssu.ssutime.v2.todo.localizedLabel
 import com.yourssu.ssutime.v2.ui.theme.BLACK
 import com.yourssu.ssutime.v2.ui.theme.G100
@@ -204,6 +205,7 @@ fun SubmittedItem(
                             .border(1.dp, N200, RoundedCornerShape(8.dp))
                             .background(WHITE)
                             .clickable {
+                                Analytics.submittedAttachmentDownload()
                                 if (item.url.isNotBlank()) {
                                     runCatching {
                                         uriHandler.openUri(item.url)

@@ -406,6 +406,7 @@ fun TodoAttachmentSection(
                 TodoAttachmentItem(
                     fileName = fileName,
                     onClick = {
+                        Analytics.taskAttachmentClick()
                         onOpenUrl(attachment.url)
                     }
                 )

@@ -563,6 +563,7 @@ fun MyPageContent(
                 text = stringResource(R.string.my_lab_submitted_files),
                 value = labsData.isEnableSubmittedFile,
                 onValueChanged = { enabled ->
+                    Analytics.settingLabMode(isEnabled = enabled)
                     viewModel.updateLabsData(labsData.copy(isEnableSubmittedFile = enabled))
                 },
                 childOption = null
@@ -589,6 +590,7 @@ fun MyPageContent(
             modifier = Modifier
                 .align(Alignment.CenterHorizontally)
                 .clickable {
+                    Analytics.withdrawClick()
                     viewModel.withdrawAccount()
                 }
         )
