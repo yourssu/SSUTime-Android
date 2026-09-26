@@ -151,12 +151,13 @@ fun MainScreen(
         onResult = {},
     )
     LaunchedEffect(homeEntryVersion) {
+        Analytics.viewHome(
+            taskCount = viewModel.todos.size,
+            urgentCount = viewModel.todos.urgentTodoCount(),
+            entrySource = homeEntrySource,
+        )
+
         if (skipLoadFromMyPageBack) {
-            Analytics.viewHome(
-                taskCount = viewModel.todos.size,
-                urgentCount = viewModel.todos.urgentTodoCount(),
-                entrySource = homeEntrySource,
-            )
             onInitialLmsRefreshSkipConsumed()
             return@LaunchedEffect
         }
@@ -169,21 +170,9 @@ fun MainScreen(
                 allowRefresh = !skipInitialLmsRefresh,
                 showBlockingLoading = !skipInitialLmsRefresh,
                 source = RefreshSource.APP_START,
-                onSuccess = { todoData ->
-                    Analytics.viewHome(
-                        taskCount = todoData.todos.size,
-                        urgentCount = todoData.todos.urgentTodoCount(),
-                        entrySource = homeEntrySource,
-                    )
-                }
             )
         } else {
             viewModel.showNetworkErrorScreen()
-            Analytics.viewHome(
-                taskCount = viewModel.todos.size,
-                urgentCount = viewModel.todos.urgentTodoCount(),
-                entrySource = homeEntrySource,
-            )
         }
         if (skipInitialLmsRefresh) {
             onInitialLmsRefreshSkipConsumed()

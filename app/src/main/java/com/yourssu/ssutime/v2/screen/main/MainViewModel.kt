@@ -153,23 +153,19 @@ class MainViewModel(
         allowRefresh: Boolean = true,
         showBlockingLoading: Boolean = true,
         source: RefreshSource = RefreshSource.APP_START,
-        onSuccess: (TodoData) -> Unit = {},
     ) {
         if (!shouldRunInitialLoad(homeEntryVersion)) {
             return
         }
 
         viewModelScope.launch {
-            val todoData = loadTodos(
+            loadTodos(
                 forceRefresh = forceRefresh,
                 forceLogin = forceLogin,
                 allowRefresh = allowRefresh,
                 showBlockingLoading = showBlockingLoading,
                 source = source,
             )
-            if (todoData != null && !showNetworkError.value) {
-                onSuccess(todoData)
-            }
         }
     }
 
