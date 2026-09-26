@@ -651,9 +651,14 @@ fun TodoOverView(
                     }
 
                     if(estimatedDurationText != stringResource(R.string.ai_estimated_duration_value_unknown)) {
+                        val durationLabelRes = if (todo.type == TodoType.COMMONS) {
+                            R.string.video_lecture_duration
+                        } else {
+                            R.string.ai_estimated_duration
+                        }
                         Row {
                             Text(
-                                text = stringResource(R.string.ai_estimated_duration),
+                                text = stringResource(durationLabelRes),
                                 style = SSUType.Caption1SemiBold.copy(N500)
                             )
                             Spacer(Modifier.weight(1f))
