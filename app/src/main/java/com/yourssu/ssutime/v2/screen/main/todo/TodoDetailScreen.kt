@@ -201,7 +201,7 @@ fun TodoDetailTabArea(
         Spacer(Modifier.fillMaxWidth().height(12.dp).background(color = N100))
 
         Column(
-            modifier = Modifier.padding(16.dp)
+            modifier = Modifier.padding(4.dp)
         ) {
             var selectedDestination by rememberSaveable { mutableIntStateOf(0) }
             val safeIndex = selectedDestination.coerceIn(0, availableTabs.lastIndex)
