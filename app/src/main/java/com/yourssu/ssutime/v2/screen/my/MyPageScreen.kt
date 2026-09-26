@@ -154,7 +154,10 @@ fun MyPageContent(
     val selectedTerm by viewModel.selectedTerm.collectAsStateWithLifecycle()
     val isLogout by remember { viewModel.isLogout }
     var showLogoutPopup by remember { mutableStateOf(false) }
-    val tooltipState = rememberTooltipState(
+    val notificationTooltipState = rememberTooltipState(
+        isPersistent = true
+    )
+    val labsTooltipState = rememberTooltipState(
         isPersistent = true
     )
     val coroutine = rememberCoroutineScope()
@@ -426,11 +429,11 @@ fun MyPageContent(
                             NotificationTooltip()
                         }
                     },
-                    state = tooltipState
+                    state = notificationTooltipState
                 ) {
                     Icon(
                         modifier = Modifier.clickable {
-                            coroutine.launch { tooltipState.show() }
+                            coroutine.launch { notificationTooltipState.show() }
                         },
                         painter = painterResource(R.drawable.ic_alret),
                         tint = N400,
@@ -537,11 +540,11 @@ fun MyPageContent(
                             LabsTooltip()
                         }
                     },
-                    state = tooltipState
+                    state = labsTooltipState
                 ) {
                     Icon(
                         modifier = Modifier.clickable {
-                            coroutine.launch { tooltipState.show() }
+                            coroutine.launch { labsTooltipState.show() }
                         },
                         painter = painterResource(R.drawable.ic_alret),
                         tint = N400,
