@@ -842,7 +842,6 @@ fun TodoList(
                 )
             }
         }
-        Spacer(Modifier.height(80.dp))
     }
 }
 
