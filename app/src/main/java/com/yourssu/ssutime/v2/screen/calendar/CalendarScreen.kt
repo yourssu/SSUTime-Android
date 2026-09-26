@@ -146,6 +146,7 @@ fun CalendarScreen(
     modifier: Modifier = Modifier,
     viewModel: MainViewModel = koinViewModel(),
     onNoticeClick: () -> Unit = {},
+    resetKey: Int = 0,
 ) {
     // SnapshotStateList의 변경을 감지하기 위해 toList()로 상태 전달
     val todos = viewModel.todos.toList()
@@ -153,6 +154,14 @@ fun CalendarScreen(
     val unreadNoticeCount = viewModel.unreadNoticeCount
     val calendarNavController = rememberNavController()
     var currentTodoJson by rememberSaveable { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(resetKey) {
+        if (resetKey > 0) {
+            runCatching {
+                calendarNavController.popBackStack(CALENDAR_MAIN_ROUTE, inclusive = false)
+            }
+        }
+    }
 
     NavHost(
         navController = calendarNavController,

@@ -57,6 +57,9 @@ fun MainContainerScreen(
     val currentRoute = navBackStackEntry?.destination?.route
     val currentTab = MainTab.fromRoute(currentRoute)
     var showCyberPopup by rememberSaveable { mutableStateOf(true) }
+    var homeResetKey by rememberSaveable { androidx.compose.runtime.mutableIntStateOf(0) }
+    var calendarResetKey by rememberSaveable { androidx.compose.runtime.mutableIntStateOf(0) }
+    var myResetKey by rememberSaveable { androidx.compose.runtime.mutableIntStateOf(0) }
     val coroutineScope = rememberCoroutineScope()
 
     val cyberRepository: CyberRepository = koinInject()
@@ -79,6 +82,11 @@ fun MainContainerScreen(
                             launchSingleTop = true
                             restoreState = true
                         }
+                    }
+                    when (tab) {
+                        MainTab.HOME -> homeResetKey++
+                        MainTab.CALENDAR -> calendarResetKey++
+                        MainTab.MY -> myResetKey++
                     }
                 }
             )
@@ -107,17 +115,21 @@ fun MainContainerScreen(
                         skipLoadFromMyPageBack = skipLoadFromMyPageBack,
                         onInitialLmsRefreshSkipConsumed = onInitialLmsRefreshSkipConsumed,
                         onInitialLmsRefreshForceConsumed = onInitialLmsRefreshForceConsumed,
+                        resetKey = homeResetKey,
                     )
                 }
 
                 composable(route = MainTab.CALENDAR.route) {
-                    CalendarScreen()
+                    CalendarScreen(
+                        resetKey = calendarResetKey,
+                    )
                 }
 
                 composable(route = MainTab.MY.route) {
                     MyPageScreen(
                         onLogout = onLogout,
                         onNavigateToCyberLogin = onNavigateToCyberLogin,
+                        resetKey = myResetKey,
                     )
                 }
             }

@@ -100,8 +100,17 @@ fun MyPageScreen(
     viewModel: MyViewModel = koinViewModel(),
     onLogout: () -> Unit = {},
     onNavigateToCyberLogin: () -> Unit = {},
+    resetKey: Int = 0,
 ) {
     val myNavController = rememberNavController()
+
+    LaunchedEffect(resetKey) {
+        if (resetKey > 0) {
+            runCatching {
+                myNavController.popBackStack(MY_PAGE_MAIN_ROUTE, inclusive = false)
+            }
+        }
+    }
 
     NavHost(
         navController = myNavController,

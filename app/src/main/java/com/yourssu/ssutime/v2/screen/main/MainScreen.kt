@@ -137,6 +137,7 @@ fun MainScreen(
     skipLoadFromMyPageBack: Boolean = false,
     onInitialLmsRefreshSkipConsumed: () -> Unit = {},
     onInitialLmsRefreshForceConsumed: () -> Unit = {},
+    resetKey: Int = 0,
 ) {
     val context = LocalContext.current
     var showWidgetHelperDialog by rememberSaveable { mutableStateOf(false) }
@@ -150,6 +151,22 @@ fun MainScreen(
         contract = ActivityResultContracts.StartActivityForResult(),
         onResult = {},
     )
+    LaunchedEffect(resetKey) {
+        if (resetKey > 0) {
+            runCatching {
+                val isNotAtRoot = mainContentNavController.currentDestination?.route != null &&
+                    mainContentNavController.currentDestination?.route != MAIN_LIST_ROUTE
+                val popped = mainContentNavController.popBackStack(MAIN_LIST_ROUTE, inclusive = false)
+                if (popped || isNotAtRoot) {
+                    Analytics.viewHome(
+                        taskCount = viewModel.todos.size,
+                        urgentCount = viewModel.todos.urgentTodoCount(),
+                        entrySource = homeEntrySource,
+                    )
+                }
+            }
+        }
+    }
     LaunchedEffect(homeEntryVersion) {
         Analytics.viewHome(
             taskCount = viewModel.todos.size,
