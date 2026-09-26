@@ -16,6 +16,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -36,6 +37,7 @@ import com.yourssu.ssutime.v2.screen.cyber.CyberRepository
 import com.yourssu.ssutime.v2.screen.my.MyPageScreen
 import com.yourssu.ssutime.v2.screen.navigation.MainTab
 import com.yourssu.ssutime.v2.ui.theme.WHITE
+import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
 @Composable
@@ -55,6 +57,7 @@ fun MainContainerScreen(
     val currentRoute = navBackStackEntry?.destination?.route
     val currentTab = MainTab.fromRoute(currentRoute)
     var showCyberPopup by rememberSaveable { mutableStateOf(true) }
+    val coroutineScope = rememberCoroutineScope()
 
     val cyberRepository: CyberRepository = koinInject()
     val cyberLoginData by cyberRepository.cyberLoginData.collectAsState(initial = CyberLoginData())
@@ -120,8 +123,7 @@ fun MainContainerScreen(
             }
 
             AnimatedVisibility(
-                visible = !cyberLoginData.hasCredentials && showCyberPopup,
-
+                visible = currentTab != MainTab.MY && !cyberLoginData.hasCredentials && !cyberLoginData.isBannerDismissed && showCyberPopup,
                 enter = fadeIn() + slideInVertically { it / 2 },
                 exit = fadeOut() + slideOutVertically { it / 2 },
                 modifier = Modifier
@@ -130,10 +132,19 @@ fun MainContainerScreen(
             ) {
                 SSUCyberConnectPopup(
                     onClick = {
+                        showCyberPopup = false
+                        coroutineScope.launch {
+                            cyberRepository.dismissBanner()
+                        }
                         Analytics.cyberConnectClick(entryPoint = "home_banner")
                         onNavigateToCyberLogin()
                     },
-                    onDismiss = { showCyberPopup = false },
+                    onDismiss = {
+                        showCyberPopup = false
+                        coroutineScope.launch {
+                            cyberRepository.dismissBanner()
+                        }
+                    },
                 )
             }
         }

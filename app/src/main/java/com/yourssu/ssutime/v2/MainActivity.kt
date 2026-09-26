@@ -28,6 +28,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -233,6 +234,10 @@ class MainActivity : ComponentActivity() {
                         val errorMessage by cyberLoginViewModel.errorMessage.collectAsState()
                         val errorMessageResId by cyberLoginViewModel.errorMessageResId.collectAsState()
                         val context = LocalContext.current
+
+                        LaunchedEffect(Unit) {
+                            cyberLoginViewModel.dismissBanner()
+                        }
 
                         CyberLoginScreen(
                             isLoading = isLoading,

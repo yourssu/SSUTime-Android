@@ -30,21 +30,30 @@ class CyberRepository(
     suspend fun getLoginData(): CyberLoginData = cyberLoginDataStore.data.first()
 
     suspend fun login(id: String, pw: String): Boolean = withContext(Dispatchers.IO) {
-        val success = CyberApi.login(id, pw)
-        if (success) {
-            cyberLoginDataStore.updateData {
-                CyberLoginData(id = id, pw = pw, isConnected = true)
+        CyberSessionCleaner.clearCookies()
+        try {
+            val success = CyberApi.login(id, pw)
+            if (success) {
+                cyberLoginDataStore.updateData {
+                    CyberLoginData(id = id, pw = pw, isConnected = true, isBannerDismissed = true)
+                }
+            } else {
+                CyberSessionCleaner.clearCookies()
             }
+            success
+        } catch (t: Throwable) {
+            CyberSessionCleaner.clearCookies()
+            throw t
         }
-        success
     }
 
     suspend fun logout() = withContext(Dispatchers.IO) {
         runCatching {
             CyberApi.logout()
         }
+        CyberSessionCleaner.clearCookies()
         cyberLoginDataStore.updateData {
-            CyberLoginData()
+            CyberLoginData(isBannerDismissed = true)
         }
         // 사이버대학교 투두 및 과목 제거
         mainRepository.updateTodoData { currentData ->
@@ -54,6 +63,12 @@ class CyberRepository(
                 subjects = currentData.subjects.filterNot { it.id < 0 },
                 hiddenTodos = currentData.hiddenTodos.filterNot { it.isCyber() },
             )
+        }
+    }
+
+    suspend fun dismissBanner() = withContext(Dispatchers.IO) {
+        cyberLoginDataStore.updateData { current ->
+            current.copy(isBannerDismissed = true)
         }
     }
 
