@@ -134,6 +134,7 @@ fun MyPageScreen(
         composable(HIDDEN_TODOS_ROUTE) {
             HiddenTodosScreen(
                 viewModel = viewModel,
+                onBackClick = { myNavController.popBackStack() },
             )
         }
     }
