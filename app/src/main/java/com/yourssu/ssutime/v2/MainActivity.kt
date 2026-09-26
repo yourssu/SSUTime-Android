@@ -435,7 +435,7 @@ fun SSUCyberAccountConnectedBadge(
             .fillMaxWidth()
             .clip(RoundedCornerShape(10.dp))
             .border(1.dp, Color(0xFFE2E8F0), RoundedCornerShape(10.dp))
-            .background(Color(0xFFF8FAFC))
+            .background(Color(0xFFFFFFFF))
             .padding(16.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
