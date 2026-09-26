@@ -89,6 +89,7 @@ import androidx.navigation.compose.rememberNavController
 import com.yourssu.data.AlertData
 import com.yourssu.data.TodoInfo
 import com.yourssu.data.TodoType
+import com.yourssu.data.isCyber
 import com.yourssu.ssutime.v2.MainActivity
 import com.yourssu.ssutime.v2.R
 import com.yourssu.ssutime.v2.analytics.Analytics
@@ -942,6 +943,18 @@ fun TodoItem(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         if(!isLate) {
+                            if (todoInfo.isCyber()) {
+                                Text(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(6.dp))
+                                        .background(Color(0xFFDFDFDF))
+                                        .padding(horizontal = 6.dp, vertical = 3.dp),
+                                    text = "사이버대",
+                                    style = SSUType.Caption1SemiBold,
+                                    color = Color(0xFF4A4C4D)
+                                )
+                                Spacer(Modifier.width(6.dp))
+                            }
                             Text(
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(6.dp))

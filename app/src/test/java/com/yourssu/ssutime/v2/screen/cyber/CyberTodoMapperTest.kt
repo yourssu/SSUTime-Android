@@ -1,6 +1,9 @@
 package com.yourssu.ssutime.v2.screen.cyber
 
+import com.yourssu.data.SubjectInfo
+import com.yourssu.data.TodoInfo
 import com.yourssu.data.TodoType
+import com.yourssu.data.isCyber
 import com.yourssu.data.todoUniqueKey
 import com.yourssu.ssutime.v2.screen.calendar.toLocalDate
 import com.yourssu.ssutime.v2.todo.toTodoDeadlineInstantOrNull
@@ -8,6 +11,7 @@ import io.github.chlwhdtn03.data.Cyber.CyberLecture
 import io.github.chlwhdtn03.data.Cyber.CyberSubject
 import io.github.chlwhdtn03.data.Cyber.CyberWeek
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -179,5 +183,31 @@ class CyberTodoMapperTest {
         assertEquals("기초 프로그래밍", CyberTodoMapper.cleanCyberSubjectName("기초 프로그래밍 (학점교류)"))
         assertEquals("운영체제", CyberTodoMapper.cleanCyberSubjectName("운영체제(2026-1)"))
         assertEquals("인공지능개론", CyberTodoMapper.cleanCyberSubjectName("인공지능개론"))
+    }
+
+    @Test
+    fun isCyber_returnsFalseForRegularLmsLectureWithMinusOneTodoId() {
+        val lmsLecture = TodoInfo(
+            todoId = -1,
+            title = "1주차 동영상 강의",
+            due_date = "2026-03-15T14:59:59Z",
+            type = TodoType.COMMONS,
+            subject = SubjectInfo(id = 501, name = "운영체제", professor = "교수님"),
+            url = "https://canvas.ssu.ac.kr/courses/501/modules/items/888",
+        )
+        assertFalse(lmsLecture.isCyber())
+    }
+
+    @Test
+    fun isCyber_returnsTrueForCyberTodo() {
+        val cyberTodo = TodoInfo(
+            todoId = -10001,
+            title = "1주차 1강",
+            due_date = "2026-03-15T14:59:59Z",
+            type = TodoType.COMMONS,
+            subject = SubjectInfo(id = -100001, name = "AI리터러시", professor = "교수님"),
+            url = "https://lms.kcu.ac/atnlcSubj/atnlcApe/list",
+        )
+        assertTrue(cyberTodo.isCyber())
     }
 }
