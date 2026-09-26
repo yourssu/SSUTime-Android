@@ -338,10 +338,7 @@ fun CalendarScreenContent(
             todos = selectedDayTodos,
             sheetState = sheetState,
             onDismissRequest = { selectedDate = null },
-            onTodoClick = { todo ->
-                selectedDate = null
-                onTodoClick(todo)
-            },
+            onTodoClick = onTodoClick,
         )
     }
 }
