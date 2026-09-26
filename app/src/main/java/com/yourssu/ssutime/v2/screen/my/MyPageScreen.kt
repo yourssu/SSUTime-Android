@@ -162,7 +162,7 @@ fun MyPageContent(
     )
     val coroutine = rememberCoroutineScope()
     val alertState by viewModel.uiState.collectAsStateWithLifecycle()
-    var alertData by remember { mutableStateOf<AlertData>(AlertData(valid = false, false, false, -1)) }
+    var alertData by remember { mutableStateOf(AlertLocalStore.getAlertData(context)) }
     val labsData by viewModel.labsData.collectAsStateWithLifecycle()
 
     var pendingNotificationSettingsRequest by remember {
@@ -174,6 +174,7 @@ fun MyPageContent(
 
     fun updateAlertData(nextAlertData: AlertData) {
         alertData = nextAlertData
+        AlertLocalStore.saveAlertData(context, nextAlertData)
         viewModel.updateAlertData(nextAlertData)
     }
 
@@ -307,7 +308,10 @@ fun MyPageContent(
     LaunchedEffect(alertState) {
         val state = alertState
         if (state is UiState.Success) {
-            alertData = state.data
+            AlertLocalStore.saveAlertData(context, state.data)
+            if (alertData != state.data) {
+                alertData = state.data
+            }
         }
     }
 

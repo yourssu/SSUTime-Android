@@ -19,6 +19,7 @@ import com.yourssu.ssutime.v2.notification.cancelDeadlineNotifications
 import com.yourssu.ssutime.v2.notification.scheduleDeadlineNotifications
 import com.yourssu.ssutime.v2.notification.sendDeadlineNotificationsIfNeeded
 import com.yourssu.ssutime.v2.notification.withSentDeadlineReminderKeys
+import com.yourssu.ssutime.v2.screen.my.AlertLocalStore
 import com.yourssu.ssutime.v2.todo.sortedByDeadlineThenName
 import com.yourssu.ssutime.v2.widget.updateAllTodoWidgets
 import kotlinx.coroutines.flow.Flow
@@ -61,6 +62,7 @@ class MainRepository(
             lastCallAlertRemindPeriod = alertData.lastCallAlertRemindPeriod
                 ?: currentAlertData.lastCallAlertRemindPeriod,
         )
+        AlertLocalStore.saveAlertData(context, updatedAlertData)
         alertDataStore.updateData { updatedAlertData }
         if (updatedAlertData.allowSystemAlert) {
             updateDeadlineNotifications(getTodoData())
@@ -140,7 +142,10 @@ class MainRepository(
     }
 
     suspend fun getTodoData(): TodoData = todoDataStore.data.first()
-    suspend fun getAlertData(): AlertData = alertDataStore.data.first().apply { Log.i("AlertData", "get AlertData : $this") }
+    suspend fun getAlertData(): AlertData = alertDataStore.data.first().apply {
+        Log.i("AlertData", "get AlertData : $this")
+        AlertLocalStore.saveAlertData(context, this)
+    }
 
     suspend fun getReportedTodos(): List<UserTodoStatusResponse> =
         apiRepository.getTodos()
