@@ -29,7 +29,7 @@ enum class TodoType(
 }
 
 fun TodoInfo.todoUniqueKey(): String =
-    if (todoId > 0) {
+    if (todoId > 0 || isCyber()) {
         "${subject?.id ?: subjectId}:$todoId:${type.name}"
     } else {
         "${subject?.id ?: subjectId}:$todoId:${type.name}:$title:$due_date"

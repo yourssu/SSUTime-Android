@@ -38,6 +38,31 @@ class CyberTodoMapperTest {
     }
 
     @Test
+    fun parseDeadlineIso_with12HourFormatTwoOClock_parsesAs14OClock() {
+        // "02:00" -> KST 14:00:00 -> UTC 05:00:00Z
+        val result = CyberTodoMapper.parseDeadlineIso("2026.03.02 00:00 ~ 2026.03.15 02:00")
+        assertEquals("2026-03-15T05:00:00Z", result)
+    }
+
+    @Test
+    fun parseDeadlineIso_withKoreanPmFormat() {
+        val result = CyberTodoMapper.parseDeadlineIso("2026.03.02 ~ 2026.03.15 오후 02:00")
+        assertEquals("2026-03-15T05:00:00Z", result)
+    }
+
+    @Test
+    fun parseDeadlineIso_withEnglishPmFormat() {
+        val result = CyberTodoMapper.parseDeadlineIso("2026.03.02 ~ 2026.03.15 02:00 PM")
+        assertEquals("2026-03-15T05:00:00Z", result)
+    }
+
+    @Test
+    fun parseDeadlineIso_with24HourFormat14() {
+        val result = CyberTodoMapper.parseDeadlineIso("2026.03.02 ~ 2026.03.15 14:00:00")
+        assertEquals("2026-03-15T05:00:00Z", result)
+    }
+
+    @Test
     fun parseDeadlineIso_withDayOfWeekText() {
         val result = CyberTodoMapper.parseDeadlineIso("2026.03.02(월) ~ 2026.03.15(일)")
         assertEquals("2026-03-15T14:59:59Z", result)
@@ -54,6 +79,18 @@ class CyberTodoMapperTest {
         assertEquals(1530.0, CyberTodoMapper.parseDurationSeconds("25:30"), 0.001)
         assertEquals(3600.0, CyberTodoMapper.parseDurationSeconds("01:00:00"), 0.001)
         assertEquals(-1.0, CyberTodoMapper.parseDurationSeconds(""), 0.001)
+    }
+
+    @Test
+    fun getStringDateWithTime_excludesSecondsForCyber() {
+        // UTC 2026-03-15T05:00:00Z -> KST 2026-03-15 14:00:00
+        val targetTime = "2026-03-15T05:00:00Z"
+        val withSeconds = com.yourssu.ssutime.v2.getStringDateWithTime(targetTime, includeSeconds = true)
+        val withoutSeconds = com.yourssu.ssutime.v2.getStringDateWithTime(targetTime, includeSeconds = false)
+
+        assertTrue(withSeconds.endsWith("14:00:00"))
+        assertTrue(withoutSeconds.endsWith("14:00"))
+        assertFalse(withoutSeconds.contains(":00:00"))
     }
 
     @Test

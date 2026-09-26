@@ -9,6 +9,7 @@ import com.yourssu.data.SubjectInfo
 import com.yourssu.data.TodoData
 import com.yourssu.data.TodoInfo
 import com.yourssu.data.TodoType
+import com.yourssu.data.isCyber
 import com.yourssu.data.network.LmsSessionCookieRequest
 import com.yourssu.data.network.LmsSessionRequest
 import com.yourssu.data.network.toAddEnrollmentRequest
@@ -758,6 +759,7 @@ class LmsRefreshRepository(
         if (aSubjectId != bSubjectId && aSubjectId > 0 && bSubjectId > 0) return false
 
         if (a.todoId > 0 && b.todoId > 0) return a.todoId == b.todoId
+        if (a.isCyber() && b.isCyber() && a.todoId != 0 && b.todoId != 0) return a.todoId == b.todoId
         if (a.moduleItemId > 0 && b.moduleItemId > 0) return a.moduleItemId == b.moduleItemId
         if (a.componentId > 0 && b.componentId > 0) return a.componentId == b.componentId
 

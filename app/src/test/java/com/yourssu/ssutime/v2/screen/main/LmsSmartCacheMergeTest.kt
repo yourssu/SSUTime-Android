@@ -202,4 +202,51 @@ class LmsSmartCacheMergeTest {
         // 다른 학기 과목의 과제는 보존되지 않아야 함
         assertTrue(result.todos.isEmpty())
     }
+
+    @Test
+    fun buildTodoData_updatesCyberTodoDeadlineWithoutDuplication() {
+        val cyberSubjectInfo = SubjectInfo(-100001, "인공지능개론", "교수님")
+        val cyberTodoId = -15001
+
+        // 이전 캐시: 02:00:00 (새벽 2시) 기준 due_date
+        val oldDeadline = "2026-03-15T17:00:00Z"
+        val previousTodo = TodoInfo(
+            todoId = cyberTodoId,
+            title = "1주차 1강",
+            due_date = oldDeadline,
+            type = TodoType.COMMONS,
+            subject = cyberSubjectInfo,
+        )
+
+        val previousData = TodoData(
+            todos = listOf(previousTodo),
+            subjects = listOf(cyberSubjectInfo),
+        )
+
+        // 이번 새로고침: 14:00:00 (낮 2시)로 수정된 새 due_date
+        val newDeadline = "2026-03-15T05:00:00Z"
+        val currentTodo = TodoInfo(
+            todoId = cyberTodoId,
+            title = "1주차 1강",
+            due_date = newDeadline,
+            type = TodoType.COMMONS,
+            subject = cyberSubjectInfo,
+        )
+
+        val result = LmsRefreshRepository.buildTodoData(
+            subjects = emptyList(),
+            subjectInfos = emptyList(),
+            previousData = previousData,
+            loadedAt = Instant.now().toString(),
+            isCyberConnected = true,
+            cyberResult = com.yourssu.ssutime.v2.screen.cyber.CyberTodoResult(
+                todos = listOf(currentTodo),
+                subjects = listOf(cyberSubjectInfo),
+            ),
+        )
+
+        // 중복되지 않고 최신 마감기한(newDeadline)의 1개만 남아야 함
+        assertEquals(1, result.todos.size)
+        assertEquals(newDeadline, result.todos.first().due_date)
+    }
 }

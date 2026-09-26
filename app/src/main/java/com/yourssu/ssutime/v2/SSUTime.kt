@@ -291,9 +291,10 @@ fun getStringDate(targetTime: String): String {
         .format(formatter)
 }
 
-fun getStringDateWithTime(targetTime: String): String {
+fun getStringDateWithTime(targetTime: String, includeSeconds: Boolean = true): String {
     val targetInstant = Instant.parse(targetTime)
-    val formatter = DateTimeFormatter.ofPattern(monthDayTimePattern(), Locale.getDefault())
+    val pattern = if (includeSeconds) monthDayTimePattern() else monthDayTimeWithoutSecondsPattern()
+    val formatter = DateTimeFormatter.ofPattern(pattern, Locale.getDefault())
 
     return targetInstant
         .atZone(TODO_DEADLINE_ZONE_ID)
@@ -327,3 +328,6 @@ private fun monthDayPattern(): String =
 
 private fun monthDayTimePattern(): String =
     if (Locale.getDefault().language == Locale.KOREAN.language) "MM월 dd일 HH:mm:ss" else "MMM dd HH:mm:ss"
+
+private fun monthDayTimeWithoutSecondsPattern(): String =
+    if (Locale.getDefault().language == Locale.KOREAN.language) "MM월 dd일 HH:mm" else "MMM dd HH:mm"

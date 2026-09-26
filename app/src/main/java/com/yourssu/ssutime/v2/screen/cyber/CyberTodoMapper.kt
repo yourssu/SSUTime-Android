@@ -54,7 +54,7 @@ object CyberTodoMapper {
         }
 
         val timeMatch = TIME_REGEX.find(endPart)
-        val (hour, minute, second) = if (timeMatch != null) {
+        val (parsedHour, minute, second) = if (timeMatch != null) {
             Triple(
                 timeMatch.groupValues[1].toInt(),
                 timeMatch.groupValues[2].toInt(),
@@ -62,6 +62,16 @@ object CyberTodoMapper {
             )
         } else {
             Triple(23, 59, 59)
+        }
+
+        val isPm = endPart.contains("오후") || endPart.contains("PM", ignoreCase = true)
+        val isAm = endPart.contains("오전") || endPart.contains("AM", ignoreCase = true)
+
+        val hour = when {
+            isPm -> if (parsedHour < 12) parsedHour + 12 else parsedHour
+            isAm -> if (parsedHour == 12) 0 else parsedHour
+            timeMatch != null && parsedHour in 1..6 -> parsedHour + 12
+            else -> parsedHour
         }
 
         return runCatching {
