@@ -18,6 +18,7 @@ import com.yourssu.ssutime.v2.analytics.SentryExceptionReporter
 import com.yourssu.ssutime.v2.lms.ensureLmsLoggedIn
 import com.yourssu.ssutime.v2.lms.getLmsLoginInfo
 import com.yourssu.ssutime.v2.lms.getLmsTerms
+import com.yourssu.ssutime.v2.network.ApiRepository
 import com.yourssu.ssutime.v2.notification.showCallAlert
 import com.yourssu.ssutime.v2.screen.cyber.CyberRepository
 import com.yourssu.ssutime.v2.screen.login.LoginRepository
@@ -47,6 +48,7 @@ class MyViewModel(
     private val mainRepository: MainRepository,
     private val termSelectionStore: TermSelectionStore,
     private val cyberRepository: CyberRepository,
+    private val apiRepository: ApiRepository,
 ) : ViewModel() {
     var loginInfo = mutableStateOf<Info?>(null)
     var terms = mutableStateOf<List<Term>>(emptyList())
@@ -193,6 +195,28 @@ class MyViewModel(
             Analytics.flush()
             withContext(Dispatchers.Main) {
                 isLogout.value = true
+            }
+        }
+    }
+
+    private var isWithdrawing = false
+
+    fun withdrawAccount(reason: String = "string") {
+        Analytics.applicationScope.launch {
+            if (isWithdrawing) return@launch
+            isWithdrawing = true
+            runCatching {
+                apiRepository.requestAccountWithdrawal(reason)
+            }.onSuccess { response ->
+                if (response.status.equals("REQUESTED", ignoreCase = true) || response.status.isNotBlank()) {
+                    logout()
+                } else {
+                    logout()
+                }
+            }.onFailure { exception ->
+                isWithdrawing = false
+                SentryExceptionReporter.capture(exception)
+                Log.e(TAG, "계정 탈퇴 요청 실패", exception)
             }
         }
     }

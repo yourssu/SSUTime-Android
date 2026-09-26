@@ -63,6 +63,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -578,7 +579,21 @@ fun MyPageContent(
             showLogoutPopup = true
         }
 
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(16.dp))
+
+        Text(
+            text = stringResource(R.string.my_withdraw),
+            style = SSUType.Label3Medium,
+            color = N400,
+            textDecoration = TextDecoration.Underline,
+            modifier = Modifier
+                .align(Alignment.CenterHorizontally)
+                .clickable {
+                    viewModel.withdrawAccount()
+                }
+        )
+
+        Spacer(Modifier.height(24.dp))
 
 //        OptionButton(
 //            text = "디버그: 10초 후 전화알림"

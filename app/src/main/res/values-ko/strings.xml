@@ -123,6 +123,7 @@
     <string name="my_terms">이용약관</string>
     <string name="my_privacy_policy">개인정보처리방침</string>
     <string name="my_logout">로그아웃</string>
+    <string name="my_withdraw">탈퇴하기</string>
     <string name="my_notification_tooltip_system_title">시스템 푸시?</string>
     <string name="my_notification_tooltip_system_desc">앱 푸시 메시지로 간편하게 알려드려요</string>
     <string name="my_notification_tooltip_call_title">전화 알림?</string>

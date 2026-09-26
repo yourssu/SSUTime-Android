@@ -1,6 +1,8 @@
 package com.yourssu.ssutime.v2.network
 
 import android.util.Log
+import com.yourssu.data.network.AccountWithdrawalRequest
+import com.yourssu.data.network.AccountWithdrawalResponse
 import com.yourssu.data.network.AddEnrollmentRequest
 import com.yourssu.data.network.AssignmentAnalysisResponse
 import com.yourssu.data.network.DeleteEnrollmentRequest
@@ -179,4 +181,26 @@ class ApiRepository(
             Log.w("ApiRepository", "Failed to decode AssignmentAnalysisResponse: $responseText", exception)
         }.getOrNull()
     }
+
+    suspend fun requestAccountWithdrawal(reason: String = "string"): AccountWithdrawalResponse {
+        val response = client.post(
+            urlString = "$baseUrl/auth/withdrawal-requests"
+        ) {
+            bearerAuth(accessToken)
+            contentType(ContentType.Application.Json)
+            setBody(AccountWithdrawalRequest(reason = reason))
+        }
+        val responseText = response.bodyAsText()
+        Log.i("ApiRepository", "Account withdrawal status: ${response.status.value}, body: $responseText")
+        if (response.status.isSuccess()) {
+            return runCatching {
+                defaultJson.decodeFromString<AccountWithdrawalResponse>(responseText)
+            }.getOrElse {
+                AccountWithdrawalResponse(status = "REQUESTED")
+            }
+        } else {
+            throw IllegalStateException("Account withdrawal failed with status ${response.status.value}: $responseText")
+        }
+    }
 }
+

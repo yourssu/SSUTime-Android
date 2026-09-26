@@ -124,6 +124,7 @@
     <string name="my_terms">Terms of Service</string>
     <string name="my_privacy_policy">Privacy Policy</string>
     <string name="my_logout">Log out</string>
+    <string name="my_withdraw">Delete Account</string>
     <string name="my_notification_tooltip_system_title">System push?</string>
     <string name="my_notification_tooltip_system_desc">We will send a simple app push notification.</string>
     <string name="my_notification_tooltip_call_title">Call alert?</string>

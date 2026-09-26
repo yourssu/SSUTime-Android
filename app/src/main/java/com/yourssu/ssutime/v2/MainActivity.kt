@@ -420,7 +420,7 @@ fun SSUCyberAccountHelperBadge(
         Image(
             imageVector = Icons.AutoMirrored.Default.KeyboardArrowRight,
             contentDescription = stringResource(R.string.common_close),
-            colorFilter = ColorFilter.tint(N500)
+            colorFilter = ColorFilter.tint(R400)
         )
     }
 }
