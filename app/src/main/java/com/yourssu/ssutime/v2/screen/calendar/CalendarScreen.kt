@@ -57,6 +57,7 @@ import com.yourssu.data.todoUniqueKey
 import com.yourssu.ssutime.v2.R
 import com.yourssu.ssutime.v2.analytics.Analytics
 import com.yourssu.ssutime.v2.component.SSUTimeTopBar
+import com.yourssu.ssutime.v2.component.preventBottomSheetJitter
 import com.yourssu.ssutime.v2.screen.main.MainViewModel
 import com.yourssu.ssutime.v2.screen.main.todo.TodoDetailScreen
 import com.yourssu.ssutime.v2.screen.notice.NoticeScreen
@@ -694,6 +695,7 @@ fun CalendarDateDetailBottomSheet(
         LazyColumn(
             modifier = Modifier
                 .fillMaxWidth()
+                .preventBottomSheetJitter()
                 .safeDrawingPadding()
                 .padding(horizontal = 20.dp)
                 .padding(bottom = 36.dp)

@@ -97,6 +97,7 @@ import com.yourssu.ssutime.v2.component.OutlinedButton
 import com.yourssu.ssutime.v2.component.SButton
 import com.yourssu.ssutime.v2.component.SCheckBox
 import com.yourssu.ssutime.v2.component.SSUTimeTopBar
+import com.yourssu.ssutime.v2.component.preventBottomSheetJitter
 import com.yourssu.ssutime.v2.getRemainingDays
 import com.yourssu.ssutime.v2.getRemainingTimeText
 import com.yourssu.ssutime.v2.getStringSimpleDate
@@ -1039,6 +1040,7 @@ fun CallingAlertBottomSheet(
         containerColor = WHITE,
     ) {
         CallingAlertBody(
+            modifier = Modifier.preventBottomSheetJitter(),
             onConfirmClick = onConfirmClick
         )
     }
@@ -1061,7 +1063,7 @@ fun CallingAlertBody(
     var enableCallingAlert = remember { mutableStateOf(false) }
 
     Column(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .safeDrawingPadding()
             .padding(horizontal = 20.dp, vertical = 36.dp),
