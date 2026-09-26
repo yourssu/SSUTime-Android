@@ -59,7 +59,7 @@ class TodoLmsUrlTest {
         val todo = TodoInfo(
             todoId = -1001,
             title = "1주차 1강",
-            due_date = "2026-03-15T23:59:59+09:00",
+            due_date = "2026-03-15T14:59:59Z",
             type = TodoType.COMMONS,
             subject = SubjectInfo(id = -2001, name = "사이버대학교 강의", professor = "교수님"),
             url = cyberUrl,
@@ -73,7 +73,7 @@ class TodoLmsUrlTest {
         val todo = TodoInfo(
             todoId = -1002,
             title = "2주차 1강",
-            due_date = "2026-03-22T23:59:59+09:00",
+            due_date = "2026-03-22T14:59:59Z",
             type = TodoType.COMMONS,
             subject = SubjectInfo(id = -2002, name = "사이버대학교 강의2", professor = "교수님"),
             url = "",

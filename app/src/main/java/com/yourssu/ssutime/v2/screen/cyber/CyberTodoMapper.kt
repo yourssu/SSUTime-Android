@@ -9,7 +9,6 @@ import io.github.chlwhdtn03.data.Cyber.CyberWeek
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZonedDateTime
-import java.time.format.DateTimeFormatter
 import kotlin.math.abs
 
 data class CyberTodoResult(
@@ -27,9 +26,10 @@ object CyberTodoMapper {
     private val TIME_REGEX = Regex("""(\d{1,2}):(\d{2})(?::(\d{2}))?""")
 
     /**
-     * CyberWeek의 attendancePeriod(출석인정기간)에서 종료일시를 파싱하여 ISO-8601 문자열로 변환합니다.
-     * 예: "2026.03.02 ~ 2026.03.15" -> "2026-03-15T23:59:59+09:00"
-     *     "2026.03.02 09:00 ~ 2026.03.15 22:00" -> "2026-03-15T22:00:00+09:00"
+     * CyberWeek의 attendancePeriod(출석인정기간)에서 종료일시를 파싱하여 UTC ISO-8601 문자열로 변환합니다.
+     * Canvas LMS와 동일하게 UTC(GMT+0) 기준 'Z' 포맷으로 통일합니다.
+     * 예: "2026.03.02 ~ 2026.03.15" (KST 23:59:59) -> "2026-03-15T14:59:59Z"
+     *     "2026.03.02 09:00 ~ 2026.03.15 22:30" (KST 22:30:00) -> "2026-03-15T13:30:00Z"
      */
     fun parseDeadlineIso(attendancePeriod: String, fallbackYear: Int = LocalDate.now(TODO_DEADLINE_ZONE_ID).year): String {
         if (attendancePeriod.isBlank()) return ""
@@ -68,7 +68,7 @@ object CyberTodoMapper {
             val localDate = LocalDate.of(year, month, day)
             val localTime = LocalTime.of(hour, minute, second)
             val zonedDateTime = ZonedDateTime.of(localDate, localTime, TODO_DEADLINE_ZONE_ID)
-            zonedDateTime.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME)
+            zonedDateTime.toInstant().toString()
         }.getOrDefault("")
     }
 

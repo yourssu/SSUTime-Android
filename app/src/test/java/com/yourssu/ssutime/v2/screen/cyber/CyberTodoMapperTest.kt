@@ -18,7 +18,7 @@ class CyberTodoMapperTest {
     @Test
     fun parseDeadlineIso_withDotFormat() {
         val result = CyberTodoMapper.parseDeadlineIso("2026.03.02 ~ 2026.03.15")
-        assertEquals("2026-03-15T23:59:59+09:00", result)
+        assertEquals("2026-03-15T14:59:59Z", result)
 
         val instant = result.toTodoDeadlineInstantOrNull()
         assertNotNull(instant)
@@ -27,7 +27,7 @@ class CyberTodoMapperTest {
     @Test
     fun parseDeadlineIso_withHyphenFormatAndTime() {
         val result = CyberTodoMapper.parseDeadlineIso("2026-03-02 09:00 ~ 2026-03-15 22:30:00")
-        assertEquals("2026-03-15T22:30:00+09:00", result)
+        assertEquals("2026-03-15T13:30:00Z", result)
 
         val instant = result.toTodoDeadlineInstantOrNull()
         assertNotNull(instant)
@@ -36,13 +36,13 @@ class CyberTodoMapperTest {
     @Test
     fun parseDeadlineIso_withDayOfWeekText() {
         val result = CyberTodoMapper.parseDeadlineIso("2026.03.02(월) ~ 2026.03.15(일)")
-        assertEquals("2026-03-15T23:59:59+09:00", result)
+        assertEquals("2026-03-15T14:59:59Z", result)
     }
 
     @Test
     fun parseDeadlineIso_withMonthDayOnly() {
         val result = CyberTodoMapper.parseDeadlineIso("03.02 ~ 03.15", fallbackYear = 2026)
-        assertEquals("2026-03-15T23:59:59+09:00", result)
+        assertEquals("2026-03-15T14:59:59Z", result)
     }
 
     @Test
