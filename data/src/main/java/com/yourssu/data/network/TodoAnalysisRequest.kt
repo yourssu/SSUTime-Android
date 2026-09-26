@@ -60,7 +60,7 @@ fun TodoInfo.toReportWithAnalysisRequestOrNull(
     val subjectId = (subject?.id ?: subjectId).toLong()
     val assignmentId = todoId.toLong()
     val assignmentHtml = description.takeIf { it.isNotBlank() } ?: return null
-    if (type != TodoType.ASSIGNMENT || subjectId <= 0L || assignmentId <= 0L) {
+    if (type != TodoType.ASSIGNMENT) {
         return null
     }
 
