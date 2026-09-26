@@ -926,9 +926,11 @@ fun TodoItem(
                                 todoInfo.due_date,
                                 now
                             ),
-                            style = if (leftDay > 1) SSUType.H4ExtraBold else SSUType.H4ExtraBold.copy(
-                                color = WHITE
-                            )
+                            style = when (leftDay) {
+                                2L, 3L -> SSUType.H4ExtraBold.copy(color = R400)
+                                0L, 1L -> SSUType.H4ExtraBold.copy(color = WHITE)
+                                else -> SSUType.H4ExtraBold
+                            }
                         )
                     }
                 }

@@ -54,11 +54,14 @@ internal fun remainingTimeTextUntilDeadline(
         } else {
             "${remainingSeconds}s"
         }
+    } else if (remainingSeconds < 3600) {
+        val minutes = remainingSeconds / 60
+        val seconds = remainingSeconds % 60
+
+        "%02d:%02d".format(minutes, seconds)
     } else {
         val hours = remainingSeconds / 3600
-        val minutes = (remainingSeconds % 3600) / 60
-
-        "%02d:%02d".format(hours, minutes)
+        "${hours}h"
     }
 }
 
