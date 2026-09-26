@@ -650,16 +650,18 @@ fun TodoOverView(
                         )
                     }
 
-                    Row {
-                        Text(
-                            text = stringResource(R.string.ai_estimated_duration),
-                            style = SSUType.Caption1SemiBold.copy(N500)
-                        )
-                        Spacer(Modifier.weight(1f))
-                        Text(
-                            text = estimatedDurationText,
-                            style = SSUType.Caption1SemiBold.copy(N500)
-                        )
+                    if(estimatedDurationText != stringResource(R.string.ai_estimated_duration_value_unknown)) {
+                        Row {
+                            Text(
+                                text = stringResource(R.string.ai_estimated_duration),
+                                style = SSUType.Caption1SemiBold.copy(N500)
+                            )
+                            Spacer(Modifier.weight(1f))
+                            Text(
+                                text = estimatedDurationText,
+                                style = SSUType.Caption1SemiBold.copy(N500)
+                            )
+                        }
                     }
                 }
             }
