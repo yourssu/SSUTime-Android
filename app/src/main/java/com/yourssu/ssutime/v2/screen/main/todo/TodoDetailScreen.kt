@@ -652,7 +652,7 @@ fun TodoOverView(
                         Text(
                             text = stringResource(
                                 R.string.main_due_until,
-                                getStringDateWithTime(todo.due_date, includeSeconds = !todo.isCyber()),
+                                getStringDateWithTime(todo.due_date, includeSeconds = false),
                             ),
                             style = SSUType.Caption1SemiBold.copy(N500)
                         )

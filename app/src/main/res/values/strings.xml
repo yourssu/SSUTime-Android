@@ -116,8 +116,8 @@
 
     <string name="my_back_content_description">Back</string>
     <string name="my_avatar_content_description">Avatar</string>
-    <string name="my_notification_settings">Notification settings</string>
-    <string name="my_settings">Settings</string>
+    <string name="my_notification_settings">Settings</string>
+    <string name="my_settings">Information</string>
     <string name="my_no_term_info">No term information</string>
     <string name="my_term_dropdown_content_description">Select term</string>
     <string name="my_notification_info_content_description">About notifications</string>
