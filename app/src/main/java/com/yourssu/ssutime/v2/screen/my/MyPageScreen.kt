@@ -95,6 +95,10 @@ import org.koin.compose.viewmodel.koinViewModel
 
 const val MY_PAGE_MAIN_ROUTE = "my_page_main"
 const val HIDDEN_TODOS_ROUTE = "hidden_todos"
+private val TRAILING_STUDENT_ID_SUFFIX = Regex("""\s*\(\d+\)\s*$""")
+
+private fun String.withoutTrailingStudentId(): String =
+    replace(TRAILING_STUDENT_ID_SUFFIX, "").trim()
 
 @Composable
 fun MyPageScreen(
@@ -372,7 +376,8 @@ fun MyPageContent(
                 modifier = Modifier.size(100.dp, 100.dp)
             )
             Text(
-                text = loginInfo?.user_name ?: stringResource(R.string.common_loading),
+                text = loginInfo?.user_name?.withoutTrailingStudentId()
+                    ?: stringResource(R.string.common_loading),
                 style = SSUType.H3SemiBold,
             )
             Text(
