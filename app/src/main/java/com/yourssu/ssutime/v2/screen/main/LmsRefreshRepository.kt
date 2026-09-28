@@ -27,6 +27,7 @@ import com.yourssu.ssutime.v2.screen.cyber.CyberRepository
 import com.yourssu.ssutime.v2.screen.cyber.CyberTodoResult
 import com.yourssu.ssutime.v2.screen.login.LoginRepository
 import com.yourssu.ssutime.v2.todo.sortedByDeadlineThenName
+import com.yourssu.ssutime.v2.todo.sortedBySubmittedAtDescending
 import com.yourssu.ssutime.v2.todo.toTodoDeadlineInstantOrNull
 import io.github.chlwhdtn03.LmsApi
 import io.github.chlwhdtn03.data.Lms.Subject
@@ -674,9 +675,9 @@ class LmsRefreshRepository(
         }
 
         val allSubmitted = if (isCyberConnected) {
-            (reportedSubmitted + cyberResult.submitted).sortedByDeadlineThenName()
+            (reportedSubmitted + cyberResult.submitted).sortedBySubmittedAtDescending()
         } else {
-            reportedSubmitted.sortedByDeadlineThenName()
+            reportedSubmitted.sortedBySubmittedAtDescending()
         }
 
         val locallyReadDiscussionIds = (
@@ -747,7 +748,7 @@ class LmsRefreshRepository(
 
         val mergedAllSubmitted = (allSubmitted + preservedSubmitted)
             .distinctBy { it.todoUniqueKey() }
-            .sortedByDeadlineThenName()
+            .sortedBySubmittedAtDescending()
 
         val hiddenKeysSet = previousData.hiddenTodoKeys.toSet()
         val (hiddenNewTodos, activeNewTodos) = mergedAllTodos.partition { it.todoUniqueKey() in hiddenKeysSet }

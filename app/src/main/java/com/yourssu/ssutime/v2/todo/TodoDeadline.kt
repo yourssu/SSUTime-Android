@@ -68,6 +68,23 @@ internal fun remainingTimeTextUntilDeadline(
 internal fun List<TodoInfo>.sortedByDeadlineThenName(): List<TodoInfo> =
     sortedWith(todoDeadlineThenNameComparator())
 
+internal fun List<TodoInfo>.sortedBySubmittedAtDescending(): List<TodoInfo> =
+    sortedWith { left, right ->
+        val leftSubmittedAt = left.submittedAt.toSubmittedAtInstantOrNull()
+        val rightSubmittedAt = right.submittedAt.toSubmittedAtInstantOrNull()
+
+        when {
+            leftSubmittedAt != null && rightSubmittedAt != null -> rightSubmittedAt.compareTo(leftSubmittedAt)
+            leftSubmittedAt != null -> -1
+            rightSubmittedAt != null -> 1
+            else -> 0
+        }
+    }
+
+private fun String.toSubmittedAtInstantOrNull(): Instant? = runCatching {
+    Instant.parse(this)
+}.getOrNull()
+
 internal fun compareTodosByDeadlineThenName(left: TodoInfo, right: TodoInfo): Int =
     todoDeadlineThenNameComparator().compare(left, right)
 

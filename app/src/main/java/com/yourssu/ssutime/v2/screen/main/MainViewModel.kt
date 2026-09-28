@@ -11,6 +11,7 @@ import com.yourssu.data.SubjectInfo
 import com.yourssu.data.TodoData
 import com.yourssu.data.TodoInfo
 import com.yourssu.ssutime.v2.analytics.SentryExceptionReporter
+import com.yourssu.ssutime.v2.todo.sortedBySubmittedAtDescending
 import io.github.chlwhdtn03.data.Lms.Term
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.collectLatest
@@ -284,7 +285,7 @@ class MainViewModel(
 
         submitted.apply {
             clear()
-            addAll(todoData.submitted)
+            addAll(todoData.submitted.sortedBySubmittedAtDescending())
         }
 
         subjects.apply {
