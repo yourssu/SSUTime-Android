@@ -156,6 +156,7 @@ fun MyPageContent(
     val selectedTerm by viewModel.selectedTerm.collectAsStateWithLifecycle()
     val isLogout by remember { viewModel.isLogout }
     var showLogoutPopup by remember { mutableStateOf(false) }
+    var showWithdrawPopup by remember { mutableStateOf(false) }
     val notificationTooltipState = rememberTooltipState(
         isPersistent = true
     )
@@ -333,6 +334,18 @@ fun MyPageContent(
                     Analytics.logoutConfirm()
                     viewModel.logout()
                 }
+            )
+        }
+    }
+
+    if (showWithdrawPopup) {
+        Dialog(onDismissRequest = { showWithdrawPopup = false }) {
+            WithdrawPopup(
+                onCancel = { showWithdrawPopup = false },
+                onConfirm = {
+                    showWithdrawPopup = false
+                    viewModel.withdrawAccount()
+                },
             )
         }
     }
@@ -591,7 +604,7 @@ fun MyPageContent(
                 .align(Alignment.CenterHorizontally)
                 .clickable {
                     Analytics.withdrawClick()
-                    viewModel.withdrawAccount()
+                    showWithdrawPopup = true
                 }
         )
 
@@ -996,6 +1009,46 @@ fun LogoutPopup(
                 color = R400,
                 textColor = WHITE,
                 onClick = onConfirm
+            )
+        }
+    }
+}
+
+@Composable
+private fun WithdrawPopup(
+    onCancel: () -> Unit,
+    onConfirm: () -> Unit,
+) {
+    Column(
+        Modifier
+            .width(300.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .background(WHITE)
+            .padding(top = 18.dp, start = 12.dp, end = 12.dp, bottom = 12.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        Text(
+            text = stringResource(R.string.my_withdraw),
+            style = SSUType.H4SemiBold,
+        )
+        Text(
+            text = stringResource(R.string.my_withdraw_message),
+            style = SSUType.Body1Medium,
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            PopupButton(
+                modifier = Modifier.weight(1f),
+                text = stringResource(R.string.common_cancel),
+                color = N200,
+                onClick = onCancel,
+            )
+            PopupButton(
+                modifier = Modifier.weight(1f),
+                text = stringResource(R.string.common_confirm),
+                color = R400,
+                textColor = WHITE,
+                onClick = onConfirm,
             )
         }
     }
