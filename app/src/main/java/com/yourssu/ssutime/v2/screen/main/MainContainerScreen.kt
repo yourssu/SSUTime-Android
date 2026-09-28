@@ -49,6 +49,7 @@ fun MainContainerScreen(
     skipLoadFromMyPageBack: Boolean = false,
     onInitialLmsRefreshSkipConsumed: () -> Unit = {},
     onInitialLmsRefreshForceConsumed: () -> Unit = {},
+    onHomeTabSelected: () -> Unit = {},
     onLogout: () -> Unit = {},
     onNavigateToCyberLogin: () -> Unit = {},
 ) {
@@ -84,7 +85,12 @@ fun MainContainerScreen(
                         }
                     }
                     when (tab) {
-                        MainTab.HOME -> homeResetKey++
+                        MainTab.HOME -> {
+                            onHomeTabSelected()
+                            if (currentRoute == MainTab.HOME.route) {
+                                homeResetKey++
+                            }
+                        }
                         MainTab.CALENDAR -> calendarResetKey++
                         MainTab.MY -> myResetKey++
                     }

@@ -146,6 +146,7 @@ fun MainScreen(
 ) {
     val context = LocalContext.current
     var showWidgetHelperDialog by rememberSaveable { mutableStateOf(false) }
+    var handledHomeResetKey by rememberSaveable { mutableIntStateOf(0) }
     val mainContentNavController = rememberNavController()
     var currentTodoJson by rememberSaveable { mutableStateOf<String?>(null) }
     val showOnboardingInitialLoading = rememberSaveable { mutableStateOf(skipInitialLmsRefresh) }
@@ -157,18 +158,15 @@ fun MainScreen(
         onResult = {},
     )
     LaunchedEffect(resetKey) {
-        if (resetKey > 0) {
+        if (resetKey > handledHomeResetKey) {
+            handledHomeResetKey = resetKey
             runCatching {
-                val isNotAtRoot = mainContentNavController.currentDestination?.route != null &&
-                    mainContentNavController.currentDestination?.route != MAIN_LIST_ROUTE
-                val popped = mainContentNavController.popBackStack(MAIN_LIST_ROUTE, inclusive = false)
-                if (popped || isNotAtRoot) {
-                    Analytics.viewHome(
-                        taskCount = viewModel.todos.size,
-                        urgentCount = viewModel.todos.urgentTodoCount(),
-                        entrySource = homeEntrySource,
-                    )
-                }
+                mainContentNavController.popBackStack(MAIN_LIST_ROUTE, inclusive = false)
+                Analytics.viewHome(
+                    taskCount = viewModel.todos.size,
+                    urgentCount = viewModel.todos.urgentTodoCount(),
+                    entrySource = homeEntrySource,
+                )
             }
         }
     }

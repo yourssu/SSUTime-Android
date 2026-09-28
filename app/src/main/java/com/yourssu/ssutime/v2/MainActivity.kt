@@ -202,6 +202,9 @@ class MainActivity : ComponentActivity() {
                             onInitialLmsRefreshForceConsumed = {
                                 forceInitialLmsRefresh.value = false
                             },
+                            onHomeTabSelected = {
+                                homeEntrySource.value = ENTRY_SOURCE_TAB
+                            },
                             onLogout = {
                                 navController.navigate(Screens.LOGIN.name) {
                                     popUpTo(0) { inclusive = true }
@@ -314,6 +317,7 @@ class MainActivity : ComponentActivity() {
         const val ENTRY_SOURCE_WIDGET = "widget"
         const val ENTRY_SOURCE_NOTIFICATION = "notification"
         const val ENTRY_SOURCE_CALL_ALERT = "call_alert"
+        const val ENTRY_SOURCE_TAB = "tab"
     }
 }
 
