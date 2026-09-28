@@ -50,6 +50,7 @@ fun MainContainerScreen(
     onInitialLmsRefreshSkipConsumed: () -> Unit = {},
     onInitialLmsRefreshForceConsumed: () -> Unit = {},
     onHomeTabSelected: () -> Unit = {},
+    onHomeEntrySourceConsumed: () -> Unit = {},
     onLogout: () -> Unit = {},
     onNavigateToCyberLogin: () -> Unit = {},
 ) {
@@ -119,6 +120,7 @@ fun MainContainerScreen(
                         homeEntrySource = homeEntrySource,
                         homeEntryVersion = homeEntryVersion,
                         skipLoadFromMyPageBack = skipLoadFromMyPageBack,
+                        onHomeEntrySourceConsumed = onHomeEntrySourceConsumed,
                         onInitialLmsRefreshSkipConsumed = onInitialLmsRefreshSkipConsumed,
                         onInitialLmsRefreshForceConsumed = onInitialLmsRefreshForceConsumed,
                         resetKey = homeResetKey,

@@ -205,6 +205,9 @@ class MainActivity : ComponentActivity() {
                             onHomeTabSelected = {
                                 homeEntrySource.value = ENTRY_SOURCE_TAB
                             },
+                            onHomeEntrySourceConsumed = {
+                                homeEntrySource.value = ENTRY_SOURCE_APP
+                            },
                             onLogout = {
                                 navController.navigate(Screens.LOGIN.name) {
                                     popUpTo(0) { inclusive = true }

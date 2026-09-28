@@ -140,6 +140,7 @@ fun MainScreen(
     homeEntrySource: String = MainActivity.ENTRY_SOURCE_APP,
     homeEntryVersion: Int = 0,
     skipLoadFromMyPageBack: Boolean = false,
+    onHomeEntrySourceConsumed: () -> Unit = {},
     onInitialLmsRefreshSkipConsumed: () -> Unit = {},
     onInitialLmsRefreshForceConsumed: () -> Unit = {},
     resetKey: Int = 0,
@@ -167,6 +168,7 @@ fun MainScreen(
                     urgentCount = viewModel.todos.urgentTodoCount(),
                     entrySource = homeEntrySource,
                 )
+                onHomeEntrySourceConsumed()
             }
         }
     }
@@ -176,6 +178,7 @@ fun MainScreen(
             urgentCount = viewModel.todos.urgentTodoCount(),
             entrySource = homeEntrySource,
         )
+        onHomeEntrySourceConsumed()
 
         if (skipLoadFromMyPageBack) {
             onInitialLmsRefreshSkipConsumed()
