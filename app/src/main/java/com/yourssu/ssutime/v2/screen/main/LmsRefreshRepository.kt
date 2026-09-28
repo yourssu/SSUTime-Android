@@ -5,6 +5,7 @@ import com.yourssu.data.AttachmentInfo
 import com.yourssu.data.DiscussionAttachment
 import com.yourssu.data.DiscussionInfo
 import com.yourssu.data.LoginData
+import com.yourssu.data.NewTodoNotificationRecord
 import com.yourssu.data.SubjectInfo
 import com.yourssu.data.TodoData
 import com.yourssu.data.TodoInfo
@@ -56,6 +57,11 @@ import kotlin.time.Instant as KotlinInstant
 private const val BACKGROUND_REFRESH_RUNNING = "running"
 private const val BACKGROUND_REFRESH_SUCCESS = "success"
 private const val BACKGROUND_REFRESH_FAILED = "failed"
+private val NEW_TODO_NOTIFICATION_TYPES = setOf(
+    TodoType.ASSIGNMENT,
+    TodoType.COMMONS,
+    TodoType.QUIZ,
+)
 private const val LMS_API_TOKEN_ERROR_MESSAGE = "API 토큰값을 불러오지 못했습니다. 다시 시도해주세요."
 private const val LMS_API_TOKEN_MAX_RETRIES = 2
 private val BACKGROUND_REFRESH_LOCK_WINDOW: Duration = Duration.ofMinutes(3)
@@ -420,10 +426,39 @@ class LmsRefreshRepository(
                 isCyberConnected = isCyberConnected,
             ).withWidgetRefreshCompleted(completedAtText)
 
-            if (source == RefreshSource.FCM) {
-                refreshedTodoData.withBackgroundRefreshSucceeded(completedAtText, requestId, summary)
+            val previouslyKnownTodoKeys = (
+                currentData.todos + currentData.hiddenTodos + currentData.submitted
+            ).mapTo(mutableSetOf()) { it.todoUniqueKey() }
+            val newlyAddedTodos = if (currentData.loadedAt.isBlank()) {
+                emptyList()
             } else {
-                refreshedTodoData
+                refreshedTodoData.todos.filter { todo ->
+                    todo.type in NEW_TODO_NOTIFICATION_TYPES &&
+                        todo.todoUniqueKey() !in previouslyKnownTodoKeys
+                }
+            }
+            val newNotificationRecords = newlyAddedTodos.map { todo ->
+                NewTodoNotificationRecord(
+                    todoKey = todo.todoUniqueKey(),
+                    discoveredAt = Instant.now().toString(),
+                    subjectName = todo.subject?.name.orEmpty(),
+                    type = todo.type,
+                )
+            }
+            val todoDataWithNewNotifications = refreshedTodoData.copy(
+                pendingNewTodoNotifications = (
+                    currentData.pendingNewTodoNotifications + newNotificationRecords
+                ).distinctBy { it.todoKey },
+            )
+
+            if (source == RefreshSource.FCM) {
+                todoDataWithNewNotifications.withBackgroundRefreshSucceeded(
+                    completedAtText,
+                    requestId,
+                    summary,
+                )
+            } else {
+                todoDataWithNewNotifications
             }
         }
     }

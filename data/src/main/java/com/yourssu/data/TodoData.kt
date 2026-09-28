@@ -25,8 +25,17 @@ data class TodoData(
     val lastWidgetRefreshProgressMessage: String = "",
     val lastWidgetRefreshErrorMessage: String = "",
     val lastWidgetRefreshFinishedAt: String = "",
+    val pendingNewTodoNotifications: List<NewTodoNotificationRecord> = emptyList(),
     val sentDeadlineReminderKeys: List<String> = emptyList(),
     val readDiscussionIds: List<Int> = emptyList(),
+)
+
+@Serializable
+data class NewTodoNotificationRecord(
+    val todoKey: String,
+    val discoveredAt: String,
+    val subjectName: String,
+    val type: TodoType,
 )
 
 @Serializable

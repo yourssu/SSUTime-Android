@@ -13,8 +13,10 @@ import androidx.annotation.RequiresPermission
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.work.WorkManager
+import com.yourssu.data.NewTodoNotificationRecord
 import com.yourssu.data.TodoData
 import com.yourssu.data.TodoInfo
+import com.yourssu.data.TodoType
 import com.yourssu.ssutime.v2.CHANNEL_ID
 import com.yourssu.ssutime.v2.MainActivity
 import com.yourssu.ssutime.v2.R
@@ -45,10 +47,13 @@ private const val EXTRA_DEADLINE_REMINDER_TRIGGER_AT_MILLIS = "extra_deadline_re
 private const val MAX_SENT_DEADLINE_REMINDER_KEYS = 500
 private const val DEADLINE_REMINDER_KEY_VERSION = "deadline:v2"
 private const val DEADLINE_REMINDER_KEY_SEPARATOR = "\u001F"
+private const val NEW_TODO_NOTIFICATION_KEY = "new-todo-announcement"
 
 private val D_DAY_NOTIFY_TIME: LocalTime = LocalTime.of(9, 0)
 private val UPCOMING_NOTIFY_TIME: LocalTime = LocalTime.of(18, 0)
 private val REFRESH_NOTIFICATION_WINDOW: Duration = Duration.ofMinutes(15)
+private val NEW_TODO_NOTIFICATION_WINDOW: Duration = Duration.ofHours(24)
+private val NEW_TODO_NOTIFICATION_ID = NEW_TODO_NOTIFICATION_KEY.toStableNotificationId()
 
 data class DeadlineReminderSendResult(
     val sentKeys: List<String> = emptyList(),
@@ -237,6 +242,27 @@ private fun Context.buildUpcomingDeadlineMessage(
 private fun Context.buildDdayDeadlineMessage(todo: TodoInfo): String =
     getString(R.string.deadline_today_message, todo.toNotificationItemName(this))
 
+internal fun Context.buildNewTodoAnnouncementMessage(
+    records: List<NewTodoNotificationRecord>,
+): String? {
+    val representative = records.firstOrNull() ?: return null
+    val subjectName = representative.subjectName.ifBlank {
+        getString(R.string.new_todo_default_subject)
+    }
+    val todoType = when (representative.type) {
+        TodoType.ASSIGNMENT -> getString(R.string.todo_type_assignment)
+        TodoType.COMMONS -> getString(R.string.todo_type_lecture)
+        TodoType.QUIZ -> getString(R.string.todo_type_quiz)
+        else -> return null
+    }
+
+    return if (records.size == 1) {
+        getString(R.string.new_todo_notification_single, subjectName, todoType)
+    } else {
+        getString(R.string.new_todo_notification_multiple, subjectName, todoType, records.size - 1)
+    }
+}
+
 private fun Context.buildDeadlineNotificationTitle(daysBefore: Int): String =
     if (daysBefore == 0) {
         getString(R.string.deadline_title_today)
@@ -290,6 +316,29 @@ private fun Context.showDeadlineNotification(
         .build()
 
     NotificationManagerCompat.from(this).notify(notificationId, notification)
+}
+
+@RequiresPermission(Manifest.permission.POST_NOTIFICATIONS)
+private fun Context.showNewTodoAnnouncementNotification(message: String) {
+    val contentIntent = PendingIntent.getActivity(
+        this,
+        NEW_TODO_NOTIFICATION_ID,
+        Intent(this, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+        },
+        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+    )
+    val notification = NotificationCompat.Builder(this, CHANNEL_ID)
+        .setSmallIcon(R.drawable.outlined_checkbox)
+        .setContentTitle(getString(R.string.new_todo_notification_title))
+        .setContentText(message)
+        .setStyle(NotificationCompat.BigTextStyle().bigText(message))
+        .setContentIntent(contentIntent)
+        .setAutoCancel(true)
+        .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+        .build()
+
+    NotificationManagerCompat.from(this).notify(NEW_TODO_NOTIFICATION_ID, notification)
 }
 
 private fun TodoInfo.toNotificationItemName(context: Context): String =
@@ -502,10 +551,42 @@ private suspend fun sendScheduledDeadlineReminders(
                 currentData.withSentDeadlineReminderKeys(result.sentKeys)
             }
         }
+
+        if (now.atZone(TODO_DEADLINE_ZONE_ID).toLocalTime() == UPCOMING_NOTIFY_TIME) {
+            val windowStart = now.minus(NEW_TODO_NOTIFICATION_WINDOW)
+            val pendingRecords = todoData.pendingNewTodoNotifications
+            val expiredRecords = pendingRecords.filter { record ->
+                record.discoveredAt.toInstantOrNull()?.isBefore(windowStart) != false
+            }
+            val readyRecords = pendingRecords.filter { record ->
+                val discoveredAt = record.discoveredAt.toInstantOrNull() ?: return@filter false
+                !discoveredAt.isBefore(windowStart) && discoveredAt.isBefore(now)
+            }
+            val message = context.buildNewTodoAnnouncementMessage(readyRecords)
+
+            if (message != null && context.canPostNotifications()) {
+                context.showNewTodoAnnouncementNotification(message)
+            }
+
+            val consumedRecordKeys = (expiredRecords + readyRecords)
+                .mapTo(mutableSetOf()) { it.notificationRecordKey() }
+            if (consumedRecordKeys.isNotEmpty()) {
+                context.todoDataStore.updateData { currentData ->
+                    currentData.copy(
+                        pendingNewTodoNotifications = currentData.pendingNewTodoNotifications
+                            .filterNot { it.notificationRecordKey() in consumedRecordKeys },
+                    )
+                }
+            }
+        }
     } finally {
         scheduleDeadlineNotifications(context)
     }
 }
+
+private fun NewTodoNotificationRecord.notificationRecordKey(): String = "$todoKey\u001F$discoveredAt"
+
+private fun String.toInstantOrNull(): Instant? = runCatching { Instant.parse(this) }.getOrNull()
 
 private suspend fun rescheduleDeadlineNotificationsIfAllowed(context: Context) {
     val alertData = context.notificationStore.data.first()

@@ -23,6 +23,10 @@
     <string name="todo_type_quiz">Quiz</string>
     <string name="todo_type_submitted">Submitted</string>
     <string name="todo_type_submitted_late">Submitted late</string>
+    <string name="new_todo_default_subject">General</string>
+    <string name="new_todo_notification_title">New tasks posted</string>
+    <string name="new_todo_notification_single">A new %2$s was posted in %1$s.</string>
+    <string name="new_todo_notification_multiple">A new %2$s and %3$d more were posted in %1$s.</string>
 
     <string name="login_logo_content_description">Logo</string>
     <string name="login_id_placeholder">Enter your u-SAINT ID</string>

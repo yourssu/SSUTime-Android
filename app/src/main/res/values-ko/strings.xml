@@ -22,6 +22,10 @@
     <string name="todo_type_quiz">퀴즈</string>
     <string name="todo_type_submitted">정상 제출</string>
     <string name="todo_type_submitted_late">지각 제출</string>
+    <string name="new_todo_default_subject">공통</string>
+    <string name="new_todo_notification_title">새 할 일이 올라왔어요</string>
+    <string name="new_todo_notification_single">%1$s %2$s가 새로 올라왔어요.</string>
+    <string name="new_todo_notification_multiple">%1$s %2$s 외 %3$d건이 올라왔어요.</string>
 
     <string name="login_logo_content_description">로고</string>
     <string name="login_id_placeholder">유세인트 아이디를 입력하세요</string>
