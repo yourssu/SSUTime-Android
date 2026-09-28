@@ -157,6 +157,11 @@ class ApiRepository(
     }
 
     suspend fun reportTodoWithAnalysis(todo: TodoReportWithAnalysisRequest): AssignmentAnalysisResponse? {
+        Log.i(
+            "ApiRepository",
+            "Sending assignment analysis request: subjectId=${todo.subjectId}, " +
+                "materialCode=${todo.materialCode}, type=${todo.type}",
+        )
         val response = client.post(
             urlString = "$baseUrl/todo/report-with-analysis"
         ) {
@@ -164,22 +169,23 @@ class ApiRepository(
             contentType(ContentType.Application.Json)
             setBody(todo)
         }
-        Log.i("ApiRepository", todo.title + " Analysis Reqeust Status Code : ${response.status.value}")
-        defaultJson.encodeToString(todo).chunked(3000).forEachIndexed { index, chunk ->
-            Log.d("AI_REQUEST", "$chunk")
-        }
+        Log.i("ApiRepository", "Assignment analysis request response: ${response.status.value}")
         val responseText = response.bodyAsText()
-        Log.i("ApiRepository RES", responseText)
 
         if (!response.status.isSuccess()) {
             Log.w("ApiRepository", "Analysis request returned error status: ${response.status.value}")
         }
 
-        return runCatching {
+        val analysisResponse = runCatching {
             defaultJson.decodeFromString<AssignmentAnalysisResponse>(responseText)
         }.onFailure { exception ->
-            Log.w("ApiRepository", "Failed to decode AssignmentAnalysisResponse: $responseText", exception)
+            Log.w("ApiRepository", "Failed to decode AssignmentAnalysisResponse", exception)
         }.getOrNull()
+        Log.i(
+            "ApiRepository",
+            "Assignment analysis accepted: id=${analysisResponse?.analysisId}, status=${analysisResponse?.status}",
+        )
+        return analysisResponse
     }
 
     suspend fun requestAccountWithdrawal(reason: String = "string"): AccountWithdrawalResponse {

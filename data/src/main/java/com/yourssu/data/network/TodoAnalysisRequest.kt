@@ -45,7 +45,17 @@ data class AssignmentAnalysisResponse(
 )
 
 val AssignmentAnalysisResponse.isSuccessful: Boolean
-    get() = error.isNullOrBlank() && (analysisId > 0L || status.isNotBlank())
+    get() = error.isNullOrBlank() &&
+        analysisId > 0L &&
+        status.isNotBlank() &&
+        !status.equals("FAILED", ignoreCase = true) &&
+        !status.equals("SKIPPED", ignoreCase = true)
+
+val AssignmentAnalysisResponse.isFailed: Boolean
+    get() = status.equals("FAILED", ignoreCase = true)
+
+val AssignmentAnalysisResponse.isSkipped: Boolean
+    get() = status.equals("SKIPPED", ignoreCase = true)
 
 val AssignmentAnalysisResponse.hasNoAnalyzableAttachment: Boolean
     get() = (error?.contains("analyzable", ignoreCase = true) == true ||

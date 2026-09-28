@@ -13,6 +13,8 @@ import com.yourssu.data.network.AssignmentAnalysisResponse
 import com.yourssu.data.network.AttachmentLinkResponse
 import com.yourssu.data.network.ReportedTodoResponse
 import com.yourssu.data.network.hasNoAnalyzableAttachment
+import com.yourssu.data.network.isFailed
+import com.yourssu.data.network.isSkipped
 import com.yourssu.data.network.isSuccessful
 import com.yourssu.data.network.matches
 import com.yourssu.ssutime.v2.analytics.SentryExceptionReporter
@@ -24,7 +26,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.time.ExperimentalTime
 
-private const val AI_SUMMARY_POLL_ATTEMPTS = 8
+private const val AI_SUMMARY_POLL_ATTEMPTS = 30
 private const val AI_SUMMARY_POLL_INTERVAL_MILLIS = 2_000L
 private const val TODO_STATUS_PROVISIONAL = "PROVISIONAL"
 private const val TODO_STATUS_CONFIRMED = "CONFIRMED"
@@ -58,6 +60,10 @@ class TodoDetailViewModel(
         activeTodoKey = key
 
         if (!todo.canRequestAiSummary()) {
+            Log.i(
+                javaClass.name,
+                "AI summary request skipped: type=${todo.type}, hasDescription=${todo.description.isNotBlank()}",
+            )
             aiSummaryState = AiSummaryUiState.Empty
             return
         }
@@ -95,7 +101,15 @@ class TodoDetailViewModel(
                 }
 
                 if (analysisResponse?.isSuccessful == true) {
-                    pollAndCacheAiSummary(todo, key, fallbackSuccess)
+                    pollReportedTodoAndCache(todo, key, fallbackSuccess)
+                    return@launch
+                }
+                if (analysisResponse?.isFailed == true) {
+                    aiSummaryState = fallbackSuccess ?: AiSummaryUiState.Error
+                    return@launch
+                }
+                if (analysisResponse?.isSkipped == true) {
+                    aiSummaryState = fallbackSuccess ?: AiSummaryUiState.Empty
                     return@launch
                 }
             }
@@ -116,7 +130,7 @@ class TodoDetailViewModel(
             }
 
             if (reportedTodo?.isProvisional == true) {
-                pollAndCacheAiSummary(todo, key)
+                pollReportedTodoAndCache(todo, key)
                 return@launch
             }
 
@@ -141,7 +155,7 @@ class TodoDetailViewModel(
         )
     }
 
-    private suspend fun pollAndCacheAiSummary(
+    private suspend fun pollReportedTodoAndCache(
         todo: TodoInfo,
         key: String,
         fallbackSuccess: AiSummaryUiState.Success? = null,
@@ -149,12 +163,28 @@ class TodoDetailViewModel(
         if (fallbackSuccess == null) {
             aiSummaryState = AiSummaryUiState.Analyzing
         }
+        var lastReportedTodo: ReportedTodoResponse? = null
 
         repeat(AI_SUMMARY_POLL_ATTEMPTS) { attempt ->
-            val success = runCatching {
-                findReportedTodo(todo)?.toAiSummarySuccessOrNull()
+            val reportedTodo = runCatching {
+                findReportedTodo(todo)
+            }.onFailure { exception ->
+                if (attempt == 0) {
+                    Log.w(javaClass.name, "AI 요약이 포함된 할 일 조회에 실패했습니다.", exception)
+                }
             }.getOrNull()
+            lastReportedTodo = reportedTodo
 
+            if (attempt == 0) {
+                Log.i(
+                    javaClass.name,
+                    "AI summary todo lookup: matched=${reportedTodo != null}, " +
+                        "todoStatus=${reportedTodo?.status}, " +
+                        "summaryLength=${reportedTodo?.aiSummary.orEmpty().length}",
+                )
+            }
+
+            val success = reportedTodo?.toAiSummarySuccessOrNull()
             if (success != null) {
                 cacheAndShowAiSummary(key, success)
                 return
@@ -165,7 +195,11 @@ class TodoDetailViewModel(
             }
         }
 
-        aiSummaryState = fallbackSuccess ?: AiSummaryUiState.Empty
+        aiSummaryState = fallbackSuccess ?: if (lastReportedTodo?.isConfirmed == true) {
+            AiSummaryUiState.Empty
+        } else {
+            AiSummaryUiState.Error
+        }
     }
 
     private suspend fun cacheAndShowAiSummary(
@@ -204,7 +238,7 @@ fun TodoInfo.canRequestAiSummary(): Boolean =
 
 private fun ReportedTodoResponse.toAiSummarySuccessOrNull(): AiSummaryUiState.Success? {
     val summary = aiSummary.orEmpty().trim()
-        .takeIf { isConfirmed && it.isNotBlank() }
+        .takeIf { it.isNotBlank() }
         ?: return null
 
     return AiSummaryUiState.Success(

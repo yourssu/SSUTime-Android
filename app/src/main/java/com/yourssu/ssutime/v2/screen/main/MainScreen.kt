@@ -936,11 +936,11 @@ fun TodoItem(
                                 Text(
                                     modifier = Modifier
                                         .clip(RoundedCornerShape(6.dp))
-                                        .background(Color(0xFFDFDFDF))
+                                        .background(Color(0xFFFFBFC1))
                                         .padding(horizontal = 6.dp, vertical = 3.dp),
                                     text = "사이버대",
                                     style = SSUType.Caption1SemiBold,
-                                    color = Color(0xFF4A4C4D)
+                                    color = Color(0xFFD6444B)
                                 )
                                 Spacer(Modifier.width(6.dp))
                             }

@@ -175,7 +175,10 @@ class MainRepository(
         todo: TodoInfo,
         lmsSession: LmsSessionRequest,
     ): AssignmentAnalysisResponse? {
-        val request = todo.toReportWithAnalysisRequestOrNull(lmsSession) ?: return null
+        val request = todo.toReportWithAnalysisRequestOrNull(lmsSession) ?: run {
+            Log.w("MainRepository", "AI summary request skipped: unsupported todo payload")
+            return null
+        }
         return apiRepository.reportTodoWithAnalysis(request)
     }
 
