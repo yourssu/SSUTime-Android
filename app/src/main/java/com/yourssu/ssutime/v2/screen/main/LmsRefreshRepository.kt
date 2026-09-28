@@ -327,6 +327,17 @@ class LmsRefreshRepository(
         } else {
             CyberTodoResult()
         }
+        // 조회 실패를 정상적인 빈 결과로 취급하지 않도록 저장된 사이버대 과목을 유지합니다.
+        // 스마트 병합에서 기존 과목의 유효한 할 일을 보존하는 기준으로 사용합니다.
+        val cyberResultForSave = if (
+            cyberLoginData.hasCredentials &&
+            !cyberResult.isComplete &&
+            cyberResult.subjects.isEmpty()
+        ) {
+            cyberResult.copy(subjects = cachedData.subjects.filter { it.id < 0 })
+        } else {
+            cyberResult
+        }
         val summary = buildRefreshSummary(
             completedAt = completedAt,
             terms = terms,
@@ -342,7 +353,7 @@ class LmsRefreshRepository(
             subjectInfos = subjectInfos,
             completedAt = completedAt,
             summary = summary,
-            cyberResult = cyberResult,
+            cyberResult = cyberResultForSave,
             isCyberConnected = cyberLoginData.hasCredentials,
         )
 
@@ -692,6 +703,9 @@ class LmsRefreshRepository(
         // 1. 미완료 할 일 스마트 머지: 네트워크 일시 누락으로 빠진 미완료 할 일 보존
         val previousCandidateTodos = previousData.todos + previousData.hiddenTodos
         val preservedTodos = previousCandidateTodos.filter { prevTodo ->
+            // 완전한 사이버대 조회에서는 응답에 없는 항목을 삭제된 것으로 처리합니다.
+            if (isCyberConnected && cyberResult.isComplete && prevTodo.isCyber()) return@filter false
+
             val sid = prevTodo.subject?.id ?: prevTodo.subjectId
             if (sid !in allCurrentSubjectIds) return@filter false
 
@@ -716,6 +730,8 @@ class LmsRefreshRepository(
 
         // 2. 제출 완료 할 일 스마트 머지: 일시 누락된 제출 목록 보존
         val preservedSubmitted = previousData.submitted.filter { prevSub ->
+            if (isCyberConnected && cyberResult.isComplete && prevSub.isCyber()) return@filter false
+
             val sid = prevSub.subject?.id ?: prevSub.subjectId
             if (sid !in allCurrentSubjectIds) return@filter false
 

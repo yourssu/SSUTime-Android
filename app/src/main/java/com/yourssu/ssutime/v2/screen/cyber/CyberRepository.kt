@@ -5,6 +5,7 @@ import androidx.datastore.core.DataStore
 import com.yourssu.data.CyberLoginData
 import com.yourssu.data.TodoInfo
 import com.yourssu.data.isCyber
+import com.yourssu.data.todoUniqueKey
 import com.yourssu.ssutime.v2.screen.main.MainRepository
 
 import io.github.chlwhdtn03.CyberApi
@@ -119,23 +120,27 @@ class CyberRepository(
                             CyberTodoMapper.mapWeeksToTodos(subject, subjectInfo, weeks)
                         }.getOrElse { exception ->
                             Log.e(TAG, "과목 주차 조회 실패: ${subject.name}", exception)
-                            Pair(emptyList<TodoInfo>(), emptyList<TodoInfo>())
+                            null
                         }
                     }
                 }
 
                 val results = deferredList.awaitAll()
-                for ((todos, submitted) in results) {
-                    allTodos.addAll(todos)
-                    allSubmitted.addAll(submitted)
+                for (result in results) {
+                    result?.let { (todos, submitted) ->
+                        allTodos.addAll(todos)
+                        allSubmitted.addAll(submitted)
+                    }
                 }
-            }
 
-            CyberTodoResult(
-                todos = allTodos,
-                submitted = allSubmitted,
-                subjects = subjectInfos,
-            )
+                val isComplete = results.all { it != null }
+                return@coroutineScope CyberTodoResult(
+                    todos = allTodos,
+                    submitted = allSubmitted,
+                    subjects = subjectInfos,
+                    isComplete = isComplete,
+                )
+            }
         } catch (e: Exception) {
             Log.e(TAG, "사이버대학교 할 일 조회 중 오류 발생", e)
             CyberTodoResult()
@@ -147,15 +152,19 @@ class CyberRepository(
      */
     suspend fun syncCyberTodos() {
         val result = fetchCyberTodos()
-        if (result.subjects.isEmpty()) return
+        if (!result.isComplete) return
 
         mainRepository.updateTodoData { currentData ->
             // 기존 사이버대 투두/과목을 먼저 제거한 후 새로운 데이터로 병합
             val nonCyberTodos = currentData.todos.filterNot { it.isCyber() }
             val nonCyberSubmitted = currentData.submitted.filterNot { it.isCyber() }
             val nonCyberSubjects = currentData.subjects.filterNot { it.id < 0 }
+            val nonCyberHiddenTodos = currentData.hiddenTodos.filterNot { it.isCyber() }
 
-            val mergedTodos = (nonCyberTodos + result.todos)
+            val (hiddenCyberTodos, visibleCyberTodos) = result.todos.partition {
+                it.todoUniqueKey() in currentData.hiddenTodoKeys
+            }
+            val mergedTodos = (nonCyberTodos + visibleCyberTodos)
             val mergedSubmitted = (nonCyberSubmitted + result.submitted)
             val mergedSubjects = (nonCyberSubjects + result.subjects).distinctBy { it.id }
 
@@ -163,6 +172,7 @@ class CyberRepository(
                 todos = mergedTodos,
                 submitted = mergedSubmitted,
                 subjects = mergedSubjects,
+                hiddenTodos = nonCyberHiddenTodos + hiddenCyberTodos,
             )
         }
     }

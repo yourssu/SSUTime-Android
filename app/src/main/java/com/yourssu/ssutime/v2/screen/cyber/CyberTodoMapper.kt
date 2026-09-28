@@ -15,6 +15,8 @@ data class CyberTodoResult(
     val todos: List<TodoInfo> = emptyList(),
     val submitted: List<TodoInfo> = emptyList(),
     val subjects: List<SubjectInfo> = emptyList(),
+    /** 과목 목록과 모든 과목의 주차 정보를 모두 불러온 경우에만 true입니다. */
+    val isComplete: Boolean = false,
 )
 
 object CyberTodoMapper {
