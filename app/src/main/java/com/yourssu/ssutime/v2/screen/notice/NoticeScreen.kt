@@ -223,6 +223,12 @@ val MockSubjectInfos: List<SubjectInfo> = listOf(
     ),
 )
 
+internal fun SubjectInfo.hasUnreadNotice(): Boolean =
+    discussions.any { it.readState.equals("unread", ignoreCase = true) }
+
+internal fun List<SubjectInfo>.findFirstUnreadSubjectIndex(): Int =
+    indexOfFirst { it.hasUnreadNotice() }
+
 @Composable
 fun NoticeScreen(
     modifier: Modifier = Modifier,
@@ -235,7 +241,27 @@ fun NoticeScreen(
     val context = LocalContext.current
     val effectiveSubjects = if (subjects.isNotEmpty()) subjects else MockSubjectInfos
 
-    var selectedSubjectIndex by rememberSaveable { mutableIntStateOf(0) }
+    var hasAutoSelected by rememberSaveable { mutableStateOf(false) }
+    var selectedSubjectIndex by rememberSaveable {
+        val initialIndex = effectiveSubjects.findFirstUnreadSubjectIndex()
+        if (initialIndex >= 0) {
+            hasAutoSelected = true
+            mutableIntStateOf(initialIndex)
+        } else {
+            mutableIntStateOf(0)
+        }
+    }
+
+    LaunchedEffect(effectiveSubjects) {
+        if (!hasAutoSelected && effectiveSubjects.isNotEmpty()) {
+            val unreadIndex = effectiveSubjects.findFirstUnreadSubjectIndex()
+            if (unreadIndex >= 0) {
+                selectedSubjectIndex = unreadIndex
+                hasAutoSelected = true
+            }
+        }
+    }
+
     val validIndex = selectedSubjectIndex.coerceIn(0, (effectiveSubjects.size - 1).coerceAtLeast(0))
     val currentSubject = effectiveSubjects.getOrNull(validIndex)
 
@@ -259,24 +285,20 @@ fun NoticeScreen(
         ) {
             item {
                 Spacer(modifier = Modifier.height(8.dp))
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
-                        contentDescription = stringResource(R.string.common_back),
-                        tint = BLACK,
-                        modifier = Modifier
-                            .size(28.dp)
-                            .clickable(onClick = onBackClick)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = stringResource(R.string.notice_title),
-                        style = SSUType.H2SemiBold,
-                        color = BLACK
-                    )
-                }
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+                    contentDescription = stringResource(R.string.common_back),
+                    tint = BLACK,
+                    modifier = Modifier
+                        .size(28.dp)
+                        .clickable(onClick = onBackClick)
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    text = stringResource(R.string.notice_title),
+                    style = SSUType.H2SemiBold,
+                    color = BLACK
+                )
                 Spacer(modifier = Modifier.height(16.dp))
 
                 if (effectiveSubjects.isNotEmpty()) {
@@ -285,6 +307,7 @@ fun NoticeScreen(
                         selectedIndex = validIndex,
                         onSelectSubject = { index ->
                             selectedSubjectIndex = index
+                            hasAutoSelected = true
                         }
                     )
                 }

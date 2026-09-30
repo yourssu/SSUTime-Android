@@ -34,6 +34,7 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.Saver
@@ -57,6 +58,7 @@ import com.yourssu.data.todoUniqueKey
 import com.yourssu.ssutime.v2.R
 import com.yourssu.ssutime.v2.analytics.Analytics
 import com.yourssu.ssutime.v2.component.SSUTimeTopBar
+import com.yourssu.ssutime.v2.component.preventBottomSheetJitter
 import com.yourssu.ssutime.v2.screen.main.MainViewModel
 import com.yourssu.ssutime.v2.screen.main.todo.TodoDetailScreen
 import com.yourssu.ssutime.v2.screen.notice.NoticeScreen
@@ -146,6 +148,7 @@ fun CalendarScreen(
     modifier: Modifier = Modifier,
     viewModel: MainViewModel = koinViewModel(),
     onNoticeClick: () -> Unit = {},
+    resetKey: Int = 0,
 ) {
     // SnapshotStateList의 변경을 감지하기 위해 toList()로 상태 전달
     val todos = viewModel.todos.toList()
@@ -153,6 +156,14 @@ fun CalendarScreen(
     val unreadNoticeCount = viewModel.unreadNoticeCount
     val calendarNavController = rememberNavController()
     var currentTodoJson by rememberSaveable { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(resetKey) {
+        if (resetKey > 0) {
+            runCatching {
+                calendarNavController.popBackStack(CALENDAR_MAIN_ROUTE, inclusive = false)
+            }
+        }
+    }
 
     NavHost(
         navController = calendarNavController,
@@ -168,6 +179,7 @@ fun CalendarScreen(
                 modifier = Modifier.fillMaxSize(),
                 todos = todos,
                 noticeCount = unreadNoticeCount,
+                resetKey = resetKey,
                 onNoticeClick = {
                     onNoticeClick()
                     calendarNavController.navigate(CALENDAR_NOTICE_ROUTE)
@@ -230,6 +242,7 @@ fun CalendarScreenContent(
     modifier: Modifier = Modifier,
     todos: List<TodoInfo> = emptyList(),
     noticeCount: Int = 4,
+    resetKey: Int = 0,
     onNoticeClick: () -> Unit = {},
     onTodoClick: (TodoInfo) -> Unit = {},
 ) {
@@ -240,7 +253,18 @@ fun CalendarScreenContent(
     var selectedDate by rememberSaveable(stateSaver = LocalDateNullableSaver) {
         mutableStateOf<LocalDate?>(null)
     }
+    var showBottomSheet by rememberSaveable { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    var handledResetKey by rememberSaveable { mutableIntStateOf(0) }
+    val shouldResetSheet = resetKey > handledResetKey
+
+    LaunchedEffect(resetKey) {
+        if (shouldResetSheet) {
+            handledResetKey = resetKey
+            showBottomSheet = false
+            selectedDate = null
+        }
+    }
 
     LaunchedEffect(Unit) {
         Analytics.viewCalendar()
@@ -292,8 +316,14 @@ fun CalendarScreenContent(
                 CalendarMonthHeader(
                     currentYearMonth = currentYearMonth,
                     totalCount = totalMonthEventCount,
-                    onPreviousMonth = { currentYearMonth = currentYearMonth.minusMonths(1) },
-                    onNextMonth = { currentYearMonth = currentYearMonth.plusMonths(1) }
+                    onPreviousMonth = {
+                        Analytics.calendarMonthChange(direction = "prev")
+                        currentYearMonth = currentYearMonth.minusMonths(1)
+                    },
+                    onNextMonth = {
+                        Analytics.calendarMonthChange(direction = "next")
+                        currentYearMonth = currentYearMonth.plusMonths(1)
+                    }
                 )
                 Spacer(modifier = Modifier.height(16.dp))
             }
@@ -313,6 +343,7 @@ fun CalendarScreenContent(
                     onDayClick = { date ->
                         Analytics.calendarDateClick()
                         selectedDate = date
+                        showBottomSheet = true
                     }
                 )
             }
@@ -320,19 +351,21 @@ fun CalendarScreenContent(
     }
 
     // 날짜 클릭 시 바텀시트 표시
-    selectedDate?.let { date ->
-        val selectedDayTodos = eventsByDate[date] ?: emptyList()
-        CalendarDateDetailBottomSheet(
-            date = date,
-            today = today,
-            todos = selectedDayTodos,
-            sheetState = sheetState,
-            onDismissRequest = { selectedDate = null },
-            onTodoClick = { todo ->
-                selectedDate = null
-                onTodoClick(todo)
-            },
-        )
+    if (showBottomSheet && !shouldResetSheet) {
+        selectedDate?.let { date ->
+            val selectedDayTodos = eventsByDate[date] ?: emptyList()
+            CalendarDateDetailBottomSheet(
+                date = date,
+                today = today,
+                todos = selectedDayTodos,
+                sheetState = sheetState,
+                onDismissRequest = {
+                    showBottomSheet = false
+                    selectedDate = null
+                },
+                onTodoClick = onTodoClick,
+            )
+        }
     }
 }
 
@@ -685,6 +718,7 @@ fun CalendarDateDetailBottomSheet(
         LazyColumn(
             modifier = Modifier
                 .fillMaxWidth()
+                .preventBottomSheetJitter()
                 .safeDrawingPadding()
                 .padding(horizontal = 20.dp)
                 .padding(bottom = 36.dp)

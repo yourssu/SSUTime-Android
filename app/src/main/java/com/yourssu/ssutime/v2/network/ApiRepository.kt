@@ -1,6 +1,8 @@
 package com.yourssu.ssutime.v2.network
 
 import android.util.Log
+import com.yourssu.data.network.AccountWithdrawalRequest
+import com.yourssu.data.network.AccountWithdrawalResponse
 import com.yourssu.data.network.AddEnrollmentRequest
 import com.yourssu.data.network.AssignmentAnalysisResponse
 import com.yourssu.data.network.DeleteEnrollmentRequest
@@ -155,6 +157,11 @@ class ApiRepository(
     }
 
     suspend fun reportTodoWithAnalysis(todo: TodoReportWithAnalysisRequest): AssignmentAnalysisResponse? {
+        Log.i(
+            "ApiRepository",
+            "Sending assignment analysis request: subjectId=${todo.subjectId}, " +
+                "materialCode=${todo.materialCode}, type=${todo.type}",
+        )
         val response = client.post(
             urlString = "$baseUrl/todo/report-with-analysis"
         ) {
@@ -162,21 +169,44 @@ class ApiRepository(
             contentType(ContentType.Application.Json)
             setBody(todo)
         }
-        Log.i("ApiRepository", todo.title + " Analysis Reqeust Status Code : ${response.status.value}")
-        defaultJson.encodeToString(todo).chunked(3000).forEachIndexed { index, chunk ->
-            Log.d("AI_REQUEST", "$chunk")
-        }
+        Log.i("ApiRepository", "Assignment analysis request response: ${response.status.value}")
         val responseText = response.bodyAsText()
-        Log.i("ApiRepository RES", responseText)
 
         if (!response.status.isSuccess()) {
             Log.w("ApiRepository", "Analysis request returned error status: ${response.status.value}")
         }
 
-        return runCatching {
+        val analysisResponse = runCatching {
             defaultJson.decodeFromString<AssignmentAnalysisResponse>(responseText)
         }.onFailure { exception ->
-            Log.w("ApiRepository", "Failed to decode AssignmentAnalysisResponse: $responseText", exception)
+            Log.w("ApiRepository", "Failed to decode AssignmentAnalysisResponse", exception)
         }.getOrNull()
+        Log.i(
+            "ApiRepository",
+            "Assignment analysis accepted: id=${analysisResponse?.analysisId}, status=${analysisResponse?.status}",
+        )
+        return analysisResponse
+    }
+
+    suspend fun requestAccountWithdrawal(reason: String = "string"): AccountWithdrawalResponse {
+        val response = client.post(
+            urlString = "$baseUrl/auth/withdrawal-requests"
+        ) {
+            bearerAuth(accessToken)
+            contentType(ContentType.Application.Json)
+            setBody(AccountWithdrawalRequest(reason = reason))
+        }
+        val responseText = response.bodyAsText()
+        Log.i("ApiRepository", "Account withdrawal status: ${response.status.value}, body: $responseText")
+        if (response.status.isSuccess()) {
+            return runCatching {
+                defaultJson.decodeFromString<AccountWithdrawalResponse>(responseText)
+            }.getOrElse {
+                AccountWithdrawalResponse(status = "REQUESTED")
+            }
+        } else {
+            throw IllegalStateException("Account withdrawal failed with status ${response.status.value}: $responseText")
+        }
     }
 }
+

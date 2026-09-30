@@ -6,7 +6,7 @@ import kotlinx.serialization.Serializable
 data class TodoInfo(
     val todoId: Int = 0, // 과제일때 유효한 ID
     val title: String, // 제목
-    val due_date: String, // 마감 기한
+    val due_date: String, // 약마감 기한
     val type: TodoType, // 제목
     val subject: SubjectInfo?, // 과목 정보
     val submittedAt: String = "", // 제출 시각
@@ -29,13 +29,13 @@ enum class TodoType(
 }
 
 fun TodoInfo.todoUniqueKey(): String =
-    if (todoId > 0) {
+    if (todoId > 0 || isCyber()) {
         "${subject?.id ?: subjectId}:$todoId:${type.name}"
     } else {
         "${subject?.id ?: subjectId}:$todoId:${type.name}:$title:$due_date"
     }
 
 fun TodoInfo.isCyber(): Boolean =
-    todoId < 0 || (subject?.id ?: subjectId) < 0 || url.contains("kcu.ac")
+    (subject?.id ?: subjectId) < 0 || url.contains("kcu.ac") || todoId <= -10000
 
 

@@ -7,6 +7,7 @@ data class CyberLoginData(
     val id: String = "",
     val pw: String = "",
     val isConnected: Boolean = false,
+    val isBannerDismissed: Boolean = false,
 ) {
     val hasCredentials: Boolean
         get() = isConnected && id.isNotBlank() && pw.isNotBlank()

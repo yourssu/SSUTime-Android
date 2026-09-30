@@ -19,8 +19,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.outlined.AttachFile
@@ -104,6 +106,7 @@ fun TodoDetailScreen(
     if (showHidePopup) {
         Dialog(onDismissRequest = { showHidePopup = false }) {
             HideTodoPopup(
+                todoType = todo.type,
                 onCancel = { showHidePopup = false },
                 onConfirm = {
                     Analytics.hideConfirm()
@@ -139,9 +142,17 @@ fun TodoDetailContent(
         onLoadAiSummary()
     }
 
+    val scrollState = rememberScrollState()
+
+    LaunchedEffect(todo.todoUniqueKey()) {
+        scrollState.scrollTo(0)
+    }
+
     Column(
         modifier = modifier
             .fillMaxSize()
+            .background(WHITE)
+            .verticalScroll(scrollState)
     ) {
         Column(
             modifier = Modifier.padding(16.dp)
@@ -170,11 +181,9 @@ fun TodoDetailTabArea(
     aiSummaryState: AiSummaryUiState?,
 ) {
 
-    val shouldShowAiSummaryTab = todo.canRequestAiSummary() && when (aiSummaryState) {
-        is AiSummaryUiState.Success -> true
-        AiSummaryUiState.Loading, AiSummaryUiState.Analyzing -> true
-        AiSummaryUiState.Empty, AiSummaryUiState.Error, null -> false
-    }
+    val shouldShowAiSummaryTab = todo.canRequestAiSummary() &&
+        aiSummaryState is AiSummaryUiState.Success &&
+        aiSummaryState.summary.isNotBlank()
 
     val availableTabs = remember(shouldShowAiSummaryTab) {
         if (shouldShowAiSummaryTab) {
@@ -192,7 +201,7 @@ fun TodoDetailTabArea(
         Spacer(Modifier.fillMaxWidth().height(12.dp).background(color = N100))
 
         Column(
-            modifier = Modifier.padding(16.dp)
+            modifier = Modifier.padding(4.dp)
         ) {
             var selectedDestination by rememberSaveable { mutableIntStateOf(0) }
             val safeIndex = selectedDestination.coerceIn(0, availableTabs.lastIndex)
@@ -242,15 +251,20 @@ fun TodoDetailTabArea(
         }
     } else {
         val context = LocalContext.current
+        val buttonTextRes = if (todo.isCyber()) {
+            R.string.todo_detail_open_cyber
+        } else {
+            R.string.todo_detail_open_lms
+        }
         SButton(
             modifier = Modifier
                 .padding(horizontal = 16.dp)
                 .padding(bottom = 16.dp)
                 .fillMaxWidth(),
-            labelText = stringResource(R.string.todo_detail_open_lms),
+            labelText = stringResource(buttonTextRes),
             textStyle = SSUType.Label3Medium,
             onClick = {
-                Analytics.lmsLinkClick()
+                Analytics.lmsLinkClick(destinationType = if (todo.isCyber()) "cyber" else "lms")
                 openTodoLmsUrl(context, todo)
             }
         )
@@ -392,6 +406,7 @@ fun TodoAttachmentSection(
                 TodoAttachmentItem(
                     fileName = fileName,
                     onClick = {
+                        Analytics.taskAttachmentClick()
                         onOpenUrl(attachment.url)
                     }
                 )
@@ -504,11 +519,16 @@ fun TodoDetailTabContent(
             modifier = Modifier.fillMaxWidth(),
             contentAlignment = Alignment.TopEnd
         ) {
+            val buttonTextRes = if (todo.isCyber()) {
+                R.string.todo_detail_open_cyber
+            } else {
+                R.string.todo_detail_open_lms
+            }
             SButton_Small(
-                labelText = stringResource(R.string.todo_detail_open_lms),
+                labelText = stringResource(buttonTextRes),
                 textStyle = SSUType.Label3Medium,
                 onClick = {
-                    Analytics.lmsLinkClick()
+                    Analytics.lmsLinkClick(destinationType = if (todo.isCyber()) "cyber" else "lms")
                     openTodoLmsUrl(context, todo)
                 }
             )
@@ -589,34 +609,31 @@ fun TodoOverView(
         modifier = Modifier
             .padding(top = 4.dp)
     ) {
-        Column(
-            verticalArrangement = Arrangement.spacedBy(5.dp)
-        ) {
+        Column {
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+                contentDescription = stringResource(R.string.common_back),
+                tint = N600,
+                modifier = Modifier
+                    .size(28.dp)
+                    .clickable(onClick = onPreviousClick)
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
             Text(
                 text = todo.subject?.name ?: stringResource(R.string.common_unknown_subject),
                 style = SSUType.H5SemiBold.copy(color = N500),
             )
 
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
-                    contentDescription = stringResource(R.string.common_back),
-                    tint = N600,
-                    modifier = Modifier
-                        .size(28.dp)
-                        .clickable(onClick = onPreviousClick)
-                )
-                Spacer(Modifier.width(8.dp))
-                Text(
-                    text = todo.title,
-                    style = SSUType.H2SemiBold.copy(color = N600),
-                    modifier = Modifier.weight(1f, fill = false),
-                )
-            }
+            Spacer(modifier = Modifier.height(4.dp))
 
-            Spacer(modifier = Modifier.height(5.dp))
+            Text(
+                text = todo.title,
+                style = SSUType.H2SemiBold.copy(color = N600),
+            )
+
+            Spacer(modifier = Modifier.height(10.dp))
 
             Box(
                 modifier = Modifier
@@ -635,22 +652,29 @@ fun TodoOverView(
                         Text(
                             text = stringResource(
                                 R.string.main_due_until,
-                                getStringDateWithTime(todo.due_date),
+                                getStringDateWithTime(todo.due_date, includeSeconds = false),
                             ),
                             style = SSUType.Caption1SemiBold.copy(N500)
                         )
                     }
 
-                    Row {
-                        Text(
-                            text = stringResource(R.string.ai_estimated_duration),
-                            style = SSUType.Caption1SemiBold.copy(N500)
-                        )
-                        Spacer(Modifier.weight(1f))
-                        Text(
-                            text = estimatedDurationText,
-                            style = SSUType.Caption1SemiBold.copy(N500)
-                        )
+                    if(estimatedDurationText != stringResource(R.string.ai_estimated_duration_value_unknown)) {
+                        val durationLabelRes = if (todo.type == TodoType.COMMONS) {
+                            R.string.video_lecture_duration
+                        } else {
+                            R.string.ai_estimated_duration
+                        }
+                        Row {
+                            Text(
+                                text = stringResource(durationLabelRes),
+                                style = SSUType.Caption1SemiBold.copy(N500)
+                            )
+                            Spacer(Modifier.weight(1f))
+                            Text(
+                                text = estimatedDurationText,
+                                style = SSUType.Caption1SemiBold.copy(N500)
+                            )
+                        }
                     }
                 }
             }
@@ -688,9 +712,16 @@ fun TodoOverView(
 
 @Composable
 fun HideTodoPopup(
+    todoType: TodoType = TodoType.ASSIGNMENT,
     onCancel: () -> Unit = {},
     onConfirm: () -> Unit = {},
 ) {
+    val titleRes = when (todoType) {
+        TodoType.QUIZ -> R.string.quiz_hide_popup_title
+        TodoType.COMMONS -> R.string.common_hide_popup_title
+        else -> R.string.assignment_hide_popup_title
+    }
+
     Column(
         Modifier
             .width(300.dp)
@@ -701,7 +732,7 @@ fun HideTodoPopup(
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Text(
-            text = stringResource(R.string.todo_hide_popup_title),
+            text = stringResource(titleRes),
             style = SSUType.H4SemiBold
         )
         Text(

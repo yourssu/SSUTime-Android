@@ -22,6 +22,10 @@
     <string name="todo_type_quiz">퀴즈</string>
     <string name="todo_type_submitted">정상 제출</string>
     <string name="todo_type_submitted_late">지각 제출</string>
+    <string name="new_todo_default_subject">공통</string>
+    <string name="new_todo_notification_title">새 할 일이 올라왔어요</string>
+    <string name="new_todo_notification_single">%1$s %2$s가 새로 올라왔어요.</string>
+    <string name="new_todo_notification_multiple">%1$s %2$s 외 %3$d건이 올라왔어요.</string>
 
     <string name="login_logo_content_description">로고</string>
     <string name="login_id_placeholder">유세인트 아이디를 입력하세요</string>
@@ -37,7 +41,7 @@
     <string name="onboarding_tip_assignment">LearningX [과제]</string>
     <string name="onboarding_tip_quiz">LearningX [퀴즈]</string>
     <string name="onboarding_tip_lecture">LearningX [강의]</string>
-    <string name="onboarding_tip_cyber_excluded">숭실 사이버 강의는 포함되지 않아요</string>
+    <string name="onboarding_tip_cyber_excluded">숭실 사이버 대학 강의도 볼 수 있어요!</string>
     <string name="cyber_connect_title">숭실 사이버 대학 연결하기</string>
     <string name="cyber_connect_login">로그인</string>
     <string name="cyber_title">숭실 사이버 대학</string>
@@ -68,7 +72,7 @@
     <string name="main_date_placeholder">00월 00일 기준</string>
     <string name="main_widget_badge_title">슈타임 위젯 등록하기</string>
     <string name="main_widget_badge_description">마감 D-day를 보여드려요</string>
-    <string name="main_urgent_tasks_title">가장 급한 과제예요!</string>
+    <string name="main_urgent_tasks_title">가장 급한 할 일이에요</string>
     <string name="main_relaxed_tasks_title">여유가 있는 할 일 리스트</string>
     <string name="main_todo_list_title">과제 목록</string>
     <string name="main_empty_todos">제출할 과제가 없어요</string>
@@ -78,6 +82,7 @@
     <string name="main_due_until">%1$s까지</string>
     <string name="ai_summary_title">AI 요약</string>
     <string name="ai_estimated_duration">예상 소요시간</string>
+    <string name="video_lecture_duration">강의 시간</string>
     <string name="ai_estimated_duration_minutes">%1$d분</string>
     <string name="ai_estimated_duration_value_unknown">알 수 없음</string>
     <string name="ai_estimated_duration_unknown">예상 소요시간 알 수 없음</string>
@@ -110,8 +115,8 @@
 
     <string name="my_back_content_description">뒤로가기</string>
     <string name="my_avatar_content_description">프로필 이미지</string>
-    <string name="my_notification_settings">알림 설정</string>
-    <string name="my_settings">설정</string>
+    <string name="my_notification_settings">설정</string>
+    <string name="my_settings">이용 안내</string>
     <string name="my_no_term_info">학기 정보 없음</string>
     <string name="my_term_dropdown_content_description">학기 선택</string>
     <string name="my_notification_info_content_description">알림 안내</string>
@@ -123,6 +128,8 @@
     <string name="my_terms">이용약관</string>
     <string name="my_privacy_policy">개인정보처리방침</string>
     <string name="my_logout">로그아웃</string>
+    <string name="my_withdraw">탈퇴하기</string>
+    <string name="my_withdraw_message">정말 탈퇴하시겠어요?</string>
     <string name="my_notification_tooltip_system_title">시스템 푸시?</string>
     <string name="my_notification_tooltip_system_desc">앱 푸시 메시지로 간편하게 알려드려요</string>
     <string name="my_notification_tooltip_call_title">전화 알림?</string>
@@ -130,8 +137,10 @@
     <string name="my_logout_message">정말 로그아웃 하시겠어요?</string>
     <string name="my_hidden_todos">숨긴 할 일</string>
     <string name="todo_hide_from_list">목록에서 숨기기</string>
-    <string name="todo_hide_popup_title">과제를 숨길까요?</string>
-    <string name="todo_hide_popup_message">마이페이지의 [숨긴 할 일]에서 복원할 수 있어요.</string>
+    <string name="assignment_hide_popup_title">과제를 숨길까요?</string>
+    <string name="common_hide_popup_title">강의를 숨길까요?</string>
+    <string name="quiz_hide_popup_title">퀴즈를 숨길까요?</string>
+    <string name="todo_hide_popup_message">마이페이지의 [숨긴 할 일]에서\n복원할 수 있어요.</string>
     <string name="hidden_todos_empty">숨긴 할 일이 없어요</string>
     <string name="hidden_todos_restore">복원하기</string>
 
@@ -193,6 +202,7 @@
     <string name="todo_detail_ai_summary_banner">첨부된 파일 내용을 ai가 요약했어요.</string>
     <string name="todo_detail_ai_summary_icon_content_description">AI 요약 아이콘</string>
     <string name="todo_detail_open_lms">LMS 바로가기</string>
+    <string name="todo_detail_open_cyber">숭사대 바로가기</string>
     <string name="todo_detail_late_submission_available">마감이 지났지만 지각 제출이 가능한 과제예요!</string>
     <string name="todo_duration_hours">%1$d시간</string>
     <string name="todo_duration_minutes">%1$d분</string>

@@ -59,7 +59,7 @@ class TodoLmsUrlTest {
         val todo = TodoInfo(
             todoId = -1001,
             title = "1주차 1강",
-            due_date = "2026-03-15T23:59:59+09:00",
+            due_date = "2026-03-15T14:59:59Z",
             type = TodoType.COMMONS,
             subject = SubjectInfo(id = -2001, name = "사이버대학교 강의", professor = "교수님"),
             url = cyberUrl,
@@ -73,7 +73,7 @@ class TodoLmsUrlTest {
         val todo = TodoInfo(
             todoId = -1002,
             title = "2주차 1강",
-            due_date = "2026-03-22T23:59:59+09:00",
+            due_date = "2026-03-22T14:59:59Z",
             type = TodoType.COMMONS,
             subject = SubjectInfo(id = -2002, name = "사이버대학교 강의2", professor = "교수님"),
             url = "",
@@ -102,14 +102,15 @@ class TodoLmsUrlTest {
 
     @Test
     fun `formatVideoDuration formats seconds into hours minutes and seconds correctly`() {
-        assertEquals("45초", formatVideoDuration(45.0))
-        assertEquals("25분", formatVideoDuration(1500.0))
-        assertEquals("25분 30초", formatVideoDuration(1530.0))
-        assertEquals("1시간", formatVideoDuration(3600.0))
-        assertEquals("1시간 1분", formatVideoDuration(3660.0))
-        assertEquals("1시간 1분 5초", formatVideoDuration(3665.0))
-        assertEquals("", formatVideoDuration(0.0))
-        assertEquals("", formatVideoDuration(-1.0))
+        val koreanLocale = java.util.Locale.KOREAN
+        assertEquals("45초", formatVideoDuration(45.0, koreanLocale))
+        assertEquals("25분", formatVideoDuration(1500.0, koreanLocale))
+        assertEquals("25분 30초", formatVideoDuration(1530.0, koreanLocale))
+        assertEquals("1시간", formatVideoDuration(3600.0, koreanLocale))
+        assertEquals("1시간 1분", formatVideoDuration(3660.0, koreanLocale))
+        assertEquals("1시간 1분 5초", formatVideoDuration(3665.0, koreanLocale))
+        assertEquals("", formatVideoDuration(0.0, koreanLocale))
+        assertEquals("", formatVideoDuration(-1.0, koreanLocale))
     }
 
     @Test

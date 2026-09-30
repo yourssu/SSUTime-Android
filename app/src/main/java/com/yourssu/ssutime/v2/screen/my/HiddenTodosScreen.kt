@@ -13,10 +13,14 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -52,6 +56,7 @@ import org.koin.compose.viewmodel.koinViewModel
 fun HiddenTodosScreen(
     modifier: Modifier = Modifier,
     viewModel: MyViewModel = koinViewModel(),
+    onBackClick: () -> Unit = {},
 ) {
     val hiddenTodos by viewModel.hiddenTodos.collectAsStateWithLifecycle()
 
@@ -62,6 +67,7 @@ fun HiddenTodosScreen(
     HiddenTodosContent(
         modifier = modifier,
         hiddenTodos = hiddenTodos,
+        onBackClick = onBackClick,
         onRestoreClick = { todo ->
             Analytics.restoreClick()
             viewModel.restoreTodo(todo)
@@ -73,6 +79,7 @@ fun HiddenTodosScreen(
 fun HiddenTodosContent(
     modifier: Modifier = Modifier,
     hiddenTodos: List<TodoInfo>,
+    onBackClick: () -> Unit = {},
     onRestoreClick: (TodoInfo) -> Unit,
 ) {
     Column(
@@ -80,25 +87,39 @@ fun HiddenTodosContent(
             .fillMaxSize()
             .background(WHITE)
     ) {
-        SSUTimeTopBar()
+        SSUTimeTopBar(
+            onLogoClick = onBackClick,
+        )
 
-        Row(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = stringResource(R.string.my_hidden_todos),
-                style = SSUType.H2SemiBold,
-                color = BLACK
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+                contentDescription = stringResource(R.string.common_back),
+                tint = BLACK,
+                modifier = Modifier
+                    .size(28.dp)
+                    .clickable(onClick = onBackClick)
             )
-            Spacer(Modifier.width(8.dp))
-            Text(
-                text = "${hiddenTodos.size}",
-                style = SSUType.H2SemiBold,
-                color = R400
-            )
+            Spacer(Modifier.height(16.dp))
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = stringResource(R.string.my_hidden_todos),
+                    style = SSUType.H2SemiBold,
+                    color = BLACK
+                )
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    text = "${hiddenTodos.size}",
+                    style = SSUType.H2SemiBold,
+                    color = R400
+                )
+            }
         }
 
         if (hiddenTodos.isEmpty()) {

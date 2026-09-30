@@ -28,6 +28,16 @@ class CyberLoginViewModel(
     private val _errorMessageResId = MutableStateFlow<Int?>(null)
     val errorMessageResId: StateFlow<Int?> = _errorMessageResId.asStateFlow()
 
+    init {
+        dismissBanner()
+    }
+
+    fun dismissBanner() {
+        viewModelScope.launch {
+            cyberRepository.dismissBanner()
+        }
+    }
+
     fun login(id: String, pw: String, onSuccess: () -> Unit) {
         if (_isLoading.value) return
 

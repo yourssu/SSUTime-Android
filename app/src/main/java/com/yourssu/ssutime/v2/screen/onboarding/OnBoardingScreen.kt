@@ -63,7 +63,7 @@ fun OnBoardingScreen(
     val launcher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) { granted ->
-        Analytics.alarmPermission(isAllowed = granted, entryPoint = "onboarding")
+        Analytics.alarmPermission(isAllowed = granted)
         viewModel.completeNotificationPermissionStep(granted)
     }
 

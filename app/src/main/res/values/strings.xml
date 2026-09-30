@@ -23,6 +23,10 @@
     <string name="todo_type_quiz">Quiz</string>
     <string name="todo_type_submitted">Submitted</string>
     <string name="todo_type_submitted_late">Submitted late</string>
+    <string name="new_todo_default_subject">General</string>
+    <string name="new_todo_notification_title">New tasks posted</string>
+    <string name="new_todo_notification_single">A new %2$s was posted in %1$s.</string>
+    <string name="new_todo_notification_multiple">A new %2$s and %3$d more were posted in %1$s.</string>
 
     <string name="login_logo_content_description">Logo</string>
     <string name="login_id_placeholder">Enter your u-SAINT ID</string>
@@ -38,7 +42,7 @@
     <string name="onboarding_tip_assignment">LearningX [Assignment]</string>
     <string name="onboarding_tip_quiz">LearningX [Quiz]</string>
     <string name="onboarding_tip_lecture">LearningX [Lecture]</string>
-    <string name="onboarding_tip_cyber_excluded">Soongsil Cyber University lectures are not included.</string>
+    <string name="onboarding_tip_cyber_excluded">You can also view Soongsil Cyber University lectures!</string>
     <string name="cyber_connect_title">Connect Soongsil Cyber University</string>
     <string name="cyber_connect_login">Log in</string>
     <string name="cyber_title">Soongsil Cyber University</string>
@@ -79,6 +83,7 @@
     <string name="main_due_until">Until %1$s</string>
     <string name="ai_summary_title">AI Summary</string>
     <string name="ai_estimated_duration">Estimated time</string>
+    <string name="video_lecture_duration">Video length</string>
     <string name="ai_estimated_duration_minutes">%1$d min</string>
     <string name="ai_estimated_duration_value_unknown">Unknown</string>
     <string name="ai_estimated_duration_unknown">Estimated time unknown</string>
@@ -111,8 +116,8 @@
 
     <string name="my_back_content_description">Back</string>
     <string name="my_avatar_content_description">Avatar</string>
-    <string name="my_notification_settings">Notification settings</string>
-    <string name="my_settings">Settings</string>
+    <string name="my_notification_settings">Settings</string>
+    <string name="my_settings">Information</string>
     <string name="my_no_term_info">No term information</string>
     <string name="my_term_dropdown_content_description">Select term</string>
     <string name="my_notification_info_content_description">About notifications</string>
@@ -124,6 +129,8 @@
     <string name="my_terms">Terms of Service</string>
     <string name="my_privacy_policy">Privacy Policy</string>
     <string name="my_logout">Log out</string>
+    <string name="my_withdraw">Delete Account</string>
+    <string name="my_withdraw_message">Are you sure you want to delete your account?</string>
     <string name="my_notification_tooltip_system_title">System push?</string>
     <string name="my_notification_tooltip_system_desc">We will send a simple app push notification.</string>
     <string name="my_notification_tooltip_call_title">Call alert?</string>
@@ -132,6 +139,9 @@
     <string name="my_hidden_todos">Hidden Tasks</string>
     <string name="todo_hide_from_list">Hide from list</string>
     <string name="todo_hide_popup_title">Hide assignment?</string>
+    <string name="assignment_hide_popup_title">Hide assignment?</string>
+    <string name="common_hide_popup_title">Hide video?</string>
+    <string name="quiz_hide_popup_title">Hide quiz?</string>
     <string name="todo_hide_popup_message">You can restore it from [Hidden Tasks] in My Page.</string>
     <string name="hidden_todos_empty">No hidden tasks</string>
     <string name="hidden_todos_restore">Restore</string>
@@ -194,6 +204,7 @@
     <string name="todo_detail_ai_summary_banner">AI summarized the attached file.</string>
     <string name="todo_detail_ai_summary_icon_content_description">AI summary icon</string>
     <string name="todo_detail_open_lms">Go to LMS</string>
+    <string name="todo_detail_open_cyber">Go to KCU</string>
     <string name="todo_detail_late_submission_available">The deadline has passed, but late submission is available!</string>
     <string name="todo_duration_hours">%1$d hr</string>
     <string name="todo_duration_minutes">%1$d min</string>

@@ -28,6 +28,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -201,6 +202,12 @@ class MainActivity : ComponentActivity() {
                             onInitialLmsRefreshForceConsumed = {
                                 forceInitialLmsRefresh.value = false
                             },
+                            onHomeTabSelected = {
+                                homeEntrySource.value = ENTRY_SOURCE_TAB
+                            },
+                            onHomeEntrySourceConsumed = {
+                                homeEntrySource.value = ENTRY_SOURCE_APP
+                            },
                             onLogout = {
                                 navController.navigate(Screens.LOGIN.name) {
                                     popUpTo(0) { inclusive = true }
@@ -233,6 +240,10 @@ class MainActivity : ComponentActivity() {
                         val errorMessage by cyberLoginViewModel.errorMessage.collectAsState()
                         val errorMessageResId by cyberLoginViewModel.errorMessageResId.collectAsState()
                         val context = LocalContext.current
+
+                        LaunchedEffect(Unit) {
+                            cyberLoginViewModel.dismissBanner()
+                        }
 
                         CyberLoginScreen(
                             isLoading = isLoading,
@@ -309,6 +320,7 @@ class MainActivity : ComponentActivity() {
         const val ENTRY_SOURCE_WIDGET = "widget"
         const val ENTRY_SOURCE_NOTIFICATION = "notification"
         const val ENTRY_SOURCE_CALL_ALERT = "call_alert"
+        const val ENTRY_SOURCE_TAB = "tab"
     }
 }
 
@@ -415,7 +427,7 @@ fun SSUCyberAccountHelperBadge(
         Image(
             imageVector = Icons.AutoMirrored.Default.KeyboardArrowRight,
             contentDescription = stringResource(R.string.common_close),
-            colorFilter = ColorFilter.tint(N500)
+            colorFilter = ColorFilter.tint(R400)
         )
     }
 }
@@ -430,7 +442,7 @@ fun SSUCyberAccountConnectedBadge(
             .fillMaxWidth()
             .clip(RoundedCornerShape(10.dp))
             .border(1.dp, Color(0xFFE2E8F0), RoundedCornerShape(10.dp))
-            .background(Color(0xFFF8FAFC))
+            .background(Color(0xFFFFFFFF))
             .padding(16.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,

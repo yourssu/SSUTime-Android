@@ -45,7 +45,17 @@ data class AssignmentAnalysisResponse(
 )
 
 val AssignmentAnalysisResponse.isSuccessful: Boolean
-    get() = error.isNullOrBlank() && (analysisId > 0L || status.isNotBlank())
+    get() = error.isNullOrBlank() &&
+        analysisId > 0L &&
+        status.isNotBlank() &&
+        !status.equals("FAILED", ignoreCase = true) &&
+        !status.equals("SKIPPED", ignoreCase = true)
+
+val AssignmentAnalysisResponse.isFailed: Boolean
+    get() = status.equals("FAILED", ignoreCase = true)
+
+val AssignmentAnalysisResponse.isSkipped: Boolean
+    get() = status.equals("SKIPPED", ignoreCase = true)
 
 val AssignmentAnalysisResponse.hasNoAnalyzableAttachment: Boolean
     get() = (error?.contains("analyzable", ignoreCase = true) == true ||
@@ -60,7 +70,7 @@ fun TodoInfo.toReportWithAnalysisRequestOrNull(
     val subjectId = (subject?.id ?: subjectId).toLong()
     val assignmentId = todoId.toLong()
     val assignmentHtml = description.takeIf { it.isNotBlank() } ?: return null
-    if (type != TodoType.ASSIGNMENT || subjectId <= 0L || assignmentId <= 0L) {
+    if (type != TodoType.ASSIGNMENT) {
         return null
     }
 

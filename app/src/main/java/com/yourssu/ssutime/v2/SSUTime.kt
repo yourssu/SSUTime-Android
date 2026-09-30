@@ -47,6 +47,7 @@ import java.io.InputStream
 import java.io.OutputStream
 import java.security.GeneralSecurityException
 import java.time.Instant
+import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
@@ -98,7 +99,7 @@ val appModule = module {
             )
         )
     }
-    viewModel { MyViewModel(get(), get(), get(), get()) }
+    viewModel { MyViewModel(get(), get(), get(), get(), get()) }
     viewModel { SplashViewModel(get(), get()) }
     viewModel { LoginViewModel(get(), get(), get()) }
     viewModel { CyberLoginViewModel(get()) }
@@ -157,7 +158,7 @@ val previewModule = module {
             )
         )
     }
-    viewModel { MyViewModel(get(), get(), get(), get()) }
+    viewModel { MyViewModel(get(), get(), get(), get(), get()) }
     viewModel { SplashViewModel(get(), get()) }
     viewModel { LoginViewModel(get(), get(), get()) }
     viewModel { CyberLoginViewModel(get()) }
@@ -290,9 +291,10 @@ fun getStringDate(targetTime: String): String {
         .format(formatter)
 }
 
-fun getStringDateWithTime(targetTime: String): String {
+fun getStringDateWithTime(targetTime: String, includeSeconds: Boolean = true): String {
     val targetInstant = Instant.parse(targetTime)
-    val formatter = DateTimeFormatter.ofPattern(monthDayTimePattern(), Locale.getDefault())
+    val pattern = if (includeSeconds) monthDayTimePattern() else monthDayTimeWithoutSecondsPattern()
+    val formatter = DateTimeFormatter.ofPattern(pattern, Locale.getDefault())
 
     return targetInstant
         .atZone(TODO_DEADLINE_ZONE_ID)
@@ -301,15 +303,24 @@ fun getStringDateWithTime(targetTime: String): String {
 
 
 fun getStringSimpleDate(context: Context, targetTime: String): String {
-    val targetInstant = Instant.parse(targetTime)
-    val formatter = DateTimeFormatter.ofPattern(
+    val targetInstant = runCatching { Instant.parse(targetTime) }.getOrNull()
+        ?: return targetTime
+    val zonedDateTime = targetInstant.atZone(TODO_DEADLINE_ZONE_ID)
+    val now = ZonedDateTime.now(TODO_DEADLINE_ZONE_ID)
+
+    val timeFormatter = DateTimeFormatter.ofPattern(
         if (DateFormat.is24HourFormat(context)) "HH:mm" else "a hh:mm",
         Locale.getDefault()
     )
+    val timeText = zonedDateTime.format(timeFormatter)
 
-    return targetInstant
-        .atZone(TODO_DEADLINE_ZONE_ID)
-        .format(formatter)
+    return if (zonedDateTime.toLocalDate() == now.toLocalDate()) {
+        timeText
+    } else {
+        val datePattern = if (Locale.getDefault().language == Locale.KOREAN.language) "M월 d일" else "MMM d"
+        val dateFormatter = DateTimeFormatter.ofPattern(datePattern, Locale.getDefault())
+        "${zonedDateTime.format(dateFormatter)} $timeText"
+    }
 }
 
 private fun monthDayPattern(): String =
@@ -317,3 +328,6 @@ private fun monthDayPattern(): String =
 
 private fun monthDayTimePattern(): String =
     if (Locale.getDefault().language == Locale.KOREAN.language) "MM월 dd일 HH:mm:ss" else "MMM dd HH:mm:ss"
+
+private fun monthDayTimeWithoutSecondsPattern(): String =
+    if (Locale.getDefault().language == Locale.KOREAN.language) "MM월 dd일 HH:mm" else "MMM dd HH:mm"

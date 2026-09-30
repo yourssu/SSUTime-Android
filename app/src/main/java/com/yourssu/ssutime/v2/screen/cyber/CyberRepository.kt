@@ -5,6 +5,7 @@ import androidx.datastore.core.DataStore
 import com.yourssu.data.CyberLoginData
 import com.yourssu.data.TodoInfo
 import com.yourssu.data.isCyber
+import com.yourssu.data.todoUniqueKey
 import com.yourssu.ssutime.v2.screen.main.MainRepository
 
 import io.github.chlwhdtn03.CyberApi
@@ -30,21 +31,30 @@ class CyberRepository(
     suspend fun getLoginData(): CyberLoginData = cyberLoginDataStore.data.first()
 
     suspend fun login(id: String, pw: String): Boolean = withContext(Dispatchers.IO) {
-        val success = CyberApi.login(id, pw)
-        if (success) {
-            cyberLoginDataStore.updateData {
-                CyberLoginData(id = id, pw = pw, isConnected = true)
+        CyberSessionCleaner.clearCookies()
+        try {
+            val success = CyberApi.login(id, pw)
+            if (success) {
+                cyberLoginDataStore.updateData {
+                    CyberLoginData(id = id, pw = pw, isConnected = true, isBannerDismissed = true)
+                }
+            } else {
+                CyberSessionCleaner.clearCookies()
             }
+            success
+        } catch (t: Throwable) {
+            CyberSessionCleaner.clearCookies()
+            throw t
         }
-        success
     }
 
     suspend fun logout() = withContext(Dispatchers.IO) {
         runCatching {
             CyberApi.logout()
         }
+        CyberSessionCleaner.clearCookies()
         cyberLoginDataStore.updateData {
-            CyberLoginData()
+            CyberLoginData(isBannerDismissed = true)
         }
         // 사이버대학교 투두 및 과목 제거
         mainRepository.updateTodoData { currentData ->
@@ -54,6 +64,12 @@ class CyberRepository(
                 subjects = currentData.subjects.filterNot { it.id < 0 },
                 hiddenTodos = currentData.hiddenTodos.filterNot { it.isCyber() },
             )
+        }
+    }
+
+    suspend fun dismissBanner() = withContext(Dispatchers.IO) {
+        cyberLoginDataStore.updateData { current ->
+            current.copy(isBannerDismissed = true)
         }
     }
 
@@ -101,26 +117,35 @@ class CyberRepository(
                     async {
                         runCatching {
                             val weeks = CyberApi.getWeeklyLectures(subject)
-                            CyberTodoMapper.mapWeeksToTodos(subject, subjectInfo, weeks)
+                            val (lectureTodos, lectureSubmitted) =
+                                CyberTodoMapper.mapWeeksToTodos(subject, subjectInfo, weeks)
+                            val evaluations = CyberApi.getQuizzesAndAssignments(subject)
+                            val (evaluationTodos, evaluationSubmitted) =
+                                CyberTodoMapper.mapEvaluationsToTodos(subjectInfo, evaluations)
+                            (lectureTodos + evaluationTodos) to (lectureSubmitted + evaluationSubmitted)
                         }.getOrElse { exception ->
-                            Log.e(TAG, "과목 주차 조회 실패: ${subject.name}", exception)
-                            Pair(emptyList<TodoInfo>(), emptyList<TodoInfo>())
+                            Log.e(TAG, "과목 강의·학습평가 조회 실패: ${subject.name}", exception)
+                            null
                         }
                     }
                 }
 
                 val results = deferredList.awaitAll()
-                for ((todos, submitted) in results) {
-                    allTodos.addAll(todos)
-                    allSubmitted.addAll(submitted)
+                for (result in results) {
+                    result?.let { (todos, submitted) ->
+                        allTodos.addAll(todos)
+                        allSubmitted.addAll(submitted)
+                    }
                 }
-            }
 
-            CyberTodoResult(
-                todos = allTodos,
-                submitted = allSubmitted,
-                subjects = subjectInfos,
-            )
+                val isComplete = results.all { it != null }
+                return@coroutineScope CyberTodoResult(
+                    todos = allTodos,
+                    submitted = allSubmitted,
+                    subjects = subjectInfos,
+                    isComplete = isComplete,
+                )
+            }
         } catch (e: Exception) {
             Log.e(TAG, "사이버대학교 할 일 조회 중 오류 발생", e)
             CyberTodoResult()
@@ -132,15 +157,19 @@ class CyberRepository(
      */
     suspend fun syncCyberTodos() {
         val result = fetchCyberTodos()
-        if (result.subjects.isEmpty()) return
+        if (!result.isComplete) return
 
         mainRepository.updateTodoData { currentData ->
             // 기존 사이버대 투두/과목을 먼저 제거한 후 새로운 데이터로 병합
             val nonCyberTodos = currentData.todos.filterNot { it.isCyber() }
             val nonCyberSubmitted = currentData.submitted.filterNot { it.isCyber() }
             val nonCyberSubjects = currentData.subjects.filterNot { it.id < 0 }
+            val nonCyberHiddenTodos = currentData.hiddenTodos.filterNot { it.isCyber() }
 
-            val mergedTodos = (nonCyberTodos + result.todos)
+            val (hiddenCyberTodos, visibleCyberTodos) = result.todos.partition {
+                it.todoUniqueKey() in currentData.hiddenTodoKeys
+            }
+            val mergedTodos = (nonCyberTodos + visibleCyberTodos)
             val mergedSubmitted = (nonCyberSubmitted + result.submitted)
             val mergedSubjects = (nonCyberSubjects + result.subjects).distinctBy { it.id }
 
@@ -148,6 +177,7 @@ class CyberRepository(
                 todos = mergedTodos,
                 submitted = mergedSubmitted,
                 subjects = mergedSubjects,
+                hiddenTodos = nonCyberHiddenTodos + hiddenCyberTodos,
             )
         }
     }

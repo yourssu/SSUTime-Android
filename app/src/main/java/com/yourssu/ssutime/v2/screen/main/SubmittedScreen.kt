@@ -37,6 +37,7 @@ import com.yourssu.data.SubjectInfo
 import com.yourssu.data.TodoInfo
 import com.yourssu.data.TodoType
 import com.yourssu.ssutime.v2.R
+import com.yourssu.ssutime.v2.analytics.Analytics
 import com.yourssu.ssutime.v2.todo.localizedLabel
 import com.yourssu.ssutime.v2.ui.theme.BLACK
 import com.yourssu.ssutime.v2.ui.theme.G100
@@ -66,18 +67,20 @@ fun SubmittedScreen(
             .background(WHITE)
             .padding(16.dp)
     ) {
+        Icon(
+            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+            contentDescription = stringResource(R.string.common_back),
+            tint = BLACK,
+            modifier = Modifier
+                .size(28.dp)
+                .clickable(onClick = onBackClick)
+        )
+
+        Spacer(Modifier.height(16.dp))
+
         Row(
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
-                contentDescription = stringResource(R.string.common_back),
-                tint = BLACK,
-                modifier = Modifier
-                    .size(28.dp)
-                    .clickable(onClick = onBackClick)
-            )
-            Spacer(Modifier.width(8.dp))
             Text(
                 text = stringResource(R.string.main_submitted_title),
                 style = SSUType.H3SemiBold
@@ -202,6 +205,7 @@ fun SubmittedItem(
                             .border(1.dp, N200, RoundedCornerShape(8.dp))
                             .background(WHITE)
                             .clickable {
+                                Analytics.submittedAttachmentDownload()
                                 if (item.url.isNotBlank()) {
                                     runCatching {
                                         uriHandler.openUri(item.url)

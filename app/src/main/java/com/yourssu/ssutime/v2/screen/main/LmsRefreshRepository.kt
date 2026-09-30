@@ -5,10 +5,12 @@ import com.yourssu.data.AttachmentInfo
 import com.yourssu.data.DiscussionAttachment
 import com.yourssu.data.DiscussionInfo
 import com.yourssu.data.LoginData
+import com.yourssu.data.NewTodoNotificationRecord
 import com.yourssu.data.SubjectInfo
 import com.yourssu.data.TodoData
 import com.yourssu.data.TodoInfo
 import com.yourssu.data.TodoType
+import com.yourssu.data.isCyber
 import com.yourssu.data.network.LmsSessionCookieRequest
 import com.yourssu.data.network.LmsSessionRequest
 import com.yourssu.data.network.toAddEnrollmentRequest
@@ -26,6 +28,8 @@ import com.yourssu.ssutime.v2.screen.cyber.CyberRepository
 import com.yourssu.ssutime.v2.screen.cyber.CyberTodoResult
 import com.yourssu.ssutime.v2.screen.login.LoginRepository
 import com.yourssu.ssutime.v2.todo.sortedByDeadlineThenName
+import com.yourssu.ssutime.v2.todo.sortedBySubmittedAtDescending
+import com.yourssu.ssutime.v2.todo.toTodoDeadlineInstantOrNull
 import io.github.chlwhdtn03.LmsApi
 import io.github.chlwhdtn03.data.Lms.Subject
 import io.github.chlwhdtn03.data.Lms.Submission
@@ -53,9 +57,14 @@ import kotlin.time.Instant as KotlinInstant
 private const val BACKGROUND_REFRESH_RUNNING = "running"
 private const val BACKGROUND_REFRESH_SUCCESS = "success"
 private const val BACKGROUND_REFRESH_FAILED = "failed"
+private val NEW_TODO_NOTIFICATION_TYPES = setOf(
+    TodoType.ASSIGNMENT,
+    TodoType.COMMONS,
+    TodoType.QUIZ,
+)
 private const val LMS_API_TOKEN_ERROR_MESSAGE = "API 토큰값을 불러오지 못했습니다. 다시 시도해주세요."
 private const val LMS_API_TOKEN_MAX_RETRIES = 2
-private val BACKGROUND_REFRESH_LOCK_WINDOW: Duration = Duration.ofMinutes(10)
+private val BACKGROUND_REFRESH_LOCK_WINDOW: Duration = Duration.ofMinutes(3)
 private val TRAILING_COURSE_NUMBER = Regex("\\s*\\(\\d+\\)\\s*$")
 
 sealed interface LmsRefreshStage {
@@ -325,6 +334,17 @@ class LmsRefreshRepository(
         } else {
             CyberTodoResult()
         }
+        // 조회 실패를 정상적인 빈 결과로 취급하지 않도록 저장된 사이버대 과목을 유지합니다.
+        // 스마트 병합에서 기존 과목의 유효한 할 일을 보존하는 기준으로 사용합니다.
+        val cyberResultForSave = if (
+            cyberLoginData.hasCredentials &&
+            !cyberResult.isComplete &&
+            cyberResult.subjects.isEmpty()
+        ) {
+            cyberResult.copy(subjects = cachedData.subjects.filter { it.id < 0 })
+        } else {
+            cyberResult
+        }
         val summary = buildRefreshSummary(
             completedAt = completedAt,
             terms = terms,
@@ -340,7 +360,7 @@ class LmsRefreshRepository(
             subjectInfos = subjectInfos,
             completedAt = completedAt,
             summary = summary,
-            cyberResult = cyberResult,
+            cyberResult = cyberResultForSave,
             isCyberConnected = cyberLoginData.hasCredentials,
         )
 
@@ -406,10 +426,39 @@ class LmsRefreshRepository(
                 isCyberConnected = isCyberConnected,
             ).withWidgetRefreshCompleted(completedAtText)
 
-            if (source == RefreshSource.FCM) {
-                refreshedTodoData.withBackgroundRefreshSucceeded(completedAtText, requestId, summary)
+            val previouslyKnownTodoKeys = (
+                currentData.todos + currentData.hiddenTodos + currentData.submitted
+            ).mapTo(mutableSetOf()) { it.todoUniqueKey() }
+            val newlyAddedTodos = if (currentData.loadedAt.isBlank()) {
+                emptyList()
             } else {
-                refreshedTodoData
+                refreshedTodoData.todos.filter { todo ->
+                    todo.type in NEW_TODO_NOTIFICATION_TYPES &&
+                        todo.todoUniqueKey() !in previouslyKnownTodoKeys
+                }
+            }
+            val newNotificationRecords = newlyAddedTodos.map { todo ->
+                NewTodoNotificationRecord(
+                    todoKey = todo.todoUniqueKey(),
+                    discoveredAt = Instant.now().toString(),
+                    subjectName = todo.subject?.name.orEmpty(),
+                    type = todo.type,
+                )
+            }
+            val todoDataWithNewNotifications = refreshedTodoData.copy(
+                pendingNewTodoNotifications = (
+                    currentData.pendingNewTodoNotifications + newNotificationRecords
+                ).distinctBy { it.todoKey },
+            )
+
+            if (source == RefreshSource.FCM) {
+                todoDataWithNewNotifications.withBackgroundRefreshSucceeded(
+                    completedAtText,
+                    requestId,
+                    summary,
+                )
+            } else {
+                todoDataWithNewNotifications
             }
         }
     }
@@ -571,7 +620,8 @@ class LmsRefreshRepository(
         }
     }
 
-    private fun buildTodoData(
+    internal companion object {
+        fun buildTodoData(
         subjects: List<Subject>,
         subjectInfos: List<SubjectInfo>,
         previousData: TodoData,
@@ -660,9 +710,9 @@ class LmsRefreshRepository(
         }
 
         val allSubmitted = if (isCyberConnected) {
-            (reportedSubmitted + cyberResult.submitted).sortedByDeadlineThenName()
+            (reportedSubmitted + cyberResult.submitted).sortedBySubmittedAtDescending()
         } else {
-            reportedSubmitted.sortedByDeadlineThenName()
+            reportedSubmitted.sortedBySubmittedAtDescending()
         }
 
         val locallyReadDiscussionIds = (
@@ -680,8 +730,63 @@ class LmsRefreshRepository(
             lmsSubjectInfos
         }
 
+        // 현재 학기에 수강 중인 전체 과목 ID 집합 (이번 학기 과목에 대해서만 보존 적용)
+        val currentSubjectIds = subjects.map { it.id }.toSet()
+        val cyberSubjectIds = if (isCyberConnected) cyberResult.subjects.map { it.id }.toSet() else emptySet()
+        val allCurrentSubjectIds = currentSubjectIds + cyberSubjectIds
+        val currentNow = Instant.now()
+
+        // 1. 미완료 할 일 스마트 머지: 네트워크 일시 누락으로 빠진 미완료 할 일 보존
+        val previousCandidateTodos = previousData.todos + previousData.hiddenTodos
+        val preservedTodos = previousCandidateTodos.filter { prevTodo ->
+            // 완전한 사이버대 조회에서는 응답에 없는 항목을 삭제된 것으로 처리합니다.
+            if (isCyberConnected && cyberResult.isComplete && prevTodo.isCyber()) return@filter false
+
+            val sid = prevTodo.subject?.id ?: prevTodo.subjectId
+            if (sid !in allCurrentSubjectIds) return@filter false
+
+            if (allTodos.any { isSameTodoItem(it, prevTodo) }) return@filter false
+            if (allSubmitted.any { isSameTodoItem(it, prevTodo) }) return@filter false
+
+            val deadlineInstant = prevTodo.due_date.toTodoDeadlineInstantOrNull()
+            if (deadlineInstant != null && deadlineInstant.isBefore(currentNow)) {
+                return@filter false
+            }
+
+            true
+        }.map { todo ->
+            val sid = todo.subject?.id ?: todo.subjectId
+            val updatedSubject = subjectInfoById[sid] ?: todo.subject
+            todo.copy(subject = updatedSubject)
+        }
+
+        val mergedAllTodos = (allTodos + preservedTodos)
+            .distinctBy { it.todoUniqueKey() }
+            .sortedByDeadlineThenName()
+
+        // 2. 제출 완료 할 일 스마트 머지: 일시 누락된 제출 목록 보존
+        val preservedSubmitted = previousData.submitted.filter { prevSub ->
+            if (isCyberConnected && cyberResult.isComplete && prevSub.isCyber()) return@filter false
+
+            val sid = prevSub.subject?.id ?: prevSub.subjectId
+            if (sid !in allCurrentSubjectIds) return@filter false
+
+            if (allSubmitted.any { isSameTodoItem(it, prevSub) }) return@filter false
+            if (mergedAllTodos.any { isSameTodoItem(it, prevSub) }) return@filter false
+
+            true
+        }.map { sub ->
+            val sid = sub.subject?.id ?: sub.subjectId
+            val updatedSubject = subjectInfoById[sid] ?: sub.subject
+            sub.copy(subject = updatedSubject)
+        }
+
+        val mergedAllSubmitted = (allSubmitted + preservedSubmitted)
+            .distinctBy { it.todoUniqueKey() }
+            .sortedBySubmittedAtDescending()
+
         val hiddenKeysSet = previousData.hiddenTodoKeys.toSet()
-        val (hiddenNewTodos, activeNewTodos) = allTodos.partition { it.todoUniqueKey() in hiddenKeysSet }
+        val (hiddenNewTodos, activeNewTodos) = mergedAllTodos.partition { it.todoUniqueKey() in hiddenKeysSet }
 
         val allReadDiscussionIds = (
             locallyReadDiscussionIds +
@@ -692,12 +797,33 @@ class LmsRefreshRepository(
 
         return previousData.copy(
             todos = activeNewTodos,
-            submitted = allSubmitted,
+            submitted = mergedAllSubmitted,
             subjects = allSubjectInfos,
             hiddenTodos = hiddenNewTodos,
             loadedAt = loadedAt,
             readDiscussionIds = allReadDiscussionIds,
         )
+    }
+
+    private fun isSameTodoItem(a: TodoInfo, b: TodoInfo): Boolean {
+        val aSubjectId = a.subject?.id ?: a.subjectId
+        val bSubjectId = b.subject?.id ?: b.subjectId
+        if (aSubjectId != bSubjectId && aSubjectId > 0 && bSubjectId > 0) return false
+
+        if (a.todoId > 0 && b.todoId > 0) return a.todoId == b.todoId
+        if (a.isCyber() && b.isCyber() && a.todoId != 0 && b.todoId != 0) return a.todoId == b.todoId
+        if (a.moduleItemId > 0 && b.moduleItemId > 0) return a.moduleItemId == b.moduleItemId
+        if (a.componentId > 0 && b.componentId > 0) return a.componentId == b.componentId
+
+        val aTitle = a.title.trim()
+        val bTitle = b.title.trim()
+        if (aTitle.isNotEmpty() && bTitle.isNotEmpty() && aTitle.equals(bTitle, ignoreCase = true)) {
+            if (a.due_date.isBlank() || b.due_date.isBlank() || a.due_date == b.due_date) {
+                return true
+            }
+        }
+
+        return false
     }
 
     private fun buildSubjectInfos(
@@ -734,6 +860,7 @@ class LmsRefreshRepository(
             )
         }
         .distinctBy { it.id }
+    }
 
     private suspend fun markBackgroundRefreshStarted(startedAt: Instant, requestId: String?) {
         mainRepository.updateTodoData { currentData ->

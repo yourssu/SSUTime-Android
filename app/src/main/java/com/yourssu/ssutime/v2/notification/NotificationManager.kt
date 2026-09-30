@@ -21,6 +21,14 @@ import com.yourssu.ssutime.v2.todo.localizedLabel
 import java.util.concurrent.atomic.AtomicLong
 
 fun showCallAlert(context: Context, todo: TodoInfo) {
+    if (!context.canPostCallAlert()) {
+        Log.i(
+            TAG,
+            "시스템 설정에서 알림 또는 마감 전화 알림 채널이 비활성화되어 있어 전화 알림을 표시하지 않습니다.",
+        )
+        return
+    }
+
     val notificationId = todo.todoId
     if (!CallAlertSession.tryStart(notificationId)) {
         Log.i(
@@ -34,14 +42,13 @@ fun showCallAlert(context: Context, todo: TodoInfo) {
     Analytics.callAlertReceived(subjectName = todo.subject?.name.orEmpty())
     CallAlertRinger.start(context)
 
-    val notificationShown = context.canPostNotifications()
-    if (notificationShown) {
+    val notificationShown = runCatching {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             showCallStyleAlert(context, todo, notificationId)
         } else {
             showFallbackNotification(context, todo, notificationId)
         }
-    }
+    }.isSuccess
 
     val activityStarted = context.startCallAlertActivity(todo, notificationId)
     if (!notificationShown && !activityStarted) {
@@ -128,8 +135,37 @@ class CallNotificationActionReceiver : BroadcastReceiver() {
     }
 }
 
-private fun Context.canPostNotifications(): Boolean = Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
-    checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
+fun Context.canPostCallAlert(): Boolean {
+    val notificationManager = getSystemService(NotificationManager::class.java) ?: return false
+    if (!notificationManager.areNotificationsEnabled()) {
+        return false
+    }
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+        checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+    ) {
+        return false
+    }
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        val channel = notificationManager.getNotificationChannel(CALL_CHANNEL_ID)
+        if (channel != null && channel.importance == NotificationManager.IMPORTANCE_NONE) {
+            return false
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && channel?.group != null) {
+            val group = notificationManager.getNotificationChannelGroup(channel.group)
+            if (group != null && group.isBlocked) {
+                return false
+            }
+        }
+    }
+    return true
+}
+
+private fun Context.canPostNotifications(): Boolean {
+    val notificationManager = getSystemService(NotificationManager::class.java) ?: return false
+    return notificationManager.areNotificationsEnabled() &&
+        (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+            checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED)
+}
 
 private fun Context.logFullScreenIntentPermission() {
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {

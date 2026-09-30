@@ -12,8 +12,13 @@ import android.os.Build
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -49,8 +54,6 @@ import androidx.compose.material3.ModalBottomSheetProperties
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
-import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
-import androidx.compose.material3.pulltorefresh.PullToRefreshState
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -89,13 +92,16 @@ import androidx.navigation.compose.rememberNavController
 import com.yourssu.data.AlertData
 import com.yourssu.data.TodoInfo
 import com.yourssu.data.TodoType
+import com.yourssu.data.isCyber
 import com.yourssu.ssutime.v2.MainActivity
 import com.yourssu.ssutime.v2.R
 import com.yourssu.ssutime.v2.analytics.Analytics
+import com.yourssu.ssutime.v2.component.IosLoadingSpinner
 import com.yourssu.ssutime.v2.component.OutlinedButton
 import com.yourssu.ssutime.v2.component.SButton
 import com.yourssu.ssutime.v2.component.SCheckBox
 import com.yourssu.ssutime.v2.component.SSUTimeTopBar
+import com.yourssu.ssutime.v2.component.preventBottomSheetJitter
 import com.yourssu.ssutime.v2.getRemainingDays
 import com.yourssu.ssutime.v2.getRemainingTimeText
 import com.yourssu.ssutime.v2.getStringSimpleDate
@@ -134,11 +140,14 @@ fun MainScreen(
     homeEntrySource: String = MainActivity.ENTRY_SOURCE_APP,
     homeEntryVersion: Int = 0,
     skipLoadFromMyPageBack: Boolean = false,
+    onHomeEntrySourceConsumed: () -> Unit = {},
     onInitialLmsRefreshSkipConsumed: () -> Unit = {},
     onInitialLmsRefreshForceConsumed: () -> Unit = {},
+    resetKey: Int = 0,
 ) {
     val context = LocalContext.current
     var showWidgetHelperDialog by rememberSaveable { mutableStateOf(false) }
+    var handledHomeResetKey by rememberSaveable { mutableIntStateOf(0) }
     val mainContentNavController = rememberNavController()
     var currentTodoJson by rememberSaveable { mutableStateOf<String?>(null) }
     val showOnboardingInitialLoading = rememberSaveable { mutableStateOf(skipInitialLmsRefresh) }
@@ -149,13 +158,29 @@ fun MainScreen(
         contract = ActivityResultContracts.StartActivityForResult(),
         onResult = {},
     )
+    LaunchedEffect(resetKey) {
+        if (resetKey > handledHomeResetKey) {
+            handledHomeResetKey = resetKey
+            runCatching {
+                mainContentNavController.popBackStack(MAIN_LIST_ROUTE, inclusive = false)
+                Analytics.viewHome(
+                    taskCount = viewModel.todos.size,
+                    urgentCount = viewModel.todos.urgentTodoCount(),
+                    entrySource = homeEntrySource,
+                )
+                onHomeEntrySourceConsumed()
+            }
+        }
+    }
     LaunchedEffect(homeEntryVersion) {
+        Analytics.viewHome(
+            taskCount = viewModel.todos.size,
+            urgentCount = viewModel.todos.urgentTodoCount(),
+            entrySource = homeEntrySource,
+        )
+        onHomeEntrySourceConsumed()
+
         if (skipLoadFromMyPageBack) {
-            Analytics.viewHome(
-                taskCount = viewModel.todos.size,
-                urgentCount = viewModel.todos.urgentTodoCount(),
-                entrySource = homeEntrySource,
-            )
             onInitialLmsRefreshSkipConsumed()
             return@LaunchedEffect
         }
@@ -168,21 +193,9 @@ fun MainScreen(
                 allowRefresh = !skipInitialLmsRefresh,
                 showBlockingLoading = !skipInitialLmsRefresh,
                 source = RefreshSource.APP_START,
-                onSuccess = { todoData ->
-                    Analytics.viewHome(
-                        taskCount = todoData.todos.size,
-                        urgentCount = todoData.todos.urgentTodoCount(),
-                        entrySource = homeEntrySource,
-                    )
-                }
             )
         } else {
             viewModel.showNetworkErrorScreen()
-            Analytics.viewHome(
-                taskCount = viewModel.todos.size,
-                urgentCount = viewModel.todos.urgentTodoCount(),
-                entrySource = homeEntrySource,
-            )
         }
         if (skipInitialLmsRefresh) {
             onInitialLmsRefreshSkipConsumed()
@@ -351,7 +364,8 @@ fun MainScreen(
         }
 
         if(viewModel.requiredShowAlertBottomSheet.value) {
-            if (viewModel.isCallAlertRepopup.value) {
+            val isRepopup = viewModel.isCallAlertRepopup.value
+            if (isRepopup) {
                 LaunchedEffect(Unit) {
                     Analytics.callAlarmRepopupView()
                 }
@@ -360,6 +374,7 @@ fun MainScreen(
                 onConfirmClick = {
                     Analytics.callAlarmSetting(
                         selectedTime = Analytics.selectedTimeFromMinutes(it) ?: "reject",
+                        entryPoint = if (isRepopup) "repopup" else "onboarding",
                     )
                     val allowSystem = ContextCompat.checkSelfPermission(
                         context,
@@ -495,14 +510,7 @@ fun MainFragment(
         isRefreshing = isRefreshing,
         onRefresh = onRefresh,
         state = pullToRefreshState,
-        indicator = {
-            LmsRefreshIndicator(
-                isRefreshing = isRefreshing,
-                progress = refreshProgress,
-                state = pullToRefreshState,
-                modifier = Modifier.align(Alignment.TopCenter),
-            )
-        },
+        indicator = {},
         modifier = Modifier
             .fillMaxSize()
             .padding(innerPadding)
@@ -524,7 +532,31 @@ fun MainFragment(
                         .fillMaxWidth()
                         .onSizeChanged { headerHeightPx = it.height },
                 ) {
-                    Spacer(Modifier.height(32.dp))
+                    val isPulling = pullToRefreshState.distanceFraction > 0f
+                    val showSpinner = isRefreshing || isPulling
+
+                    AnimatedVisibility(
+                        visible = showSpinner,
+                        enter = expandVertically() + fadeIn(),
+                        exit = shrinkVertically() + fadeOut(),
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 12.dp, bottom = 4.dp),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            IosLoadingSpinner(
+                                size = 28.dp,
+                                isRefreshing = isRefreshing,
+                                pullProgress = pullToRefreshState.distanceFraction,
+                            )
+                        }
+                    }
+
+                    val topSpacing = if (showSpinner) 16.dp else 32.dp
+                    Spacer(Modifier.height(topSpacing))
+
                     Text(
                         text = stringResource(R.string.main_completed_auto_disappear),
                         style = SSUType.H4SemiBold,
@@ -654,46 +686,6 @@ fun WidgetHelperBadge(
     }
 }
 
-@Composable
-private fun LmsRefreshIndicator(
-    isRefreshing: Boolean,
-    progress: Float,
-    state: PullToRefreshState,
-    modifier: Modifier = Modifier,
-) {
-    val indicatorProgress = if (isRefreshing) {
-        progress.coerceIn(0f, 1f)
-    } else {
-        state.distanceFraction.coerceIn(0f, 1f)
-    }
-    val progressText = "${(indicatorProgress * 100).toInt()}%"
-
-    PullToRefreshDefaults.IndicatorBox(
-        state = state,
-        isRefreshing = isRefreshing,
-        modifier = modifier,
-        containerColor = WHITE,
-        elevation = 6.dp,
-    ) {
-        Box(
-            contentAlignment = Alignment.Center,
-        ) {
-            CircularProgressIndicator(
-                progress = { indicatorProgress },
-                modifier = Modifier.size(36.dp),
-                color = R500,
-                trackColor = R100,
-                strokeWidth = 4.dp,
-            )
-            Text(
-                text = progressText,
-                style = SSUType.Caption2SemiBold,
-                color = R500,
-                maxLines = 1,
-            )
-        }
-    }
-}
 
 @Composable
 fun TodoList(
@@ -835,7 +827,6 @@ fun TodoList(
                 )
             }
         }
-        Spacer(Modifier.height(80.dp))
     }
 }
 
@@ -926,9 +917,11 @@ fun TodoItem(
                                 todoInfo.due_date,
                                 now
                             ),
-                            style = if (leftDay > 1) SSUType.H4ExtraBold else SSUType.H4ExtraBold.copy(
-                                color = WHITE
-                            )
+                            style = when (leftDay) {
+                                2L, 3L -> SSUType.H4ExtraBold.copy(color = R400)
+                                0L, 1L -> SSUType.H4ExtraBold.copy(color = WHITE)
+                                else -> SSUType.H4ExtraBold
+                            }
                         )
                     }
                 }
@@ -940,6 +933,18 @@ fun TodoItem(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         if(!isLate) {
+                            if (todoInfo.isCyber()) {
+                                Text(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(6.dp))
+                                        .background(Color(0xFFFFBFC1))
+                                        .padding(horizontal = 6.dp, vertical = 3.dp),
+                                    text = "사이버대",
+                                    style = SSUType.Caption1SemiBold,
+                                    color = Color(0xFFD6444B)
+                                )
+                                Spacer(Modifier.width(6.dp))
+                            }
                             Text(
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(6.dp))
@@ -1019,6 +1024,7 @@ fun CallingAlertBottomSheet(
         containerColor = WHITE,
     ) {
         CallingAlertBody(
+            modifier = Modifier.preventBottomSheetJitter(),
             onConfirmClick = onConfirmClick
         )
     }
@@ -1041,7 +1047,7 @@ fun CallingAlertBody(
     var enableCallingAlert = remember { mutableStateOf(false) }
 
     Column(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .safeDrawingPadding()
             .padding(horizontal = 20.dp, vertical = 36.dp),

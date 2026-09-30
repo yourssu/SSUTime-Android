@@ -4,9 +4,11 @@ import com.yourssu.data.SubjectInfo
 import com.yourssu.data.TodoInfo
 import com.yourssu.data.TodoType
 import com.yourssu.ssutime.v2.todo.TODO_DEADLINE_ZONE_ID
+import io.github.chlwhdtn03.data.Cyber.CyberEvaluation
 import io.github.chlwhdtn03.data.Cyber.CyberSubject
 import io.github.chlwhdtn03.data.Cyber.CyberWeek
 import java.time.LocalDate
+import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
@@ -16,6 +18,8 @@ data class CyberTodoResult(
     val todos: List<TodoInfo> = emptyList(),
     val submitted: List<TodoInfo> = emptyList(),
     val subjects: List<SubjectInfo> = emptyList(),
+    /** 과목 목록과 모든 과목의 주차 정보를 모두 불러온 경우에만 true입니다. */
+    val isComplete: Boolean = false,
 )
 
 object CyberTodoMapper {
@@ -27,9 +31,10 @@ object CyberTodoMapper {
     private val TIME_REGEX = Regex("""(\d{1,2}):(\d{2})(?::(\d{2}))?""")
 
     /**
-     * CyberWeek의 attendancePeriod(출석인정기간)에서 종료일시를 파싱하여 ISO-8601 문자열로 변환합니다.
-     * 예: "2026.03.02 ~ 2026.03.15" -> "2026-03-15T23:59:59+09:00"
-     *     "2026.03.02 09:00 ~ 2026.03.15 22:00" -> "2026-03-15T22:00:00+09:00"
+     * CyberWeek의 attendancePeriod(출석인정기간)에서 종료일시를 파싱하여 UTC ISO-8601 문자열로 변환합니다.
+     * Canvas LMS와 동일하게 UTC(GMT+0) 기준 'Z' 포맷으로 통일합니다.
+     * 예: "2026.03.02 ~ 2026.03.15" (KST 23:59:59) -> "2026-03-15T14:59:59Z"
+     *     "2026.03.02 09:00 ~ 2026.03.15 22:30" (KST 22:30:00) -> "2026-03-15T13:30:00Z"
      */
     fun parseDeadlineIso(attendancePeriod: String, fallbackYear: Int = LocalDate.now(TODO_DEADLINE_ZONE_ID).year): String {
         if (attendancePeriod.isBlank()) return ""
@@ -54,7 +59,7 @@ object CyberTodoMapper {
         }
 
         val timeMatch = TIME_REGEX.find(endPart)
-        val (hour, minute, second) = if (timeMatch != null) {
+        val (parsedHour, minute, second) = if (timeMatch != null) {
             Triple(
                 timeMatch.groupValues[1].toInt(),
                 timeMatch.groupValues[2].toInt(),
@@ -64,11 +69,21 @@ object CyberTodoMapper {
             Triple(23, 59, 59)
         }
 
+        val isPm = endPart.contains("오후") || endPart.contains("PM", ignoreCase = true)
+        val isAm = endPart.contains("오전") || endPart.contains("AM", ignoreCase = true)
+
+        val hour = when {
+            isPm -> if (parsedHour < 12) parsedHour + 12 else parsedHour
+            isAm -> if (parsedHour == 12) 0 else parsedHour
+            timeMatch != null && parsedHour in 1..6 -> parsedHour + 12
+            else -> parsedHour
+        }
+
         return runCatching {
             val localDate = LocalDate.of(year, month, day)
             val localTime = LocalTime.of(hour, minute, second)
             val zonedDateTime = ZonedDateTime.of(localDate, localTime, TODO_DEADLINE_ZONE_ID)
-            zonedDateTime.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME)
+            zonedDateTime.toInstant().toString()
         }.getOrDefault("")
     }
 
@@ -112,10 +127,16 @@ object CyberTodoMapper {
         }
     }
 
+    private val TRAILING_PARENTHESES_REGEX = Regex("""\s*[(\uFF08][^)\uFF09]*[)\uFF09]\s*$""")
+
+    internal fun cleanCyberSubjectName(name: String): String {
+        return name.replace(TRAILING_PARENTHESES_REGEX, "").trim()
+    }
+
     fun mapToSubjectInfo(subject: CyberSubject): SubjectInfo {
         return SubjectInfo(
             id = toCyberSubjectId(subject),
-            name = subject.name,
+            name = cleanCyberSubjectName(subject.name),
             professor = subject.professor,
             discussions = emptyList(),
         )
@@ -195,5 +216,64 @@ object CyberTodoMapper {
         }
 
         return Pair(todos, submitted)
+    }
+
+    fun mapEvaluationsToTodos(
+        subjectInfo: SubjectInfo,
+        evaluations: List<CyberEvaluation>,
+    ): Pair<List<TodoInfo>, List<TodoInfo>> {
+        val todos = mutableListOf<TodoInfo>()
+        val submitted = mutableListOf<TodoInfo>()
+
+        evaluations
+            .asSequence()
+            .filter { it.typeCode == "02" || it.typeCode == "03" }
+            .filterNot { it.isResubmission }
+            .distinctBy { listOf(it.typeCode, it.week, it.round, it.title) }
+            .forEach { evaluation ->
+                val dueDate = parseEvaluationDeadlineIso(evaluation.endAt)
+                if (dueDate.isBlank()) return@forEach
+
+                val todoType = when (evaluation.typeCode) {
+                    "02" -> TodoType.QUIZ
+                    "03" -> TodoType.ASSIGNMENT
+                    else -> return@forEach
+                }
+                val status = evaluation.submitStatus.replace(" ", "")
+                val isSubmitted = status.contains("완료") && !status.contains("미완료")
+                val isLate = isSubmitted && status.contains("지각")
+                val todoInfo = TodoInfo(
+                    todoId = toCyberEvaluationTodoId(subjectInfo.id, evaluation),
+                    title = evaluation.title,
+                    due_date = dueDate,
+                    type = when {
+                        isLate -> TodoType.SUBMITTED_LATE
+                        isSubmitted -> TodoType.SUBMITTED
+                        else -> todoType
+                    },
+                    subject = subjectInfo,
+                    url = CYBER_LMS_URL,
+                )
+                if (isSubmitted) {
+                    submitted.add(todoInfo)
+                } else {
+                    todos.add(todoInfo)
+                }
+            }
+
+        return Pair(todos, submitted)
+    }
+
+    private fun parseEvaluationDeadlineIso(endAt: String): String = runCatching {
+        LocalDateTime.parse(endAt, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"))
+            .atZone(TODO_DEADLINE_ZONE_ID)
+            .toInstant()
+            .toString()
+    }.getOrDefault("")
+
+    private fun toCyberEvaluationTodoId(subjectId: Int, evaluation: CyberEvaluation): Int {
+        val key = "$subjectId:${evaluation.typeCode}:${evaluation.week}:${evaluation.round}:${evaluation.title}"
+        val hash = key.hashCode().let { if (it == Int.MIN_VALUE) 1 else abs(it) }
+        return -(10_000 + (hash % 1_000_000))
     }
 }

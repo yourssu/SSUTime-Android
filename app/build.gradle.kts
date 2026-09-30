@@ -45,8 +45,8 @@ android {
         applicationId = "com.yourssu.ssutime.v2"
         minSdk = 26
         targetSdk = 36
-        versionCode = 41
-        versionName = "1.1.13"
+        versionCode = 52
+        versionName = "1.2.3"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         buildConfigField(
@@ -93,6 +93,9 @@ android {
     buildFeatures {
         compose = true
         buildConfig = true
+    }
+    testOptions {
+        unitTests.isReturnDefaultValues = true
     }
 }
 

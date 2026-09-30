@@ -56,9 +56,10 @@ import com.yourssu.ssutime.v2.screen.main.LmsRefreshStage
 import com.yourssu.ssutime.v2.screen.main.RefreshSource
 import com.yourssu.ssutime.v2.screen.main.TodoRefreshResult
 import com.yourssu.ssutime.v2.screen.main.todoDataStore
+import com.yourssu.ssutime.v2.todo.TODO_DEADLINE_ZONE_ID
 import com.yourssu.ssutime.v2.todo.localizedLabel
 import com.yourssu.ssutime.v2.todo.sortedByDeadlineThenName
-import com.yourssu.ssutime.v2.todo.toTodoDeadlineInstant
+import com.yourssu.ssutime.v2.todo.toTodoDeadlineInstantOrNull
 import com.yourssu.ssutime.v2.ui.theme.SSUType
 import kotlinx.coroutines.flow.first
 import org.koin.core.component.KoinComponent
@@ -67,7 +68,6 @@ import java.time.Instant
 import java.time.temporal.ChronoUnit
 
 private const val TAG = "DDayWidget"
-private const val SECONDS_PER_DAY = 24 * 60 * 60L
 private const val WIDGET_REFRESH_TIMEOUT_MILLIS = 30_000L
 private val WidgetRefreshSizeKey = ActionParameters.Key<String>("widget_size")
 
@@ -217,21 +217,6 @@ private fun DDayTodoContent(
             )
         }
     }
-
-    Box(
-        modifier = GlanceModifier
-            .fillMaxSize()
-            .padding(end = 18.dp, bottom = 18.dp),
-        contentAlignment = Alignment.BottomEnd,
-    ) {
-        Image(
-            provider = ImageProvider(R.drawable.ic_widget_refresh),
-            contentDescription = context.getString(R.string.common_refresh),
-            modifier = GlanceModifier
-                .size(34.dp)
-                .clickable(widgetRefreshAction(WidgetAnalyticsSize.Small)),
-        )
-    }
 }
 
 @Composable
@@ -330,14 +315,6 @@ private fun DDayRefreshErrorContent(message: String) {
                 textAlign = TextAlign.Center,
             ),
         )
-        Spacer(modifier = GlanceModifier.height(8.dp))
-        Image(
-            provider = ImageProvider(R.drawable.ic_widget_refresh),
-            contentDescription = context.getString(R.string.common_refresh),
-            modifier = GlanceModifier
-                .size(28.dp)
-                .clickable(widgetRefreshAction(WidgetAnalyticsSize.Small)),
-        )
     }
 }
 
@@ -356,10 +333,10 @@ private data class DDayWidgetUiState(
 )
 
 private fun TodoData.toWidgetUiState(context: Context): DDayWidgetUiState {
-    val selectedTodo = todos.selectMostUrgentTodo()
     val now = Instant.now()
+    val selectedTodo = todos.selectMostUrgentTodo(now)
     val targetInstant = selectedTodo?.let {
-        it.due_date.toTodoDeadlineInstant()
+        it.due_date.toTodoDeadlineInstantOrNull()
     }
     val remainingDays = selectedTodo?.let {
         getRemainingDays(it.due_date, now)
@@ -368,7 +345,20 @@ private fun TodoData.toWidgetUiState(context: Context): DDayWidgetUiState {
         ChronoUnit.SECONDS.between(now, it)
     } ?: Long.MAX_VALUE
     val displayRemainingSeconds = remainingSeconds.coerceAtLeast(0L)
-    val isRemainingTimeText = selectedTodo != null && displayRemainingSeconds <= SECONDS_PER_DAY
+    val isRemainingTimeText = selectedTodo != null && remainingDays == 0L && remainingSeconds > 0
+
+    if (selectedTodo != null && targetInstant != null && remainingSeconds > 0) {
+        val nextDisplayUpdate = if (remainingDays > 0) {
+            now.atZone(TODO_DEADLINE_ZONE_ID)
+                .toLocalDate()
+                .plusDays(1)
+                .atStartOfDay(TODO_DEADLINE_ZONE_ID)
+                .toInstant()
+        } else {
+            targetInstant
+        }
+        scheduleWidgetDeadlineUpdate(context, nextDisplayUpdate)
+    }
 
     return DDayWidgetUiState(
         hasTodo = selectedTodo != null,
@@ -386,7 +376,7 @@ private fun TodoData.toWidgetUiState(context: Context): DDayWidgetUiState {
                 remainingSeconds = remainingSeconds,
             )
         },
-        countdownTargetEpochMillis = if (remainingSeconds in 1..SECONDS_PER_DAY) {
+        countdownTargetEpochMillis = if (isRemainingTimeText) {
             targetInstant?.toEpochMilli()
         } else {
             null
@@ -397,14 +387,19 @@ private fun TodoData.toWidgetUiState(context: Context): DDayWidgetUiState {
     )
 }
 
-private fun List<TodoInfo>.selectMostUrgentTodo(): TodoInfo? =
-    sortedByDeadlineThenName().firstOrNull()
+internal fun List<TodoInfo>.selectMostUrgentTodo(now: Instant = Instant.now()): TodoInfo? {
+    val sorted = sortedByDeadlineThenName()
+    return sorted.firstOrNull { todo ->
+        val deadline = todo.due_date.toTodoDeadlineInstantOrNull()
+        deadline == null || deadline.isAfter(now)
+    }
+}
 
 private fun TodoInfo?.toDdayText(remainingDays: Long, remainingSeconds: Long): String {
     if (this == null) {
         return "-"
     }
-    return if (remainingSeconds <= SECONDS_PER_DAY) {
+    return if (remainingDays == 0L) {
         remainingSeconds.toWidgetRemainingTimeText()
     } else {
         "D-$remainingDays"
@@ -435,7 +430,7 @@ private fun backgroundFor(
         return R.drawable.dlate
     }
 
-    if (remainingSeconds <= SECONDS_PER_DAY) {
+    if (remainingDays == 0L) {
         val backgrounds = intArrayOf(
             R.drawable.d0_1,
             R.drawable.d0_2,

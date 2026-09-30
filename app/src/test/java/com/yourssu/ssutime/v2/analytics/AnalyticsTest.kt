@@ -104,4 +104,21 @@ class AnalyticsTest {
         Analytics.viewLogin(isOnboarding = false)
         Analytics.viewLogin()
     }
+
+    @Test
+    fun `new and updated analytics methods execute cleanly`() {
+        Analytics.submittedAttachmentDownload()
+        Analytics.taskAttachmentClick()
+        Analytics.calendarMonthChange("prev")
+        Analytics.calendarMonthChange("next")
+        Analytics.settingLabMode(true)
+        Analytics.settingLabMode(false)
+        Analytics.withdrawClick()
+        Analytics.cyberBannerDismiss()
+        Analytics.loginFail()
+        Analytics.alarmPermission(isAllowed = true)
+        Analytics.alarmPermission(isAllowed = false)
+        Analytics.callAlarmSetting(selectedTime = "12h", entryPoint = "onboarding")
+        Analytics.callAlarmSetting(selectedTime = "reject", entryPoint = "repopup")
+    }
 }

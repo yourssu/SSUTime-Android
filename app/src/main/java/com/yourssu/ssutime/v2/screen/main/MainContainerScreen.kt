@@ -16,6 +16,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -36,6 +37,7 @@ import com.yourssu.ssutime.v2.screen.cyber.CyberRepository
 import com.yourssu.ssutime.v2.screen.my.MyPageScreen
 import com.yourssu.ssutime.v2.screen.navigation.MainTab
 import com.yourssu.ssutime.v2.ui.theme.WHITE
+import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
 @Composable
@@ -47,6 +49,8 @@ fun MainContainerScreen(
     skipLoadFromMyPageBack: Boolean = false,
     onInitialLmsRefreshSkipConsumed: () -> Unit = {},
     onInitialLmsRefreshForceConsumed: () -> Unit = {},
+    onHomeTabSelected: () -> Unit = {},
+    onHomeEntrySourceConsumed: () -> Unit = {},
     onLogout: () -> Unit = {},
     onNavigateToCyberLogin: () -> Unit = {},
 ) {
@@ -55,6 +59,10 @@ fun MainContainerScreen(
     val currentRoute = navBackStackEntry?.destination?.route
     val currentTab = MainTab.fromRoute(currentRoute)
     var showCyberPopup by rememberSaveable { mutableStateOf(true) }
+    var homeResetKey by rememberSaveable { androidx.compose.runtime.mutableIntStateOf(0) }
+    var calendarResetKey by rememberSaveable { androidx.compose.runtime.mutableIntStateOf(0) }
+    var myResetKey by rememberSaveable { androidx.compose.runtime.mutableIntStateOf(0) }
+    val coroutineScope = rememberCoroutineScope()
 
     val cyberRepository: CyberRepository = koinInject()
     val cyberLoginData by cyberRepository.cyberLoginData.collectAsState(initial = CyberLoginData())
@@ -76,6 +84,16 @@ fun MainContainerScreen(
                             launchSingleTop = true
                             restoreState = true
                         }
+                    }
+                    when (tab) {
+                        MainTab.HOME -> {
+                            onHomeTabSelected()
+                            if (currentRoute == MainTab.HOME.route) {
+                                homeResetKey++
+                            }
+                        }
+                        MainTab.CALENDAR -> calendarResetKey++
+                        MainTab.MY -> myResetKey++
                     }
                 }
             )
@@ -102,26 +120,30 @@ fun MainContainerScreen(
                         homeEntrySource = homeEntrySource,
                         homeEntryVersion = homeEntryVersion,
                         skipLoadFromMyPageBack = skipLoadFromMyPageBack,
+                        onHomeEntrySourceConsumed = onHomeEntrySourceConsumed,
                         onInitialLmsRefreshSkipConsumed = onInitialLmsRefreshSkipConsumed,
                         onInitialLmsRefreshForceConsumed = onInitialLmsRefreshForceConsumed,
+                        resetKey = homeResetKey,
                     )
                 }
 
                 composable(route = MainTab.CALENDAR.route) {
-                    CalendarScreen()
+                    CalendarScreen(
+                        resetKey = calendarResetKey,
+                    )
                 }
 
                 composable(route = MainTab.MY.route) {
                     MyPageScreen(
                         onLogout = onLogout,
                         onNavigateToCyberLogin = onNavigateToCyberLogin,
+                        resetKey = myResetKey,
                     )
                 }
             }
 
             AnimatedVisibility(
-                visible = !cyberLoginData.hasCredentials && showCyberPopup,
-
+                visible = currentTab != MainTab.MY && !cyberLoginData.hasCredentials && !cyberLoginData.isBannerDismissed && showCyberPopup,
                 enter = fadeIn() + slideInVertically { it / 2 },
                 exit = fadeOut() + slideOutVertically { it / 2 },
                 modifier = Modifier
@@ -130,10 +152,20 @@ fun MainContainerScreen(
             ) {
                 SSUCyberConnectPopup(
                     onClick = {
+                        showCyberPopup = false
+                        coroutineScope.launch {
+                            cyberRepository.dismissBanner()
+                        }
                         Analytics.cyberConnectClick(entryPoint = "home_banner")
                         onNavigateToCyberLogin()
                     },
-                    onDismiss = { showCyberPopup = false },
+                    onDismiss = {
+                        Analytics.cyberBannerDismiss()
+                        showCyberPopup = false
+                        coroutineScope.launch {
+                            cyberRepository.dismissBanner()
+                        }
+                    },
                 )
             }
         }

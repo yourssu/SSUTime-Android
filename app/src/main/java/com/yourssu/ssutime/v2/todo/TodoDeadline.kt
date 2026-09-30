@@ -38,7 +38,9 @@ internal fun remainingDaysUntilDeadline(
     now: Instant = Instant.now(),
 ): Long {
     val targetInstant = targetTime.toTodoDeadlineInstant()
-    return max(0, ChronoUnit.DAYS.between(now, targetInstant))
+    val today = now.atZone(TODO_DEADLINE_ZONE_ID).toLocalDate()
+    val deadlineDate = targetInstant.atZone(TODO_DEADLINE_ZONE_ID).toLocalDate()
+    return max(0, ChronoUnit.DAYS.between(today, deadlineDate))
 }
 
 internal fun remainingTimeTextUntilDeadline(
@@ -54,16 +56,36 @@ internal fun remainingTimeTextUntilDeadline(
         } else {
             "${remainingSeconds}s"
         }
+    } else if (remainingSeconds < 3600) {
+        val minutes = remainingSeconds / 60
+        val seconds = remainingSeconds % 60
+
+        "%02d:%02d".format(minutes, seconds)
     } else {
         val hours = remainingSeconds / 3600
-        val minutes = (remainingSeconds % 3600) / 60
-
-        "%02d:%02d".format(hours, minutes)
+        "${hours}h"
     }
 }
 
 internal fun List<TodoInfo>.sortedByDeadlineThenName(): List<TodoInfo> =
     sortedWith(todoDeadlineThenNameComparator())
+
+internal fun List<TodoInfo>.sortedBySubmittedAtDescending(): List<TodoInfo> =
+    sortedWith { left, right ->
+        val leftSubmittedAt = left.submittedAt.toSubmittedAtInstantOrNull()
+        val rightSubmittedAt = right.submittedAt.toSubmittedAtInstantOrNull()
+
+        when {
+            leftSubmittedAt != null && rightSubmittedAt != null -> rightSubmittedAt.compareTo(leftSubmittedAt)
+            leftSubmittedAt != null -> -1
+            rightSubmittedAt != null -> 1
+            else -> 0
+        }
+    }
+
+private fun String.toSubmittedAtInstantOrNull(): Instant? = runCatching {
+    Instant.parse(this)
+}.getOrNull()
 
 internal fun compareTodosByDeadlineThenName(left: TodoInfo, right: TodoInfo): Int =
     todoDeadlineThenNameComparator().compare(left, right)

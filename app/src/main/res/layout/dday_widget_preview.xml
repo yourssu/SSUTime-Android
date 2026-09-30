@@ -83,14 +83,5 @@
                 android:textColor="@android:color/white"
                 android:textSize="9sp" />
         </LinearLayout>
-
-        <ImageView
-            android:layout_width="34dp"
-            android:layout_height="34dp"
-            android:layout_gravity="bottom|end"
-            android:layout_marginEnd="17dp"
-            android:layout_marginBottom="17dp"
-            android:contentDescription="@null"
-            android:src="@drawable/ic_widget_refresh" />
     </FrameLayout>
 </FrameLayout>

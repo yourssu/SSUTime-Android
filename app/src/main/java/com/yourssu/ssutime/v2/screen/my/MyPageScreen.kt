@@ -63,6 +63,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -78,6 +79,7 @@ import com.yourssu.ssutime.v2.R
 import com.yourssu.ssutime.v2.SSUCyberAccountConnectedBadge
 import com.yourssu.ssutime.v2.SSUCyberAccountHelperBadge
 import com.yourssu.ssutime.v2.analytics.Analytics
+import com.yourssu.ssutime.v2.notification.canPostCallAlert
 import com.yourssu.ssutime.v2.ui.theme.BLACK
 import com.yourssu.ssutime.v2.ui.theme.N100
 import com.yourssu.ssutime.v2.ui.theme.N200
@@ -93,14 +95,27 @@ import org.koin.compose.viewmodel.koinViewModel
 
 const val MY_PAGE_MAIN_ROUTE = "my_page_main"
 const val HIDDEN_TODOS_ROUTE = "hidden_todos"
+private val TRAILING_STUDENT_ID_SUFFIX = Regex("""\s*\(\d+\)\s*$""")
+
+private fun String.withoutTrailingStudentId(): String =
+    replace(TRAILING_STUDENT_ID_SUFFIX, "").trim()
 
 @Composable
 fun MyPageScreen(
     viewModel: MyViewModel = koinViewModel(),
     onLogout: () -> Unit = {},
     onNavigateToCyberLogin: () -> Unit = {},
+    resetKey: Int = 0,
 ) {
     val myNavController = rememberNavController()
+
+    LaunchedEffect(resetKey) {
+        if (resetKey > 0) {
+            runCatching {
+                myNavController.popBackStack(MY_PAGE_MAIN_ROUTE, inclusive = false)
+            }
+        }
+    }
 
     NavHost(
         navController = myNavController,
@@ -124,6 +139,7 @@ fun MyPageScreen(
         composable(HIDDEN_TODOS_ROUTE) {
             HiddenTodosScreen(
                 viewModel = viewModel,
+                onBackClick = { myNavController.popBackStack() },
             )
         }
     }
@@ -144,12 +160,16 @@ fun MyPageContent(
     val selectedTerm by viewModel.selectedTerm.collectAsStateWithLifecycle()
     val isLogout by remember { viewModel.isLogout }
     var showLogoutPopup by remember { mutableStateOf(false) }
-    val tooltipState = rememberTooltipState(
+    var showWithdrawPopup by remember { mutableStateOf(false) }
+    val notificationTooltipState = rememberTooltipState(
+        isPersistent = true
+    )
+    val labsTooltipState = rememberTooltipState(
         isPersistent = true
     )
     val coroutine = rememberCoroutineScope()
     val alertState by viewModel.uiState.collectAsStateWithLifecycle()
-    var alertData by remember { mutableStateOf<AlertData>(AlertData(valid = false, false, false, -1)) }
+    var alertData by remember { mutableStateOf(AlertLocalStore.getAlertData(context)) }
     val labsData by viewModel.labsData.collectAsStateWithLifecycle()
 
     var pendingNotificationSettingsRequest by remember {
@@ -161,6 +181,7 @@ fun MyPageContent(
 
     fun updateAlertData(nextAlertData: AlertData) {
         alertData = nextAlertData
+        AlertLocalStore.saveAlertData(context, nextAlertData)
         viewModel.updateAlertData(nextAlertData)
     }
 
@@ -235,7 +256,7 @@ fun MyPageContent(
     fun requestEnableCallAlert(thresholdMinutes: Long = alertData.callingAlertThresholdMinutes) {
         pendingCallAlertThresholdMinutes = thresholdMinutes
         when {
-            !context.canPostNotifications() -> {
+            !context.canPostCallAlert() -> {
                 openNotificationSettings(NotificationSettingsRequest.CallAlertPostNotifications)
             }
 
@@ -261,7 +282,7 @@ fun MyPageContent(
             }
 
             NotificationSettingsRequest.CallAlertPostNotifications -> {
-                if (context.canPostNotifications()) {
+                if (context.canPostCallAlert()) {
                     val thresholdMinutes = pendingCallAlertThresholdMinutes
                         ?: alertData.callingAlertThresholdMinutes
                     if (context.canUseFullScreenIntent()) {
@@ -274,7 +295,7 @@ fun MyPageContent(
             }
 
             NotificationSettingsRequest.CallAlertFullScreenIntent -> {
-                if (context.canPostNotifications() && context.canUseFullScreenIntent()) {
+                if (context.canPostCallAlert() && context.canUseFullScreenIntent()) {
                     enableCallAlert(
                         pendingCallAlertThresholdMinutes ?: alertData.callingAlertThresholdMinutes
                     )
@@ -294,7 +315,10 @@ fun MyPageContent(
     LaunchedEffect(alertState) {
         val state = alertState
         if (state is UiState.Success) {
-            alertData = state.data
+            AlertLocalStore.saveAlertData(context, state.data)
+            if (alertData != state.data) {
+                alertData = state.data
+            }
         }
     }
 
@@ -314,6 +338,18 @@ fun MyPageContent(
                     Analytics.logoutConfirm()
                     viewModel.logout()
                 }
+            )
+        }
+    }
+
+    if (showWithdrawPopup) {
+        Dialog(onDismissRequest = { showWithdrawPopup = false }) {
+            WithdrawPopup(
+                onCancel = { showWithdrawPopup = false },
+                onConfirm = {
+                    showWithdrawPopup = false
+                    viewModel.withdrawAccount()
+                },
             )
         }
     }
@@ -340,7 +376,8 @@ fun MyPageContent(
                 modifier = Modifier.size(100.dp, 100.dp)
             )
             Text(
-                text = loginInfo?.user_name ?: stringResource(R.string.common_loading),
+                text = loginInfo?.user_name?.withoutTrailingStudentId()
+                    ?: stringResource(R.string.common_loading),
                 style = SSUType.H3SemiBold,
             )
             Text(
@@ -416,11 +453,11 @@ fun MyPageContent(
                             NotificationTooltip()
                         }
                     },
-                    state = tooltipState
+                    state = notificationTooltipState
                 ) {
                     Icon(
                         modifier = Modifier.clickable {
-                            coroutine.launch { tooltipState.show() }
+                            coroutine.launch { notificationTooltipState.show() }
                         },
                         painter = painterResource(R.drawable.ic_alret),
                         tint = N400,
@@ -527,11 +564,11 @@ fun MyPageContent(
                             LabsTooltip()
                         }
                     },
-                    state = tooltipState
+                    state = labsTooltipState
                 ) {
                     Icon(
                         modifier = Modifier.clickable {
-                            coroutine.launch { tooltipState.show() }
+                            coroutine.launch { labsTooltipState.show() }
                         },
                         painter = painterResource(R.drawable.ic_alret),
                         tint = N400,
@@ -544,6 +581,7 @@ fun MyPageContent(
                 text = stringResource(R.string.my_lab_submitted_files),
                 value = labsData.isEnableSubmittedFile,
                 onValueChanged = { enabled ->
+                    Analytics.settingLabMode(isEnabled = enabled)
                     viewModel.updateLabsData(labsData.copy(isEnableSubmittedFile = enabled))
                 },
                 childOption = null
@@ -560,7 +598,22 @@ fun MyPageContent(
             showLogoutPopup = true
         }
 
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(16.dp))
+
+        Text(
+            text = stringResource(R.string.my_withdraw),
+            style = SSUType.Label3Medium,
+            color = N400,
+            textDecoration = TextDecoration.Underline,
+            modifier = Modifier
+                .align(Alignment.CenterHorizontally)
+                .clickable {
+                    Analytics.withdrawClick()
+                    showWithdrawPopup = true
+                }
+        )
+
+        Spacer(Modifier.height(24.dp))
 
 //        OptionButton(
 //            text = "디버그: 10초 후 전화알림"
@@ -644,12 +697,15 @@ private enum class NotificationSettingsRequest {
     CallAlertFullScreenIntent,
 }
 
-private fun Context.canPostNotifications(): Boolean =
-    Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
-        ContextCompat.checkSelfPermission(
-            this,
-            Manifest.permission.POST_NOTIFICATIONS,
-        ) == PackageManager.PERMISSION_GRANTED
+private fun Context.canPostNotifications(): Boolean {
+    val notificationManager = getSystemService(NotificationManager::class.java) ?: return false
+    return notificationManager.areNotificationsEnabled() &&
+        (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+            ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.POST_NOTIFICATIONS,
+            ) == PackageManager.PERMISSION_GRANTED)
+}
 
 private fun Context.canUseFullScreenIntent(): Boolean {
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
@@ -873,20 +929,24 @@ fun NotificationTooltip() {
     ) {
         Text(
             text = stringResource(R.string.my_notification_tooltip_system_title),
-            style = SSUType.Caption1SemiBold
+            style = SSUType.Caption1SemiBold,
+            color = BLACK
         )
         Text(
             text = stringResource(R.string.my_notification_tooltip_system_desc),
-            style = SSUType.Body2Medium
+            style = SSUType.Body2Medium,
+            color = BLACK
         )
         Spacer(Modifier.height(12.dp))
         Text(
             text = stringResource(R.string.my_notification_tooltip_call_title),
-            style = SSUType.Caption1SemiBold
+            style = SSUType.Caption1SemiBold,
+            color = BLACK
         )
         Text(
             text = stringResource(R.string.my_notification_tooltip_call_desc),
-            style = SSUType.Body2Medium
+            style = SSUType.Body2Medium,
+            color = BLACK
         )
     }
 }
@@ -903,11 +963,13 @@ fun LabsTooltip() {
     ) {
         Text(
             text = stringResource(R.string.my_lab_question),
-            style = SSUType.Caption1SemiBold
+            style = SSUType.Caption1SemiBold,
+            color = BLACK
         )
         Text(
             text = stringResource(R.string.my_lab_description),
-            style = SSUType.Body2Medium
+            style = SSUType.Body2Medium,
+            color = BLACK
         )
     }
 }
@@ -929,7 +991,7 @@ fun LogoutPopup(
     ) {
         Text(
             text = stringResource(R.string.my_logout),
-            style = SSUType.H4SemiBold
+            style = SSUType.H4SemiBold,
         )
         Text(
             text = stringResource(R.string.my_logout_message),
@@ -952,6 +1014,46 @@ fun LogoutPopup(
                 color = R400,
                 textColor = WHITE,
                 onClick = onConfirm
+            )
+        }
+    }
+}
+
+@Composable
+private fun WithdrawPopup(
+    onCancel: () -> Unit,
+    onConfirm: () -> Unit,
+) {
+    Column(
+        Modifier
+            .width(300.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .background(WHITE)
+            .padding(top = 18.dp, start = 12.dp, end = 12.dp, bottom = 12.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        Text(
+            text = stringResource(R.string.my_withdraw),
+            style = SSUType.H4SemiBold,
+        )
+        Text(
+            text = stringResource(R.string.my_withdraw_message),
+            style = SSUType.Body1Medium,
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            PopupButton(
+                modifier = Modifier.weight(1f),
+                text = stringResource(R.string.common_cancel),
+                color = N200,
+                onClick = onCancel,
+            )
+            PopupButton(
+                modifier = Modifier.weight(1f),
+                text = stringResource(R.string.common_confirm),
+                color = R400,
+                textColor = WHITE,
+                onClick = onConfirm,
             )
         }
     }
