@@ -118,7 +118,10 @@ object Analytics {
         properties = mapOf("tab_name" to tabName),
     )
 
-    fun lmsLinkClick() = capture("lms_link_click")
+    fun lmsLinkClick(destinationType: String) = capture(
+        event = "lms_link_click",
+        properties = mapOf("destination_type" to destinationType),
+    )
 
     fun taskAttachmentClick() = capture("task_attachment_click")
 

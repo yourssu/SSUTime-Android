@@ -264,7 +264,7 @@ fun TodoDetailTabArea(
             labelText = stringResource(buttonTextRes),
             textStyle = SSUType.Label3Medium,
             onClick = {
-                Analytics.lmsLinkClick()
+                Analytics.lmsLinkClick(destinationType = if (todo.isCyber()) "cyber" else "lms")
                 openTodoLmsUrl(context, todo)
             }
         )
@@ -528,7 +528,7 @@ fun TodoDetailTabContent(
                 labelText = stringResource(buttonTextRes),
                 textStyle = SSUType.Label3Medium,
                 onClick = {
-                    Analytics.lmsLinkClick()
+                    Analytics.lmsLinkClick(destinationType = if (todo.isCyber()) "cyber" else "lms")
                     openTodoLmsUrl(context, todo)
                 }
             )

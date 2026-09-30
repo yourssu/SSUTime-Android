@@ -56,6 +56,7 @@ import com.yourssu.ssutime.v2.screen.main.LmsRefreshStage
 import com.yourssu.ssutime.v2.screen.main.RefreshSource
 import com.yourssu.ssutime.v2.screen.main.TodoRefreshResult
 import com.yourssu.ssutime.v2.screen.main.todoDataStore
+import com.yourssu.ssutime.v2.todo.TODO_DEADLINE_ZONE_ID
 import com.yourssu.ssutime.v2.todo.localizedLabel
 import com.yourssu.ssutime.v2.todo.sortedByDeadlineThenName
 import com.yourssu.ssutime.v2.todo.toTodoDeadlineInstantOrNull
@@ -67,7 +68,6 @@ import java.time.Instant
 import java.time.temporal.ChronoUnit
 
 private const val TAG = "DDayWidget"
-private const val SECONDS_PER_DAY = 24 * 60 * 60L
 private const val WIDGET_REFRESH_TIMEOUT_MILLIS = 30_000L
 private val WidgetRefreshSizeKey = ActionParameters.Key<String>("widget_size")
 
@@ -345,10 +345,19 @@ private fun TodoData.toWidgetUiState(context: Context): DDayWidgetUiState {
         ChronoUnit.SECONDS.between(now, it)
     } ?: Long.MAX_VALUE
     val displayRemainingSeconds = remainingSeconds.coerceAtLeast(0L)
-    val isRemainingTimeText = selectedTodo != null && remainingSeconds in 1..SECONDS_PER_DAY
+    val isRemainingTimeText = selectedTodo != null && remainingDays == 0L && remainingSeconds > 0
 
     if (selectedTodo != null && targetInstant != null && remainingSeconds > 0) {
-        scheduleWidgetDeadlineUpdate(context, targetInstant)
+        val nextDisplayUpdate = if (remainingDays > 0) {
+            now.atZone(TODO_DEADLINE_ZONE_ID)
+                .toLocalDate()
+                .plusDays(1)
+                .atStartOfDay(TODO_DEADLINE_ZONE_ID)
+                .toInstant()
+        } else {
+            targetInstant
+        }
+        scheduleWidgetDeadlineUpdate(context, nextDisplayUpdate)
     }
 
     return DDayWidgetUiState(
@@ -367,7 +376,7 @@ private fun TodoData.toWidgetUiState(context: Context): DDayWidgetUiState {
                 remainingSeconds = remainingSeconds,
             )
         },
-        countdownTargetEpochMillis = if (remainingSeconds in 1..SECONDS_PER_DAY) {
+        countdownTargetEpochMillis = if (isRemainingTimeText) {
             targetInstant?.toEpochMilli()
         } else {
             null
@@ -390,7 +399,7 @@ private fun TodoInfo?.toDdayText(remainingDays: Long, remainingSeconds: Long): S
     if (this == null) {
         return "-"
     }
-    return if (remainingSeconds <= SECONDS_PER_DAY) {
+    return if (remainingDays == 0L) {
         remainingSeconds.toWidgetRemainingTimeText()
     } else {
         "D-$remainingDays"
@@ -421,7 +430,7 @@ private fun backgroundFor(
         return R.drawable.dlate
     }
 
-    if (remainingSeconds <= SECONDS_PER_DAY) {
+    if (remainingDays == 0L) {
         val backgrounds = intArrayOf(
             R.drawable.d0_1,
             R.drawable.d0_2,
