@@ -117,9 +117,14 @@ class CyberRepository(
                     async {
                         runCatching {
                             val weeks = CyberApi.getWeeklyLectures(subject)
-                            CyberTodoMapper.mapWeeksToTodos(subject, subjectInfo, weeks)
+                            val (lectureTodos, lectureSubmitted) =
+                                CyberTodoMapper.mapWeeksToTodos(subject, subjectInfo, weeks)
+                            val evaluations = CyberApi.getQuizzesAndAssignments(subject)
+                            val (evaluationTodos, evaluationSubmitted) =
+                                CyberTodoMapper.mapEvaluationsToTodos(subjectInfo, evaluations)
+                            (lectureTodos + evaluationTodos) to (lectureSubmitted + evaluationSubmitted)
                         }.getOrElse { exception ->
-                            Log.e(TAG, "과목 주차 조회 실패: ${subject.name}", exception)
+                            Log.e(TAG, "과목 강의·학습평가 조회 실패: ${subject.name}", exception)
                             null
                         }
                     }

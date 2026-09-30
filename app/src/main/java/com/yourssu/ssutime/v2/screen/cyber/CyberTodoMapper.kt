@@ -4,11 +4,14 @@ import com.yourssu.data.SubjectInfo
 import com.yourssu.data.TodoInfo
 import com.yourssu.data.TodoType
 import com.yourssu.ssutime.v2.todo.TODO_DEADLINE_ZONE_ID
+import io.github.chlwhdtn03.data.Cyber.CyberEvaluation
 import io.github.chlwhdtn03.data.Cyber.CyberSubject
 import io.github.chlwhdtn03.data.Cyber.CyberWeek
 import java.time.LocalDate
+import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.ZonedDateTime
+import java.time.format.DateTimeFormatter
 import kotlin.math.abs
 
 data class CyberTodoResult(
@@ -213,5 +216,64 @@ object CyberTodoMapper {
         }
 
         return Pair(todos, submitted)
+    }
+
+    fun mapEvaluationsToTodos(
+        subjectInfo: SubjectInfo,
+        evaluations: List<CyberEvaluation>,
+    ): Pair<List<TodoInfo>, List<TodoInfo>> {
+        val todos = mutableListOf<TodoInfo>()
+        val submitted = mutableListOf<TodoInfo>()
+
+        evaluations
+            .asSequence()
+            .filter { it.typeCode == "02" || it.typeCode == "03" }
+            .filterNot { it.isResubmission }
+            .distinctBy { listOf(it.typeCode, it.week, it.round, it.title) }
+            .forEach { evaluation ->
+                val dueDate = parseEvaluationDeadlineIso(evaluation.endAt)
+                if (dueDate.isBlank()) return@forEach
+
+                val todoType = when (evaluation.typeCode) {
+                    "02" -> TodoType.QUIZ
+                    "03" -> TodoType.ASSIGNMENT
+                    else -> return@forEach
+                }
+                val status = evaluation.submitStatus.replace(" ", "")
+                val isSubmitted = status.contains("완료") && !status.contains("미완료")
+                val isLate = isSubmitted && status.contains("지각")
+                val todoInfo = TodoInfo(
+                    todoId = toCyberEvaluationTodoId(subjectInfo.id, evaluation),
+                    title = evaluation.title,
+                    due_date = dueDate,
+                    type = when {
+                        isLate -> TodoType.SUBMITTED_LATE
+                        isSubmitted -> TodoType.SUBMITTED
+                        else -> todoType
+                    },
+                    subject = subjectInfo,
+                    url = CYBER_LMS_URL,
+                )
+                if (isSubmitted) {
+                    submitted.add(todoInfo)
+                } else {
+                    todos.add(todoInfo)
+                }
+            }
+
+        return Pair(todos, submitted)
+    }
+
+    private fun parseEvaluationDeadlineIso(endAt: String): String = runCatching {
+        LocalDateTime.parse(endAt, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"))
+            .atZone(TODO_DEADLINE_ZONE_ID)
+            .toInstant()
+            .toString()
+    }.getOrDefault("")
+
+    private fun toCyberEvaluationTodoId(subjectId: Int, evaluation: CyberEvaluation): Int {
+        val key = "$subjectId:${evaluation.typeCode}:${evaluation.week}:${evaluation.round}:${evaluation.title}"
+        val hash = key.hashCode().let { if (it == Int.MIN_VALUE) 1 else abs(it) }
+        return -(10_000 + (hash % 1_000_000))
     }
 }
