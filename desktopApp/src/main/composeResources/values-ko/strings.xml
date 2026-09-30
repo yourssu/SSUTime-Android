@@ -41,7 +41,7 @@
     <string name="onboarding_tip_assignment">LearningX [과제]</string>
     <string name="onboarding_tip_quiz">LearningX [퀴즈]</string>
     <string name="onboarding_tip_lecture">LearningX [강의]</string>
-    <string name="onboarding_tip_cyber_excluded">숭실 사이버 강의는 포함되지 않아요</string>
+    <string name="onboarding_tip_cyber_excluded">숭실 사이버 대학 강의도 볼 수 있어요!</string>
 
     <string name="network_error_title">인터넷 연결이 불안정해요</string>
     <string name="network_error_description">Wi-Fi나 셀룰러 데이터 연결 상태를\n확인하고 다시 시도해주세요.</string>
@@ -97,7 +97,7 @@
 
     <string name="my_back_content_description">뒤로가기</string>
     <string name="my_avatar_content_description">프로필 이미지</string>
-    <string name="my_notification_settings">알림 설정</string>
+    <string name="my_notification_settings">설정</string>
     <string name="my_no_term_info">학기 정보 없음</string>
     <string name="my_term_dropdown_content_description">학기 선택</string>
     <string name="my_notification_info_content_description">알림 안내</string>
@@ -115,11 +115,11 @@
     <string name="my_notification_tooltip_call_title">전화 알림?</string>
     <string name="my_notification_tooltip_call_desc">과제 마감 당일 설정한 시간까지 완료하지 않았다면, 전화 알림을 드려요! * 진짜 전화는 아니니 놀라지 않으셔도 돼요!</string>
     <string name="my_logout_message">정말 로그아웃 하시겠어요?</string>
-    <string name="my_settings">설정</string>
+    <string name="my_settings">이용 안내</string>
     <string name="my_hidden_todos">숨긴 할 일</string>
     <string name="todo_hide_from_list">목록에서 숨기기</string>
     <string name="todo_hide_popup_title">과제를 숨길까요?</string>
-    <string name="todo_hide_popup_message">마이페이지의 [숨긴 할 일]에서 복원할 수 있어요.</string>
+    <string name="todo_hide_popup_message">마이페이지의 [숨긴 할 일]에서\n복원할 수 있어요.</string>
     <string name="hidden_todos_empty">숨긴 할 일이 없어요</string>
     <string name="hidden_todos_restore">복원하기</string>
 
@@ -184,4 +184,31 @@
     <string name="main_submitted_attachment">첨부파일</string>
     <string name="cyber_login_failed">로그인에 실패했습니다. 학번과 비밀번호를 확인해주세요.</string>
     <string name="cyber_login_error">로그인 중 오류가 발생했습니다. 다시 시도해주세요.</string>
+    <string name="my_withdraw">탈퇴하기</string>
+    <string name="my_withdraw_message">정말 탈퇴하시겠어요?</string>
+    <string name="todo_detail_open_cyber">숭사대 바로가기</string>
+    <string name="video_lecture_duration">강의 시간</string>
+    <string name="desktop_withdraw_error">탈퇴 요청에 실패했어요. 다시 시도해주세요.</string>
+
+    <string name="calendar_coming_soon">캘린더 기능을 준비하고 있어요</string>
+    <string name="calendar_new_notice">새로운 공지사항</string>
+    <string name="calendar_notice_shortcut">공지사항 바로가기</string>
+    <string name="calendar_month_format">%1$d월</string>
+    <string name="calendar_total_count">%1$d건</string>
+    <string name="calendar_more_count">+외 %1$d건</string>
+    <string name="calendar_prev_month">이전 달</string>
+    <string name="calendar_next_month">다음 달</string>
+    <string name="calendar_empty_day_todos">마감 일정이 없습니다.</string>
+    <string name="calendar_day_sun">일</string>
+    <string name="calendar_day_mon">월</string>
+    <string name="calendar_day_tue">화</string>
+    <string name="calendar_day_wed">수</string>
+    <string name="calendar_day_thu">목</string>
+    <string name="calendar_day_fri">금</string>
+    <string name="calendar_day_sat">토</string>
+    <string name="calendar_due_time_format">%1$d시 %2$d분까지</string>
+    <string name="calendar_bottom_sheet_date_format">%1$d월 %2$d일 (%3$s)</string>
+    <string name="desktop_nav_todo">할 일</string>
+    <string name="desktop_nav_my">마이페이지</string>
+    <string name="desktop_profile_empty">프로필 정보가 없습니다.</string>
 </resources>

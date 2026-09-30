@@ -1,5 +1,7 @@
 package com.yourssu.ssutime.desktop.screen.main
 
+import com.yourssu.ssutime.desktop.ui.resources.*
+import org.jetbrains.compose.resources.stringResource
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -74,7 +76,7 @@ fun DesktopVerticalNavBar(
             // 할 일 메뉴
             NavBarItem(
                 icon = Icons.Default.CheckCircle,
-                tooltipText = "할 일",
+                tooltipText = stringResource(Res.string.desktop_nav_todo),
                 isSelected = currentTab == DesktopNavTab.TODO,
                 onClick = { onTabSelect(DesktopNavTab.TODO) },
             )
@@ -84,7 +86,7 @@ fun DesktopVerticalNavBar(
             // 캘린더 메뉴
             NavBarItem(
                 icon = Icons.Default.CalendarMonth,
-                tooltipText = "캘린더",
+                tooltipText = stringResource(Res.string.calendar_title),
                 isSelected = currentTab == DesktopNavTab.CALENDAR,
                 onClick = { onTabSelect(DesktopNavTab.CALENDAR) },
                 hasBadge = unreadNoticeCount > 0,
@@ -95,7 +97,7 @@ fun DesktopVerticalNavBar(
             // 마이페이지 메뉴
             NavBarItem(
                 icon = Icons.Default.Person,
-                tooltipText = "마이페이지",
+                tooltipText = stringResource(Res.string.desktop_nav_my),
                 isSelected = currentTab == DesktopNavTab.MY_PAGE,
                 onClick = { onTabSelect(DesktopNavTab.MY_PAGE) },
             )

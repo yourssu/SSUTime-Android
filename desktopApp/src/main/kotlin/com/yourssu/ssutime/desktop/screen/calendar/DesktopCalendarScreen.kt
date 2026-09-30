@@ -44,7 +44,7 @@ import com.yourssu.ssutime.desktop.core.model.AppTodo
 import com.yourssu.ssutime.desktop.core.model.AppTodoType
 import com.yourssu.ssutime.desktop.core.model.dueDate
 import com.yourssu.ssutime.desktop.ui.component.SButton
-import com.yourssu.ssutime.desktop.ui.resources.Res
+import com.yourssu.ssutime.desktop.ui.resources.*
 import com.yourssu.ssutime.desktop.ui.resources.calendar_empty_events
 import com.yourssu.ssutime.desktop.ui.resources.common_close
 import com.yourssu.ssutime.desktop.ui.resources.ic_arrow_back
@@ -74,6 +74,8 @@ import java.time.LocalDate
 import java.time.YearMonth
 import java.time.ZoneId
 import java.time.temporal.ChronoUnit
+import com.yourssu.ssutime.desktop.ui.util.toTodoDeadlineInstant
+import com.yourssu.ssutime.desktop.ui.util.sortedByDeadlineThenName
 
 private val KOREA_ZONE_ID: ZoneId = ZoneId.of("Asia/Seoul")
 
@@ -92,11 +94,11 @@ fun AppTodoType.badgeTextColor(): Color = when (this) {
 }
 
 fun AppTodo.toLocalDate(): LocalDate? = runCatching {
-    Instant.parse(dueDate).atZone(KOREA_ZONE_ID).toLocalDate()
+    dueDate.toTodoDeadlineInstant().atZone(KOREA_ZONE_ID).toLocalDate()
 }.getOrNull()
 
 fun AppTodo.toDueTimeText(): String = runCatching {
-    val zdt = Instant.parse(dueDate).atZone(KOREA_ZONE_ID)
+    val zdt = dueDate.toTodoDeadlineInstant().atZone(KOREA_ZONE_ID)
     "${zdt.hour}시 ${zdt.minute}분까지"
 }.getOrDefault("")
 
@@ -152,8 +154,8 @@ fun DesktopCalendarPanel(
         CalendarMonthHeader(
             currentYearMonth = currentYearMonth,
             totalCount = totalMonthEventCount,
-            onPreviousMonth = { currentYearMonth = currentYearMonth.minusMonths(1) },
-            onNextMonth = { currentYearMonth = currentYearMonth.plusMonths(1) },
+            onPreviousMonth = { DesktopAnalytics.calendarMonthChange("prev"); currentYearMonth = currentYearMonth.minusMonths(1) },
+            onNextMonth = { DesktopAnalytics.calendarMonthChange("next"); currentYearMonth = currentYearMonth.plusMonths(1) },
         )
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -174,7 +176,7 @@ fun DesktopCalendarPanel(
     }
 
     selectedDate?.let { date ->
-        val selectedDayTodos = eventsByDate[date] ?: emptyList()
+        val selectedDayTodos = eventsByDate[date].orEmpty().sortedByDeadlineThenName()
         DesktopCalendarDateDetailDialog(
             date = date,
             today = today,
@@ -223,7 +225,7 @@ private fun CalendarNoticeBanner(
         Icon(
             imageVector = Icons.AutoMirrored.Outlined.KeyboardArrowRight,
             tint = N400,
-            contentDescription = "상세보기",
+            contentDescription = stringResource(Res.string.calendar_notice_shortcut),
         )
     }
 }
@@ -246,7 +248,7 @@ private fun CalendarMonthHeader(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Text(
-                text = "${currentYearMonth.monthValue}월",
+                text = stringResource(Res.string.calendar_month_format, currentYearMonth.monthValue),
                 style = SSUType.H3SemiBold,
                 color = N500,
             )
@@ -262,7 +264,7 @@ private fun CalendarMonthHeader(
                 ) {
                     Icon(
                         painter = painterResource(Res.drawable.ic_arrow_back),
-                        contentDescription = "이전 달",
+                        contentDescription = stringResource(Res.string.calendar_prev_month),
                         tint = N500,
                         modifier = Modifier.size(14.dp),
                     )
@@ -278,7 +280,7 @@ private fun CalendarMonthHeader(
                 ) {
                     Icon(
                         painter = painterResource(Res.drawable.ic_arrow_right),
-                        contentDescription = "다음 달",
+                        contentDescription = stringResource(Res.string.calendar_next_month),
                         tint = N500,
                         modifier = Modifier.size(14.dp),
                     )
@@ -287,7 +289,7 @@ private fun CalendarMonthHeader(
         }
 
         Text(
-            text = "${totalCount}건",
+            text = stringResource(Res.string.calendar_total_count, totalCount),
             style = SSUType.H4SemiBold,
             color = N700,
         )
@@ -298,7 +300,7 @@ private fun CalendarMonthHeader(
 private fun CalendarWeekHeader(
     modifier: Modifier = Modifier,
 ) {
-    val weekDays = listOf("일", "월", "화", "수", "목", "금", "토")
+    val weekDays = listOf(stringResource(Res.string.calendar_day_sun), stringResource(Res.string.calendar_day_mon), stringResource(Res.string.calendar_day_tue), stringResource(Res.string.calendar_day_wed), stringResource(Res.string.calendar_day_thu), stringResource(Res.string.calendar_day_fri), stringResource(Res.string.calendar_day_sat))
 
     Row(
         modifier = modifier.fillMaxWidth(),
@@ -425,7 +427,7 @@ private fun CalendarDayCell(
 
             if (moreCount > 0) {
                 Text(
-                    text = "+외 ${moreCount}건",
+                    text = stringResource(Res.string.calendar_more_count, moreCount),
                     style = SSUType.Caption3Regular,
                     color = N400,
                     textAlign = TextAlign.Center,
@@ -486,7 +488,7 @@ fun DesktopCalendarDateDetailDialog(
                 .padding(24.dp),
         ) {
             Text(
-                text = "${date.monthValue}월 ${date.dayOfMonth}일 ($dDayText)",
+                text = stringResource(Res.string.calendar_bottom_sheet_date_format, date.monthValue, date.dayOfMonth, dDayText),
                 style = SSUType.H2SemiBold,
                 color = N700,
             )
@@ -604,7 +606,9 @@ private fun CalendarTodoDetailItem(
             )
 
             Text(
-                text = todo.toDueTimeText(),
+                text = runCatching { todo.dueDate.toTodoDeadlineInstant().atZone(KOREA_ZONE_ID) }.getOrNull()?.let {
+                    stringResource(Res.string.calendar_due_time_format, it.hour, it.minute)
+                }.orEmpty(),
                 style = SSUType.Label3Medium,
                 color = N500,
             )

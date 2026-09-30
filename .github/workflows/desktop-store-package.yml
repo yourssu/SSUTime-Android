@@ -1,47 +1,57 @@
-name: Windows Desktop MSIX Release
+name: Windows Desktop Store Release
 
 on:
   push:
     tags:
       - "desktop-v*"
   workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Existing desktop-v release tag to rebuild and submit
+        required: true
+        type: string
 
 permissions:
   contents: write
 
 concurrency:
-  group: windows-desktop-msix-${{ github.ref_name }}
+  group: windows-desktop-msix-${{ inputs.release_tag || github.ref_name }}
   cancel-in-progress: false
 
 jobs:
   package:
     name: Build Windows MSIX
+    if: startsWith(github.ref, 'refs/tags/desktop-v') || (github.event_name == 'workflow_dispatch' && startsWith(inputs.release_tag, 'desktop-v'))
     runs-on: windows-latest
+    outputs:
+      version: ${{ steps.version.outputs.value }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          ref: ${{ github.ref }}
+          ref: ${{ inputs.release_tag || github.ref }}
 
       - name: Resolve and validate version
         id: version
         shell: pwsh
         env:
           EVENT_NAME: ${{ github.event_name }}
-          RELEASE_TAG: ${{ github.ref_name }}
+          RELEASE_TAG: ${{ inputs.release_tag || github.ref_name }}
         run: |
           $version = (Get-Content -LiteralPath "desktopApp/version.txt" -Raw).Trim()
           if ($version -notmatch "^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$") {
             throw "desktopApp/version.txt must use MAJOR.MINOR.PATCH."
           }
 
-          if ($env:EVENT_NAME -eq "push") {
-            $expectedTag = "desktop-v$version"
-            if ($env:RELEASE_TAG -ne $expectedTag) {
-              throw "Desktop release tag must match the committed Desktop version: $expectedTag"
-            }
+          $expectedTag = "desktop-v$version"
+          if ($env:RELEASE_TAG -ne $expectedTag) {
+            throw "Desktop release tag must match the committed Desktop version: $expectedTag"
+          }
+          $tagCommit = git rev-parse "refs/tags/$expectedTag^{commit}"
+          if ($LASTEXITCODE -ne 0 -or $tagCommit -ne (git rev-parse HEAD)) {
+            throw "Desktop packages must be built from the immutable release tag commit."
           }
 
           "value=$version" >> $env:GITHUB_OUTPUT
@@ -53,10 +63,6 @@ jobs:
           EVENT_NAME: ${{ github.event_name }}
           REF_NAME: ${{ github.ref_name }}
         run: |
-          if ($env:EVENT_NAME -eq "workflow_dispatch" -and $env:REF_NAME -ne "desktop") {
-            throw "Manual Desktop Store releases must run from the desktop branch."
-          }
-
           git fetch origin desktop
           git merge-base --is-ancestor HEAD origin/desktop
           if ($LASTEXITCODE -ne 0) {
@@ -142,5 +148,76 @@ jobs:
           - Desktop version: `${{ steps.version.outputs.value }}`
           - MSIX version: `${{ steps.version.outputs.store }}`
           - Distribution: GitHub Actions artifact
-          - Store submission: Manual upload required
+          - Store submission: Microsoft Store submission job
+          "@ >> $env:GITHUB_STEP_SUMMARY
+
+  submit-store:
+    name: Submit to Microsoft Store
+    needs: package
+    runs-on: windows-latest
+    environment: microsoft-store
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - name: Validate Store credentials
+        shell: pwsh
+        env:
+          AZURE_AD_APPLICATION_CLIENT_ID: ${{ secrets.AZURE_AD_APPLICATION_CLIENT_ID }}
+          AZURE_AD_APPLICATION_SECRET: ${{ secrets.AZURE_AD_APPLICATION_SECRET }}
+          AZURE_AD_TENANT_ID: ${{ secrets.AZURE_AD_TENANT_ID }}
+          SELLER_ID: ${{ secrets.SELLER_ID }}
+        run: |
+          foreach ($name in @("AZURE_AD_APPLICATION_CLIENT_ID", "AZURE_AD_APPLICATION_SECRET", "AZURE_AD_TENANT_ID", "SELLER_ID")) {
+            if ([string]::IsNullOrWhiteSpace([Environment]::GetEnvironmentVariable($name))) {
+              throw "Missing microsoft-store Environment secret: $name"
+            }
+          }
+
+      - name: Download release MSIX
+        uses: actions/download-artifact@v4
+        with:
+          name: SSUTime-${{ needs.package.outputs.version }}-Windows-MSIX
+          path: store-package
+
+      - name: Verify package checksum
+        shell: pwsh
+        run: |
+          $package = Get-Item "store-package/SSUTime-${{ needs.package.outputs.version }}-windows-x64.msix"
+          $expected = ((Get-Content -LiteralPath "$($package.FullName).sha256" -Raw) -split '\s+')[0]
+          $actual = (Get-FileHash -LiteralPath $package.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($actual -ne $expected) { throw "Store package checksum mismatch." }
+
+      - name: Set up Microsoft Store Developer CLI
+        uses: microsoft/microsoft-store-apppublisher@v1.1
+
+      - name: Configure Microsoft Store Developer CLI
+        shell: pwsh
+        env:
+          AZURE_AD_APPLICATION_CLIENT_ID: ${{ secrets.AZURE_AD_APPLICATION_CLIENT_ID }}
+          AZURE_AD_APPLICATION_SECRET: ${{ secrets.AZURE_AD_APPLICATION_SECRET }}
+          AZURE_AD_TENANT_ID: ${{ secrets.AZURE_AD_TENANT_ID }}
+          SELLER_ID: ${{ secrets.SELLER_ID }}
+        run: |
+          msstore reconfigure --tenantId "$env:AZURE_AD_TENANT_ID" --sellerId "$env:SELLER_ID" --clientId "$env:AZURE_AD_APPLICATION_CLIENT_ID" --clientSecret "$env:AZURE_AD_APPLICATION_SECRET"
+          if ($LASTEXITCODE -ne 0) { throw "Microsoft Store authentication failed." }
+
+      - name: Upload package and request certification
+        shell: pwsh
+        run: |
+          msstore publish "store-package" --appId "9N8DJHBJDRGR" --inputFile "store-package/SSUTime-${{ needs.package.outputs.version }}-windows-x64.msix"
+          if ($LASTEXITCODE -ne 0) { throw "Microsoft Store submission failed." }
+
+      - name: Check submission status
+        shell: pwsh
+        run: |
+          msstore submission status "9N8DJHBJDRGR"
+          if ($LASTEXITCODE -ne 0) { throw "Could not verify Microsoft Store submission status." }
+          @"
+          ## Microsoft Store
+
+          - Version: ${{ needs.package.outputs.version }}.0
+          - Product: 9N8DJHBJDRGR
+          - Package uploaded and certification requested
+          - Store publication awaits Microsoft certification
           "@ >> $env:GITHUB_STEP_SUMMARY

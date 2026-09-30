@@ -42,7 +42,7 @@
     <string name="onboarding_tip_assignment">LearningX [Assignment]</string>
     <string name="onboarding_tip_quiz">LearningX [Quiz]</string>
     <string name="onboarding_tip_lecture">LearningX [Lecture]</string>
-    <string name="onboarding_tip_cyber_excluded">Soongsil Cyber University lectures are not included.</string>
+    <string name="onboarding_tip_cyber_excluded">You can also view Soongsil Cyber University lectures!</string>
 
     <string name="network_error_title">Your internet connection is unstable</string>
     <string name="network_error_description">Check your Wi-Fi or cellular connection\nand try again.</string>
@@ -98,7 +98,7 @@
 
     <string name="my_back_content_description">Back</string>
     <string name="my_avatar_content_description">Avatar</string>
-    <string name="my_notification_settings">Notification settings</string>
+    <string name="my_notification_settings">Settings</string>
     <string name="my_no_term_info">No term information</string>
     <string name="my_term_dropdown_content_description">Select term</string>
     <string name="my_notification_info_content_description">About notifications</string>
@@ -116,7 +116,7 @@
     <string name="my_notification_tooltip_call_title">Call alert?</string>
     <string name="my_notification_tooltip_call_desc">If you have not completed an assignment by the time you set on its due date, we will send a call-style alert. * It is not a real phone call, so do not be surprised!</string>
     <string name="my_logout_message">Are you sure you want to log out?</string>
-    <string name="my_settings">Settings</string>
+    <string name="my_settings">Information</string>
     <string name="my_hidden_todos">Hidden Tasks</string>
     <string name="todo_hide_from_list">Hide from list</string>
     <string name="todo_hide_popup_title">Hide assignment?</string>
@@ -148,9 +148,9 @@
     <string name="tab_my">My</string>
     <string name="calendar_title">Calendar</string>
     <string name="calendar_empty_events">No deadlines scheduled.</string>
-    <string name="notice_title">Notices</string>
+    <string name="notice_title">Announcements</string>
     <string name="notice_new">New notices</string>
-    <string name="notice_empty">No notices posted.</string>
+    <string name="notice_empty">No announcements found.</string>
     <string name="notice_attachment">Attachment</string>
     <string name="notice_select_subject">Select course</string>
     <string name="common_attachment">Attachments</string>
@@ -185,4 +185,31 @@
     <string name="main_submitted_attachment">Attachment</string>
     <string name="cyber_login_failed">Login failed. Please check your student ID and password.</string>
     <string name="cyber_login_error">An error occurred during login. Please try again.</string>
+    <string name="my_withdraw">Delete Account</string>
+    <string name="my_withdraw_message">Are you sure you want to delete your account?</string>
+    <string name="todo_detail_open_cyber">Go to KCU</string>
+    <string name="video_lecture_duration">Video length</string>
+    <string name="desktop_withdraw_error">Account deletion failed. Please try again.</string>
+
+    <string name="calendar_coming_soon">Calendar feature is coming soon</string>
+    <string name="calendar_new_notice">New announcements</string>
+    <string name="calendar_notice_shortcut">Go to announcements</string>
+    <string name="calendar_month_format">%1$d</string>
+    <string name="calendar_total_count">%1$d tasks</string>
+    <string name="calendar_more_count">+%1$d more</string>
+    <string name="calendar_prev_month">Previous month</string>
+    <string name="calendar_next_month">Next month</string>
+    <string name="calendar_empty_day_todos">No tasks due on this day.</string>
+    <string name="calendar_day_sun">Sun</string>
+    <string name="calendar_day_mon">Mon</string>
+    <string name="calendar_day_tue">Tue</string>
+    <string name="calendar_day_wed">Wed</string>
+    <string name="calendar_day_thu">Thu</string>
+    <string name="calendar_day_fri">Fri</string>
+    <string name="calendar_day_sat">Sat</string>
+    <string name="calendar_due_time_format">Until %1$02d:%2$02d</string>
+    <string name="calendar_bottom_sheet_date_format">%1$d/%2$d (%3$s)</string>
+    <string name="desktop_nav_todo">Tasks</string>
+    <string name="desktop_nav_my">My page</string>
+    <string name="desktop_profile_empty">No profile information available.</string>
 </resources>

@@ -77,6 +77,8 @@ dependencies {
     implementation(libs.jna.platform)
     runtimeOnly(libs.slf4j.nop)
     testImplementation(kotlin("test"))
+    testImplementation(compose.desktop.uiTestJUnit4)
+    testImplementation("io.ktor:ktor-client-mock:3.5.0")
 }
 
 compose.resources {

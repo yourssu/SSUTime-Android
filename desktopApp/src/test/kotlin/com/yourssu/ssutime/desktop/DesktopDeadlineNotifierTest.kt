@@ -18,10 +18,10 @@ class DesktopDeadlineNotifierTest {
     )
 
     @Test
-    fun `windows toast uses foreground activation without a custom protocol`() {
-        assertTrue(windowsToastXmlTemplate.contains("launch=\"--notification-activated\""))
-        assertFalse(windowsToastXmlTemplate.contains("activationType=\"protocol\""))
-        assertFalse(windowsToastXmlTemplate.contains("ssutime://"))
+    fun `windows toast uses the registered protocol activation`() {
+        assertFalse(windowsToastXmlTemplate.contains("--notification-activated"))
+        assertTrue(windowsToastXmlTemplate.contains("activationType=\"protocol\""))
+        assertTrue(windowsToastXmlTemplate.contains("ssutime://"))
     }
 
     @Test

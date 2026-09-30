@@ -1,9 +1,17 @@
 package com.yourssu.ssutime.desktop.core.lms
 
 import com.yourssu.data.AttachmentInfo
+import com.yourssu.data.network.isFailed
+import com.yourssu.data.network.isSkipped
+import com.yourssu.data.network.hasNoAnalyzableAttachment
+import com.yourssu.ssutime.desktop.core.network.DesktopApiException
+import com.yourssu.data.NewTodoNotificationRecord
 import com.yourssu.data.DiscussionAttachment
 import com.yourssu.data.DiscussionInfo
+import com.yourssu.data.isCyber
 import com.yourssu.data.todoUniqueKey
+import com.yourssu.ssutime.desktop.ui.util.toTodoDeadlineInstantOrNull
+import com.yourssu.ssutime.desktop.ui.util.sortedByDeadlineThenName
 import com.yourssu.ssutime.desktop.core.cyber.CyberTodoResult
 import com.yourssu.ssutime.desktop.core.model.AiSummary
 import com.yourssu.ssutime.desktop.core.model.AppProfile
@@ -16,7 +24,7 @@ import com.yourssu.ssutime.desktop.core.model.dueDate
 import com.yourssu.ssutime.desktop.core.model.submittedTodoComparator
 import com.yourssu.ssutime.desktop.core.network.LmsCookie
 import com.yourssu.ssutime.desktop.core.network.SsuTimeApi
-import com.yourssu.ssutime.desktop.core.network.toConfirmedAiSummaryOrNull
+import com.yourssu.ssutime.desktop.core.network.toAiSummaryOrNull
 import com.yourssu.ssutime.desktop.lms.getLmsCookies
 import com.yourssu.ssutime.desktop.lms.getLmsLoginInfo
 import com.yourssu.ssutime.desktop.lms.getLmsTerms
@@ -43,11 +51,14 @@ class LmsAppService(
         loadingState: (Float) -> Unit = {},
         previousData: AppTodoData = AppTodoData(),
         cyberResult: CyberTodoResult = CyberTodoResult(),
+        isCyberConnected: Boolean = false,
         onRequireReLogin: (suspend () -> Unit)? = null,
         postHogDistinctId: String? = null,
     ): LmsRefreshSnapshot {
         val terms = try {
             getLmsTerms()
+        } catch (cancellation: CancellationException) {
+            throw cancellation
         } catch (e: Exception) {
             if (onRequireReLogin != null) {
                 onRequireReLogin()
@@ -64,6 +75,8 @@ class LmsAppService(
                 loadingState = loadingState,
                 postHogDistinctId = postHogDistinctId,
             )
+        } catch (cancellation: CancellationException) {
+            throw cancellation
         } catch (e: Exception) {
             if (onRequireReLogin != null) {
                 onRequireReLogin()
@@ -82,10 +95,16 @@ class LmsAppService(
             loadedAt = Clock.System.now().toString(),
             previousData = previousData,
             cyberResult = cyberResult,
+            isCyberConnected = isCyberConnected,
         )
 
+        val knownKeys = (previousData.todos + previousData.hiddenTodos + previousData.submitted)
+            .map { it.todoUniqueKey() }.toSet()
+        val discovered = if (previousData.loadedAt.isBlank()) emptyList() else todoData.todos
+            .filter { it.type in listOf(AppTodoType.ASSIGNMENT, AppTodoType.QUIZ, AppTodoType.COMMONS) && it.todoUniqueKey() !in knownKeys }
+            .map { NewTodoNotificationRecord(it.todoUniqueKey(), todoData.loadedAt, it.subject?.name.orEmpty(), it.type) }
         return LmsRefreshSnapshot(
-            todoData = todoData,
+            todoData = todoData.copy(pendingNewTodoNotifications = (previousData.pendingNewTodoNotifications + discovered).distinctBy { it.todoKey }),
             subjects = todoData.subjects,
             semester = currentTerm.toString(),
         )
@@ -97,6 +116,7 @@ class LmsAppService(
         loadingState: (Float) -> Unit = {},
         previousData: AppTodoData = AppTodoData(),
         cyberResult: CyberTodoResult = CyberTodoResult(),
+        isCyberConnected: Boolean = false,
         onRequireReLogin: (suspend () -> Unit)? = null,
         postHogDistinctId: String? = null,
     ): AppTodoData {
@@ -106,6 +126,8 @@ class LmsAppService(
                 loadingState = loadingState,
                 postHogDistinctId = postHogDistinctId,
             )
+        } catch (cancellation: CancellationException) {
+            throw cancellation
         } catch (e: Exception) {
             if (onRequireReLogin != null) {
                 onRequireReLogin()
@@ -123,6 +145,7 @@ class LmsAppService(
             loadedAt = Clock.System.now().toString(),
             previousData = previousData,
             cyberResult = cyberResult,
+            isCyberConnected = isCyberConnected,
         )
     }
 
@@ -132,6 +155,8 @@ class LmsAppService(
     ): List<Term> {
         val terms = try {
             getLmsTerms()
+        } catch (cancellation: CancellationException) {
+            throw cancellation
         } catch (e: Exception) {
             if (onRequireReLogin != null) {
                 onRequireReLogin()
@@ -160,6 +185,8 @@ class LmsAppService(
                 email = info.user_email,
                 termName = term?.name.orEmpty(),
             )
+        } catch (cancellation: CancellationException) {
+            throw cancellation
         } catch (e: Exception) {
             if (onRequireReLogin != null) {
                 onRequireReLogin()
@@ -202,7 +229,7 @@ class LmsAppService(
             return false
         }
 
-        snapshot.subjects.forEach { subject ->
+        snapshot.subjects.filter { it.id > 0 }.forEach { subject ->
             runCatching {
                 var status = api.addEnrollment(
                     accessToken = currentToken,
@@ -222,7 +249,7 @@ class LmsAppService(
             }
         }
 
-        (snapshot.todoData.todos + snapshot.todoData.submitted).forEach { todo ->
+        (snapshot.todoData.todos + snapshot.todoData.submitted).filterNot { it.isCyber() }.forEach { todo ->
             runCatching {
                 var status = api.reportTodo(currentToken, todo)
                 if (refreshTokenIfNeeded(status)) {
@@ -239,13 +266,23 @@ class LmsAppService(
         accessToken: String,
         todo: AppTodo,
         onRequireReLogin: (suspend () -> Unit)? = null,
+        onRefreshToken: (suspend () -> String?)? = null,
     ): AiSummary? {
         if (!todo.canRequestAiSummary || accessToken.isBlank()) {
             return null
         }
 
+        var token = accessToken
+        suspend fun <T> authenticated(block: suspend (String) -> T): T {
+            return try { block(token) } catch (error: DesktopApiException) {
+                if (error.status.value !in listOf(401, 403) || onRefreshToken == null) throw error
+                token = onRefreshToken().orEmpty()
+                if (token.isBlank()) throw error
+                block(token)
+            }
+        }
         val cached = runCatching {
-            api.findAiSummary(accessToken, todo)?.toConfirmedAiSummaryOrNull()
+            authenticated { api.findAiSummary(it, todo) }?.toAiSummaryOrNull()
         }.getOrNull()
         if (cached != null) {
             return cached
@@ -253,6 +290,8 @@ class LmsAppService(
 
         val session = try {
             getLmsCookies()
+        } catch (cancellation: CancellationException) {
+            throw cancellation
         } catch (e: Exception) {
             if (onRequireReLogin != null) {
                 onRequireReLogin()
@@ -277,15 +316,14 @@ class LmsAppService(
                 )
             }
 
-        api.reportTodoWithAnalysis(
-            accessToken = accessToken,
-            todo = todo,
-            cookies = cookies,
-        )
+        val analysis = authenticated { api.reportTodoWithAnalysis(it, todo, cookies) }
+        if (analysis?.isFailed == true || analysis?.isSkipped == true || analysis?.hasNoAnalyzableAttachment == true) {
+            return authenticated { api.findAiSummary(it, todo) }?.toAiSummaryOrNull()
+        }
 
         repeat(AI_SUMMARY_POLL_ATTEMPTS) { attempt ->
             val summary = try {
-                api.findAiSummary(accessToken, todo)?.toConfirmedAiSummaryOrNull()
+                authenticated { api.findAiSummary(it, todo) }?.toAiSummaryOrNull()
             } catch (cancellation: CancellationException) {
                 throw cancellation
             } catch (_: Exception) {
@@ -319,17 +357,18 @@ fun List<Term>.currentTermAt(now: Instant): Term? =
 private fun String.withoutTrailingCourseNumber(): String =
     replace(TRAILING_COURSE_NUMBER, "")
 
-private fun toAppTodoData(
+internal fun toAppTodoData(
     subjects: List<Subject>,
     loadedAt: String,
     previousData: AppTodoData = AppTodoData(),
     cyberResult: CyberTodoResult = CyberTodoResult(),
+    isCyberConnected: Boolean = false,
+    now: java.time.Instant = java.time.Instant.now(),
 ): AppTodoData {
-    val locallyReadDiscussionIds = previousData.subjects
+    val locallyReadDiscussionIds = (previousData.readDiscussionIds + previousData.subjects
         .flatMap { it.discussions }
         .filter { it.readState.equals("read", ignoreCase = true) }
-        .map { it.id }
-        .toSet()
+        .map { it.id }).toSet()
 
     val lmsSubjectInfos = subjects.map { subject ->
         AppSubject(
@@ -338,7 +377,7 @@ private fun toAppTodoData(
             professor = subject.professor,
             discussions = subject.discussions.map { discussion ->
                 val isLocallyRead = discussion.id in locallyReadDiscussionIds
-                val initialReadState = if (isLocallyRead) "read" else discussion.read_state.trim().ifBlank { "unread" }
+                val initialReadState = if (isLocallyRead || discussion.read_state.equals("read", true)) "read" else "unread"
                 DiscussionInfo(
                     id = discussion.id,
                     title = discussion.title,
@@ -360,7 +399,10 @@ private fun toAppTodoData(
         )
     }.distinctBy { it.id }
 
-    val allSubjectInfos = (lmsSubjectInfos + cyberResult.subjects).distinctBy { it.id }
+    val cyberSubjects = if (!isCyberConnected) emptyList() else if (!cyberResult.isComplete && cyberResult.subjects.isEmpty()) {
+        previousData.subjects.filter { it.id < 0 }
+    } else cyberResult.subjects
+    val allSubjectInfos = (lmsSubjectInfos + cyberSubjects).distinctBy { it.id }
     val subjectById = allSubjectInfos.associateBy { it.id }
 
     val lmsTodos = subjects.flatMap { subject ->
@@ -437,27 +479,49 @@ private fun toAppTodoData(
             }
     }
 
-    val allTodos = (lmsTodos + cyberResult.todos).sortedWith(appTodoComparator())
-    val allSubmitted = (lmsSubmitted + cyberResult.submitted).sortedWith(submittedTodoComparator())
-
-    val hiddenKeysSet = previousData.hiddenTodoKeys.toSet()
-    val (hidden, active) = allTodos.partition { it.todoUniqueKey() in hiddenKeysSet }
-
+    val allTodos = (lmsTodos + if (isCyberConnected) cyberResult.todos else emptyList()).sortedByDeadlineThenName()
+    val allSubmitted = (lmsSubmitted + if (isCyberConnected) cyberResult.submitted else emptyList())
+        .sortedWith(submittedTodoComparator())
+    val currentSubjectIds = allSubjectInfos.map { it.id }.toSet()
+    fun canPreserve(todo: AppTodo): Boolean =
+        (todo.subject?.id ?: todo.subjectId) in currentSubjectIds &&
+            !(todo.isCyber() && (!isCyberConnected || cyberResult.isComplete))
+    val preservedTodos = (previousData.todos + previousData.hiddenTodos).filter { previous ->
+        canPreserve(previous) &&
+            allTodos.none { isSameTodoItem(it, previous) } &&
+            allSubmitted.none { isSameTodoItem(it, previous) } &&
+            previous.dueDate.toTodoDeadlineInstantOrNull()?.isBefore(now) != true
+    }.map { it.copy(subject = subjectById[it.subject?.id ?: it.subjectId] ?: it.subject) }
+    val mergedTodos = (allTodos + preservedTodos).distinctBy { it.todoUniqueKey() }.sortedByDeadlineThenName()
+    val preservedSubmitted = previousData.submitted.filter { previous ->
+        canPreserve(previous) && allSubmitted.none { isSameTodoItem(it, previous) } &&
+            mergedTodos.none { isSameTodoItem(it, previous) }
+    }.map { it.copy(subject = subjectById[it.subject?.id ?: it.subjectId] ?: it.subject) }
+    val mergedSubmitted = (allSubmitted + preservedSubmitted).distinctBy { it.todoUniqueKey() }
+        .sortedWith(submittedTodoComparator())
+    val (hidden, active) = mergedTodos.partition { it.todoUniqueKey() in previousData.hiddenTodoKeys }
     return previousData.copy(
         todos = active,
-        submitted = allSubmitted,
+        submitted = mergedSubmitted,
         subjects = allSubjectInfos,
         hiddenTodos = hidden,
-        hiddenTodoKeys = previousData.hiddenTodoKeys,
         loadedAt = loadedAt,
+        readDiscussionIds = (locallyReadDiscussionIds + allSubjectInfos.flatMap { it.discussions }
+            .filter { it.readState.equals("read", true) }.map { it.id }).toList(),
     )
 }
 
-private fun appTodoComparator(): Comparator<AppTodo> =
-    compareBy<AppTodo> { todo -> todo.dueDate }
-        .thenBy { todo -> todo.subject?.name.orEmpty() }
-        .thenBy(AppTodo::title)
-        .thenBy(AppTodo::todoId)
+internal fun isSameTodoItem(a: AppTodo, b: AppTodo): Boolean {
+    val aSubjectId = a.subject?.id ?: a.subjectId
+    val bSubjectId = b.subject?.id ?: b.subjectId
+    if (aSubjectId != bSubjectId && aSubjectId > 0 && bSubjectId > 0) return false
+    if (a.todoId > 0 && b.todoId > 0) return a.todoId == b.todoId
+    if (a.isCyber() && b.isCyber() && a.todoId != 0 && b.todoId != 0) return a.todoId == b.todoId
+    if (a.moduleItemId > 0 && b.moduleItemId > 0) return a.moduleItemId == b.moduleItemId
+    if (a.componentId > 0 && b.componentId > 0) return a.componentId == b.componentId
+    return a.title.trim().isNotEmpty() && a.title.trim().equals(b.title.trim(), true) &&
+        (a.dueDate.isBlank() || b.dueDate.isBlank() || a.dueDate == b.dueDate)
+}
 
 private fun Submission.isReportableSubmission(): Boolean =
     submitted_at?.isNotBlank() == true ||

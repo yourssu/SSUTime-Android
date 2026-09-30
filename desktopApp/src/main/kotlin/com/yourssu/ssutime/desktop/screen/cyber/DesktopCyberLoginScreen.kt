@@ -16,7 +16,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.input.rememberTextFieldState
-import androidx.compose.material3.CircularProgressIndicator
+import com.yourssu.ssutime.desktop.ui.component.IosLoadingSpinner
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -177,9 +177,9 @@ fun DesktopCyberLoginScreen(
                     .background(Color(0x80000000)),
                 contentAlignment = Alignment.Center,
             ) {
-                CircularProgressIndicator(
+                IosLoadingSpinner(
                     color = MaterialTheme.colorScheme.secondary,
-                    trackColor = MaterialTheme.colorScheme.surfaceVariant,
+
                 )
             }
         }

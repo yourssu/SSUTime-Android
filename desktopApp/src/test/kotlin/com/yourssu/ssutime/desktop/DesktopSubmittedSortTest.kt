@@ -81,7 +81,7 @@ class DesktopSubmittedSortTest {
             due_date = "2026-04-19T23:59:59Z",
             type = TodoType.SUBMITTED,
             subject = subject,
-            submittedAt = "", // falls back to due_date: 2026-04-19
+            submittedAt = "", // No submitted_at: keep stable order after dated submissions
         )
         val undatedSubmission = TodoInfo(
             todoId = 4,
@@ -95,13 +95,12 @@ class DesktopSubmittedSortTest {
         val list = listOf(olderSubmission, undatedSubmission, latestCyberSubmission, newerSubmission)
         val sorted = list.sortedWith(submittedTodoComparator())
 
-        // Latest date first: 2026-04-19 (latestCyberSubmission), then 2026-04-11 (newerSubmission),
-        // then 2026-04-03 (olderSubmission), then undated
-        assertEquals(listOf(3, 2, 1, 4), sorted.map { it.todoId })
+        // Android uses submitted_at only; undated items keep their original relative order.
+        assertEquals(listOf(2, 1, 4, 3), sorted.map { it.todoId })
     }
 
     @Test
-    fun testSubmittedTodoComparatorTieBreaksDeterministic() {
+    fun testSubmittedTodoComparatorPreservesOrderForEqualSubmissionTimes() {
         val itemA = TodoInfo(
             todoId = 10,
             title = "A 과제",
@@ -120,6 +119,6 @@ class DesktopSubmittedSortTest {
         )
 
         val sorted = listOf(itemB, itemA).sortedWith(submittedTodoComparator())
-        assertEquals(listOf(10, 20), sorted.map { it.todoId })
+        assertEquals(listOf(20, 10), sorted.map { it.todoId })
     }
 }

@@ -11,7 +11,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.input.TextFieldState
-import androidx.compose.material3.CircularProgressIndicator
+import com.yourssu.ssutime.desktop.ui.component.IosLoadingSpinner
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -149,9 +149,9 @@ fun DesktopLoginScreen(
                     .background(Color(0x80000000)),
                 contentAlignment = Alignment.Center,
             ) {
-                CircularProgressIndicator(
+                IosLoadingSpinner(
                     color = MaterialTheme.colorScheme.secondary,
-                    trackColor = MaterialTheme.colorScheme.surfaceVariant,
+
                 )
             }
         }

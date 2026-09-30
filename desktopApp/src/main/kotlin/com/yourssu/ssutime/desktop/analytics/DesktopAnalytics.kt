@@ -54,6 +54,7 @@ object DesktopAnalytics {
 
     private val identifiedDistinctId = AtomicReference<String?>(null)
     private val anonymousDistinctId = AtomicReference<String>(UUID.randomUUID().toString())
+    internal var testEventSink: ((PostHogEventPayload) -> Unit)? = null
     private val eventQueue = ConcurrentLinkedQueue<PostHogEventPayload>()
     private val isFlushing = AtomicBoolean(false)
     private var flushLoopJob: Job? = null
@@ -72,6 +73,16 @@ object DesktopAnalytics {
     }
 
     fun currentAnonymousId(): String = anonymousDistinctId.get()
+
+    suspend fun close() {
+        flushLoopJob?.cancel()
+        while (eventQueue.isNotEmpty()) {
+            val before = eventQueue.size
+            flushInternal()
+            if (eventQueue.size >= before) break
+        }
+        httpClient.close()
+    }
 
     fun flush() {
         applicationScope.launch {
@@ -133,7 +144,7 @@ object DesktopAnalytics {
         flushImmediately: Boolean = false,
     ) {
         val apiKey = DesktopBuildConfig.POSTHOG_API_KEY.trim()
-        if (apiKey.isBlank()) return
+        if (apiKey.isBlank() && testEventSink == null) return
 
         val distinctId = identifiedDistinctId.get() ?: anonymousDistinctId.get()
 
@@ -144,6 +155,7 @@ object DesktopAnalytics {
             "\$os_version" to (System.getProperty("os.version") ?: "10.0"),
             "\$device_type" to "Desktop",
             "platform" to "windows",
+            "\$is_identified" to (identifiedDistinctId.get() != null),
             "\$app_version" to DesktopBuildConfig.VERSION_NAME,
         )
         fullProps.putAll(properties)
@@ -166,6 +178,7 @@ object DesktopAnalytics {
             timestamp = Instant.now().toString(),
         )
 
+        testEventSink?.let { it(payload); return }
         eventQueue.add(payload)
 
         if (flushImmediately || eventQueue.size >= 10) {
@@ -181,6 +194,7 @@ object DesktopAnalytics {
             if (identifiedDistinctId.get() == distinctId) return@withContext
 
             val prevAnonId = anonymousDistinctId.get()
+            identifiedDistinctId.set(distinctId)
             capture(
                 event = "\$identify",
                 properties = mapOf(
@@ -188,7 +202,6 @@ object DesktopAnalytics {
                 ),
                 flushImmediately = true,
             )
-            identifiedDistinctId.set(distinctId)
             flush()
         }
     }
@@ -224,7 +237,6 @@ object DesktopAnalytics {
 
     fun loginFail(errorType: LoginFailErrorType) = capture(
         event = "login_fail",
-        properties = mapOf("error_type" to errorType.value),
         flushImmediately = true,
     )
 
@@ -239,7 +251,6 @@ object DesktopAnalytics {
         event = "alarm_permission",
         properties = mapOf(
             "is_allowed" to isAllowed,
-            "entry_point" to entryPoint,
         ),
         flushImmediately = true,
     )
@@ -264,7 +275,16 @@ object DesktopAnalytics {
         properties = mapOf("tab_name" to tabName),
     )
 
-    fun lmsLinkClick() = capture("lms_link_click")
+    fun lmsLinkClick(destinationType: String) = capture(
+        "lms_link_click", mapOf("destination_type" to destinationType),
+    )
+
+    fun submittedAttachmentDownload() = capture("submitted_attachment_download")
+    fun taskAttachmentClick() = capture("task_attachment_click")
+    fun calendarMonthChange(direction: String) = capture("calendar_month_change", mapOf("direction" to direction))
+    fun cyberBannerDismiss() = capture("cyber_banner_dismiss")
+    fun settingLabMode(isEnabled: Boolean) = capture("setting_lab_mode", mapOf("is_enabled" to isEnabled), true)
+    fun withdrawClick() = capture("withdraw_click", flushImmediately = true)
 
     fun hideConfirm() = capture(
         event = "hide_confirm",
@@ -330,6 +350,8 @@ object DesktopAnalytics {
             notificationType = notificationType,
         ),
     )
+
+    internal fun notificationTap(properties: Map<String, Any>) = capture("notification_tap", properties)
 
     fun notificationTap(
         dDay: Int,

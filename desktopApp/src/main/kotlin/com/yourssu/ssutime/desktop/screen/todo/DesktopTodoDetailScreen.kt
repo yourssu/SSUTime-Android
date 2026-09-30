@@ -2,6 +2,7 @@ package com.yourssu.ssutime.desktop.screen.todo
 
 import androidx.compose.foundation.text.selection.SelectionContainer
 import com.yourssu.ssutime.desktop.analytics.DesktopAnalytics
+import com.yourssu.data.isCyber
 import com.yourssu.ssutime.desktop.analytics.toDetailType
 
 import androidx.compose.animation.Crossfade
@@ -23,6 +24,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AttachFile
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.PrimaryTabRow
@@ -59,6 +63,8 @@ import com.yourssu.ssutime.desktop.ui.component.SButton
 import com.yourssu.ssutime.desktop.ui.component.SButton_Small
 import com.yourssu.ssutime.desktop.ui.resources.Res
 import com.yourssu.ssutime.desktop.ui.resources.ai_estimated_duration
+import com.yourssu.ssutime.desktop.ui.resources.ai_estimated_duration_minutes
+import com.yourssu.ssutime.desktop.ui.resources.common_attachment
 import com.yourssu.ssutime.desktop.ui.resources.ai_estimated_duration_unknown
 import com.yourssu.ssutime.desktop.ui.resources.ai_sparkle
 import com.yourssu.ssutime.desktop.ui.resources.ai_summary_analyzing
@@ -77,6 +83,8 @@ import com.yourssu.ssutime.desktop.ui.resources.todo_detail_back
 import com.yourssu.ssutime.desktop.ui.resources.todo_detail_description_tab
 import com.yourssu.ssutime.desktop.ui.resources.todo_detail_late_notice
 import com.yourssu.ssutime.desktop.ui.resources.todo_detail_lms_link
+import com.yourssu.ssutime.desktop.ui.resources.todo_detail_open_cyber
+import com.yourssu.ssutime.desktop.ui.resources.video_lecture_duration
 import com.yourssu.ssutime.desktop.ui.resources.todo_hide_from_list
 import com.yourssu.ssutime.desktop.ui.resources.todo_hide_popup_message
 import com.yourssu.ssutime.desktop.ui.resources.todo_hide_popup_title
@@ -158,8 +166,9 @@ fun DesktopTodoDetailScreen(
         TodoDetailTabSection(
             todo = todo,
             aiSummaryState = aiSummaryState,
+            onOpenAttachment = onOpenUrl,
             onOpenUrl = {
-                DesktopAnalytics.lmsLinkClick()
+                DesktopAnalytics.lmsLinkClick(if (todo.isCyber()) "cyber" else "lms")
                 onOpenUrl(todo.toLmsUrl())
             },
         )
@@ -193,8 +202,8 @@ private fun TodoDetailOverview(
             (aiSummaryState as? DesktopAiSummaryUiState.Success)
                 ?.estimatedDurationMinutes
                 ?.takeIf { it > 0 }
-                ?.let { stringResource(Res.string.ai_estimated_duration, it) }
-                ?: stringResource(Res.string.ai_estimated_duration_unknown)
+                ?.let { stringResource(Res.string.ai_estimated_duration_minutes, it) }
+                ?: ""
         }
     }
 
@@ -239,7 +248,7 @@ private fun TodoDetailOverview(
                             text = stringResource(
                                 Res.string.main_due_until,
                                 runCatching {
-                                    formatMonthDayWithTime(todo.dueDate)
+                                    formatMonthDayWithTime(todo.dueDate, includeSeconds = false)
                                 }.getOrDefault(todo.dueDate),
                             ),
                             style = SSUType.Caption1SemiBold,
@@ -247,13 +256,13 @@ private fun TodoDetailOverview(
                         )
                     }
 
-                    if (todo.canRequestAiSummary || (todo.type == AppTodoType.COMMONS && todo.duration > 0)) {
+                    if (estimatedDurationText.isNotBlank()) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Text(
-                                text = if (todo.type == AppTodoType.COMMONS) "영상 길이" else stringResource(Res.string.ai_estimated_duration),
+                                text = if (todo.type == AppTodoType.COMMONS) stringResource(Res.string.video_lecture_duration) else stringResource(Res.string.ai_estimated_duration),
                                 style = SSUType.Caption1SemiBold,
                                 color = N500,
                             )
@@ -309,18 +318,16 @@ private fun TodoDetailTabSection(
     todo: AppTodo,
     aiSummaryState: DesktopAiSummaryUiState?,
     onOpenUrl: () -> Unit,
+    onOpenAttachment: (String) -> Unit,
 ) {
-    val shouldShowAiSummaryTab = todo.canRequestAiSummary && when (aiSummaryState) {
-        is DesktopAiSummaryUiState.Success -> true
-        DesktopAiSummaryUiState.Loading, DesktopAiSummaryUiState.Analyzing -> true
-        DesktopAiSummaryUiState.Empty, DesktopAiSummaryUiState.Error, null -> false
-    }
+    val shouldShowAiSummaryTab = todo.canRequestAiSummary &&
+        aiSummaryState is DesktopAiSummaryUiState.Success && aiSummaryState.summary.isNotBlank()
 
-    val availableTabs = remember(shouldShowAiSummaryTab, todo.description) {
+    val availableTabs = remember(shouldShowAiSummaryTab, todo.description, todo.attachments) {
         if (shouldShowAiSummaryTab) {
             listOf(TodoDetailTab.DESCRIPTION, TodoDetailTab.AI_SUMMARY)
         } else {
-            if (todo.description.isBlank()) {
+            if (todo.description.isBlank() && todo.attachments.isEmpty()) {
                 emptyList()
             } else {
                 listOf(TodoDetailTab.DESCRIPTION)
@@ -336,7 +343,7 @@ private fun TodoDetailTabSection(
         ) {
             SButton(
                 modifier = Modifier.fillMaxWidth(),
-                labelText = stringResource(Res.string.todo_detail_lms_link),
+                labelText = stringResource(if (todo.isCyber()) Res.string.todo_detail_open_cyber else Res.string.todo_detail_lms_link),
                 onClick = onOpenUrl,
             )
         }
@@ -448,6 +455,34 @@ private fun TodoDetailTabSection(
             }
         }
 
+        val attachmentLinks = when (currentTab) {
+            TodoDetailTab.DESCRIPTION -> todo.attachments.map { it.display_name to it.url }
+            TodoDetailTab.AI_SUMMARY -> (aiSummaryState as? DesktopAiSummaryUiState.Success)
+                ?.attachmentLinks.orEmpty().map { it.fileName to it.url }
+        }
+        if (attachmentLinks.any { it.second.isNotBlank() }) {
+            Spacer(Modifier.height(20.dp))
+            Text(stringResource(Res.string.common_attachment), style = SSUType.Caption1SemiBold, color = N500)
+        }
+        attachmentLinks.filter { it.second.isNotBlank() }.forEach { (name, url) ->
+            Spacer(Modifier.height(8.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp))
+                    .border(1.dp, N200, RoundedCornerShape(8.dp))
+                    .clickable {
+                        DesktopAnalytics.taskAttachmentClick()
+                        onOpenAttachment(url)
+                    }.padding(14.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(Icons.Default.AttachFile, contentDescription = null, tint = N500, modifier = Modifier.size(20.dp))
+                Spacer(Modifier.width(8.dp))
+                Text(name.ifBlank { url }, modifier = Modifier.weight(1f), style = SSUType.Body1Medium,
+                    color = N600, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                Spacer(Modifier.width(8.dp))
+                Icon(Icons.Default.Download, contentDescription = null, tint = N500, modifier = Modifier.size(20.dp))
+            }
+        }
         Spacer(Modifier.height(24.dp))
 
         Box(
@@ -455,7 +490,7 @@ private fun TodoDetailTabSection(
             contentAlignment = Alignment.TopEnd,
         ) {
             SButton_Small(
-                labelText = stringResource(Res.string.todo_detail_lms_link),
+                labelText = stringResource(if (todo.isCyber()) Res.string.todo_detail_open_cyber else Res.string.todo_detail_lms_link),
                 textStyle = SSUType.Label3Medium,
                 onClick = onOpenUrl,
             )

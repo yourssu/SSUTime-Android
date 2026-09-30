@@ -57,6 +57,7 @@ import com.yourssu.ssutime.desktop.ui.resources.avatar_container
 import com.yourssu.ssutime.desktop.ui.resources.common_cancel
 import com.yourssu.ssutime.desktop.ui.resources.common_confirm
 import com.yourssu.ssutime.desktop.ui.resources.common_loading
+import com.yourssu.ssutime.desktop.ui.resources.desktop_profile_empty
 import com.yourssu.ssutime.desktop.ui.resources.ic_alret
 import com.yourssu.ssutime.desktop.ui.resources.ic_arrow_back
 import com.yourssu.ssutime.desktop.ui.resources.icon_collapsed
@@ -66,6 +67,8 @@ import com.yourssu.ssutime.desktop.ui.resources.my_back_content_description
 import com.yourssu.ssutime.desktop.ui.resources.my_contact
 import com.yourssu.ssutime.desktop.ui.resources.my_hidden_todos
 import com.yourssu.ssutime.desktop.ui.resources.my_logout
+import com.yourssu.ssutime.desktop.ui.resources.my_withdraw
+import com.yourssu.ssutime.desktop.ui.resources.my_withdraw_message
 import com.yourssu.ssutime.desktop.ui.resources.my_logout_message
 import com.yourssu.ssutime.desktop.ui.resources.my_no_term_info
 import com.yourssu.ssutime.desktop.ui.resources.my_notification_info_content_description
@@ -118,6 +121,9 @@ fun DesktopMyPageScreen(
     onBack: () -> Unit = {},
     onOpenUrl: (String) -> Unit,
     onLogout: () -> Unit,
+    onWithdrawAccount: () -> Unit = {},
+    isWithdrawing: Boolean = false,
+    withdrawalError: String? = null,
     modifier: Modifier = Modifier,
     showSystemNotificationSetting: Boolean = false,
     systemNotificationsEnabled: Boolean = false,
@@ -130,6 +136,7 @@ fun DesktopMyPageScreen(
     onEnableSubmittedFileChanged: (Boolean) -> Unit = {},
 ) {
     var showLogoutDialog by remember { mutableStateOf(false) }
+    var showWithdrawDialog by remember { mutableStateOf(false) }
     val tooltipState = rememberTooltipState(isPersistent = true)
     val labsTooltipState = rememberTooltipState(isPersistent = true)
     val scope = rememberCoroutineScope()
@@ -153,6 +160,18 @@ fun DesktopMyPageScreen(
                     showLogoutDialog = false
                     onLogout()
                 },
+            )
+        }
+    }
+
+    if (showWithdrawDialog) {
+        Dialog(onDismissRequest = { if (!isWithdrawing) showWithdrawDialog = false }) {
+            LogoutPopup(
+                title = stringResource(Res.string.my_withdraw),
+                message = withdrawalError ?: stringResource(Res.string.my_withdraw_message),
+                enabled = !isWithdrawing,
+                onCancel = { showWithdrawDialog = false },
+                onConfirm = onWithdrawAccount,
             )
         }
     }
@@ -188,7 +207,7 @@ fun DesktopMyPageScreen(
             Text(
                 text = profile?.name
                     ?: errorMessage?.takeIf(String::isNotBlank)
-                    ?: stringResource(Res.string.common_loading),
+                    ?: stringResource(if (isLoading) Res.string.common_loading else Res.string.desktop_profile_empty),
                 style = SSUType.H3SemiBold,
                 color = if (profile == null && !errorMessage.isNullOrBlank()) {
                     R400
@@ -381,7 +400,7 @@ fun DesktopMyPageScreen(
             ToggleOption(
                 text = stringResource(Res.string.my_labs_enable_submitted_file),
                 value = isEnableSubmittedFile,
-                onValueChanged = onEnableSubmittedFileChanged,
+                onValueChanged = { DesktopAnalytics.settingLabMode(it); onEnableSubmittedFileChanged(it) },
             )
         }
 
@@ -391,6 +410,14 @@ fun DesktopMyPageScreen(
             onClick = {
                 DesktopAnalytics.logoutClick()
                 showLogoutDialog = true
+            },
+        )
+        Spacer(Modifier.height(8.dp))
+        OptionButton(
+            text = stringResource(Res.string.my_withdraw),
+            onClick = {
+                DesktopAnalytics.withdrawClick()
+                showWithdrawDialog = true
             },
         )
         Spacer(Modifier.height(16.dp))
@@ -528,6 +555,9 @@ private fun NotificationTooltip() {
 private fun LogoutPopup(
     onCancel: () -> Unit,
     onConfirm: () -> Unit,
+    title: String = stringResource(Res.string.my_logout),
+    message: String = stringResource(Res.string.my_logout_message),
+    enabled: Boolean = true,
 ) {
     Column(
         modifier = Modifier
@@ -539,11 +569,11 @@ private fun LogoutPopup(
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         Text(
-            text = stringResource(Res.string.my_logout),
+            text = title,
             style = SSUType.H4SemiBold,
         )
         Text(
-            text = stringResource(Res.string.my_logout_message),
+            text = message,
             style = SSUType.Body1Medium,
         )
         Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -551,14 +581,14 @@ private fun LogoutPopup(
                 modifier = Modifier.weight(1f),
                 text = stringResource(Res.string.common_cancel),
                 color = N200,
-                onClick = onCancel,
+                onClick = { if (enabled) onCancel() },
             )
             PopupButton(
                 modifier = Modifier.weight(1f),
                 text = stringResource(Res.string.common_confirm),
                 color = R400,
                 textColor = WHITE,
-                onClick = onConfirm,
+                onClick = { if (enabled) onConfirm() },
             )
         }
     }

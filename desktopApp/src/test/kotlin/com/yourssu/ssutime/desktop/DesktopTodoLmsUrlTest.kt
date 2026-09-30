@@ -74,12 +74,13 @@ class DesktopTodoLmsUrlTest {
 
     @Test
     fun `formatVideoDuration formats seconds into hours minutes and seconds correctly`() {
-        assertEquals("45초", formatVideoDuration(45.0))
-        assertEquals("25분", formatVideoDuration(1500.0))
-        assertEquals("25분 30초", formatVideoDuration(1530.0))
-        assertEquals("1시간", formatVideoDuration(3600.0))
-        assertEquals("1시간 1분", formatVideoDuration(3660.0))
-        assertEquals("1시간 1분 5초", formatVideoDuration(3665.0))
+        val korean = java.util.Locale.getDefault().language == "ko"
+        assertEquals(if (korean) "45초" else "45 sec", formatVideoDuration(45.0))
+        assertEquals(if (korean) "25분" else "25 min", formatVideoDuration(1500.0))
+        assertEquals(if (korean) "25분 30초" else "25 min 30 sec", formatVideoDuration(1530.0))
+        assertEquals(if (korean) "1시간" else "1 hr", formatVideoDuration(3600.0))
+        assertEquals(if (korean) "1시간 1분" else "1 hr 1 min", formatVideoDuration(3660.0))
+        assertEquals(if (korean) "1시간 1분 5초" else "1 hr 1 min 5 sec", formatVideoDuration(3665.0))
         assertEquals("", formatVideoDuration(0.0))
         assertEquals("", formatVideoDuration(-1.0))
     }

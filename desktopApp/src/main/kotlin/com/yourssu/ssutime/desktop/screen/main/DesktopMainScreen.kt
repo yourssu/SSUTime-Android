@@ -36,7 +36,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
-import androidx.compose.material3.CircularProgressIndicator
+import com.yourssu.ssutime.desktop.ui.component.IosLoadingSpinner
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -68,6 +68,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.yourssu.data.DiscussionInfo
+import com.yourssu.data.isCyber
+import com.yourssu.ssutime.desktop.ui.util.sortedByDeadlineThenName
 import com.yourssu.ssutime.desktop.component.SSUCyberConnectPopup
 import com.yourssu.ssutime.desktop.core.model.AppTodo
 import com.yourssu.ssutime.desktop.core.model.AppTodoData
@@ -83,6 +85,7 @@ import com.yourssu.ssutime.desktop.screen.submitted.DesktopSubmittedScreen
 import com.yourssu.ssutime.desktop.screen.todo.DesktopTodoDetailScreen
 import com.yourssu.ssutime.desktop.ui.component.SButton
 import com.yourssu.ssutime.desktop.ui.resources.Res
+import com.yourssu.ssutime.desktop.ui.resources.cyber_title
 import com.yourssu.ssutime.desktop.ui.resources.common_close
 import com.yourssu.ssutime.desktop.ui.resources.common_refresh
 import com.yourssu.ssutime.desktop.ui.resources.common_retry
@@ -149,6 +152,7 @@ sealed interface DesktopAiSummaryUiState {
     data class Success(
         val summary: String,
         val estimatedDurationMinutes: Int?,
+        val attachmentLinks: List<com.yourssu.data.network.AttachmentLinkResponse> = emptyList(),
     ) : DesktopAiSummaryUiState
     data object Error : DesktopAiSummaryUiState
 }
@@ -174,6 +178,8 @@ fun DesktopMainScreen(
     onDiscussionExpanded: (DiscussionInfo) -> Unit = {},
     onOpenUrl: (String) -> Unit = {},
     isCyberConnected: Boolean = false,
+    isCyberBannerDismissed: Boolean = false,
+    onDismissCyberBanner: () -> Unit = {},
     onNavigateToCyberLogin: () -> Unit = {},
     isEnableSubmittedFile: Boolean = false,
     modifier: Modifier = Modifier,
@@ -187,6 +193,9 @@ fun DesktopMainScreen(
     selectedTerm: Term? = null,
     onTermSelected: (Term) -> Unit = {},
     onLogout: () -> Unit = {},
+    onWithdrawAccount: () -> Unit = {},
+    isWithdrawing: Boolean = false,
+    withdrawalError: String? = null,
     showSystemNotificationSetting: Boolean = false,
     systemNotificationsEnabled: Boolean = false,
     onSystemNotificationsChanged: (Boolean) -> Unit = {},
@@ -198,20 +207,28 @@ fun DesktopMainScreen(
     cyberLoginError: String? = null,
     onLoginCyber: (String, String) -> Unit = { _, _ -> },
 ) {
+    var homeEntryVersion by remember { mutableIntStateOf(0) }
+    var calendarResetKey by remember { mutableIntStateOf(0) }
+    var homeEntrySource by remember { mutableStateOf("app") }
     var showingSubmitted by remember { mutableStateOf(false) }
     var selectedTodo by remember { mutableStateOf<AppTodo?>(null) }
     var selectedTodoEntrySource by remember { mutableStateOf("home") }
     var showingNotice by remember { mutableStateOf(false) }
     var mySubRoute by remember { mutableStateOf(MySubRoute.PROFILE) }
 
-    LaunchedEffect(todoData.todos, todoData.loadedAt) {
+    LaunchedEffect(isCyberConnected) {
+        if (isCyberConnected && mySubRoute == MySubRoute.CYBER_LOGIN) mySubRoute = MySubRoute.PROFILE
+    }
+
+    LaunchedEffect(currentTab, selectedTodo, showingSubmitted, homeEntryVersion) {
+        if (currentTab != DesktopNavTab.TODO || selectedTodo != null || showingSubmitted) return@LaunchedEffect
         val urgentCount = todoData.todos.count {
             runCatching { remainingDays(it.dueDate) <= 1L }.getOrDefault(false)
         }
         DesktopAnalytics.viewHome(
             taskCount = todoData.todos.size,
             urgentCount = urgentCount,
-            entrySource = "home",
+            entrySource = homeEntrySource,
         )
     }
 
@@ -222,6 +239,11 @@ fun DesktopMainScreen(
     }
 
     val handleTabSelect: (DesktopNavTab) -> Unit = { tab ->
+        selectedTodo = null
+        showingSubmitted = false
+        showingNotice = false
+        if (tab == DesktopNavTab.TODO) { homeEntrySource = "tab"; homeEntryVersion++ }
+        if (tab == DesktopNavTab.CALENDAR) calendarResetKey++
         if (tab == DesktopNavTab.MY_PAGE) {
             mySubRoute = MySubRoute.PROFILE
             onProfileClick()
@@ -270,6 +292,9 @@ fun DesktopMainScreen(
                                     onNavigateToHiddenTodos = { mySubRoute = MySubRoute.HIDDEN_TODOS },
                                     onOpenUrl = onOpenUrl,
                                     onLogout = onLogout,
+                                    onWithdrawAccount = onWithdrawAccount,
+                                    isWithdrawing = isWithdrawing,
+                                    withdrawalError = withdrawalError,
                                     showSystemNotificationSetting = showSystemNotificationSetting,
                                     systemNotificationsEnabled = systemNotificationsEnabled,
                                     onSystemNotificationsChanged = onSystemNotificationsChanged,
@@ -311,6 +336,7 @@ fun DesktopMainScreen(
                                 SsuTimeTopBar()
                             }
                             CalendarPaneContent(
+                                resetKey = calendarResetKey,
                                 showingNotice = showingNotice,
                                 todoData = todoData,
                                 unreadNoticeCount = unreadNoticeCount,
@@ -320,7 +346,7 @@ fun DesktopMainScreen(
                                     selectedTodoEntrySource = "calendar"
                                     selectedTodo = todo
                                     onExpandTodo(todo)
-                                    handleTabSelect(DesktopNavTab.TODO)
+                                    onTabSelect(DesktopNavTab.TODO)
                                 },
                                 onOpenUrl = onOpenUrl,
                                 onDiscussionExpanded = onDiscussionExpanded,
@@ -346,6 +372,8 @@ fun DesktopMainScreen(
                                 loadingProgress = loadingProgress,
                                 isEnableSubmittedFile = isEnableSubmittedFile,
                                 isCyberConnected = isCyberConnected,
+                                isCyberBannerDismissed = isCyberBannerDismissed,
+                                onDismissCyberBanner = onDismissCyberBanner,
                                 selectedTodoEntrySource = selectedTodoEntrySource,
                                 onExpandTodo = onExpandTodo,
                                 onHideTodo = { todo ->
@@ -388,9 +416,9 @@ fun DesktopMainScreen(
                         .background(Color(0x80000000)),
                     contentAlignment = Alignment.Center,
                 ) {
-                    CircularProgressIndicator(
+                    IosLoadingSpinner(
                         color = R500,
-                        trackColor = R100,
+
                     )
                 }
             }
@@ -408,6 +436,8 @@ private fun TodoPaneContent(
     loadingProgress: Float,
     isEnableSubmittedFile: Boolean,
     isCyberConnected: Boolean,
+    isCyberBannerDismissed: Boolean,
+    onDismissCyberBanner: () -> Unit,
     selectedTodoEntrySource: String,
     onExpandTodo: (AppTodo) -> Unit,
     onHideTodo: (AppTodo) -> Unit,
@@ -451,6 +481,8 @@ private fun TodoPaneContent(
                 onSubmittedClick = onSubmittedClick,
                 onTodoClick = onTodoClick,
                 isCyberConnected = isCyberConnected,
+                isCyberBannerDismissed = isCyberBannerDismissed,
+                onDismissCyberBanner = onDismissCyberBanner,
                 onNavigateToCyberLogin = onNavigateToCyberLogin,
             )
         }
@@ -459,6 +491,7 @@ private fun TodoPaneContent(
 
 @Composable
 private fun CalendarPaneContent(
+    resetKey: Int,
     showingNotice: Boolean,
     todoData: AppTodoData,
     unreadNoticeCount: Int,
@@ -481,12 +514,14 @@ private fun CalendarPaneContent(
                 onDiscussionExpanded = onDiscussionExpanded,
             )
         } else {
-            DesktopCalendarPanel(
-                todos = todoData.todos,
-                noticeCount = unreadNoticeCount,
-                onNoticeClick = onNoticeClick,
-                onTodoClick = onTodoClick,
-            )
+            key(resetKey) {
+                DesktopCalendarPanel(
+                    todos = todoData.todos,
+                    noticeCount = unreadNoticeCount,
+                    onNoticeClick = onNoticeClick,
+                    onTodoClick = onTodoClick,
+                )
+            }
         }
     }
 }
@@ -500,6 +535,8 @@ private fun HomeTodoListColumn(
     onSubmittedClick: () -> Unit,
     onTodoClick: (AppTodo) -> Unit,
     isCyberConnected: Boolean = false,
+    isCyberBannerDismissed: Boolean = false,
+    onDismissCyberBanner: () -> Unit = {},
     onNavigateToCyberLogin: () -> Unit = {},
 ) {
     val density = LocalDensity.current
@@ -568,12 +605,12 @@ private fun HomeTodoListColumn(
                     }
                     if (isLoading) {
                         Spacer(Modifier.width(7.dp))
-                        CircularProgressIndicator(
-                            progress = { loadingProgress.coerceIn(0f, 1f) },
+                        IosLoadingSpinner(
+
                             modifier = Modifier.size(18.dp),
                             color = R500,
-                            trackColor = R100,
-                            strokeWidth = 2.dp,
+
+
                         )
                         Spacer(Modifier.width(5.dp))
                         Text(
@@ -599,7 +636,7 @@ private fun HomeTodoListColumn(
         }
 
         AnimatedVisibility(
-            visible = !isCyberConnected && showCyberPopup,
+            visible = !isCyberConnected && !isCyberBannerDismissed && showCyberPopup,
             enter = fadeIn() + slideInVertically { it / 2 },
             exit = fadeOut() + slideOutVertically { it / 2 },
             modifier = Modifier
@@ -611,7 +648,7 @@ private fun HomeTodoListColumn(
                     DesktopAnalytics.cyberConnectClick(entryPoint = "home_banner")
                     onNavigateToCyberLogin()
                 },
-                onDismiss = { showCyberPopup = false },
+                onDismiss = { DesktopAnalytics.cyberBannerDismiss(); showCyberPopup = false; onDismissCyberBanner() },
             )
         }
     }
@@ -627,12 +664,7 @@ private fun TodoList(
     modifier: Modifier = Modifier,
 ) {
     val sortedTodos = remember(todos) {
-        todos.sortedWith(
-            compareBy<AppTodo> { todo ->
-                runCatching { remainingSeconds(todo.dueDate) }.getOrDefault(Long.MAX_VALUE)
-            }.thenBy { it.subject?.name.orEmpty() }
-                .thenBy(AppTodo::title),
-        )
+        todos.sortedByDeadlineThenName()
     }
     val immediate = sortedTodos.filter {
         runCatching { remainingDays(it.dueDate) <= 1L }.getOrDefault(false)
@@ -788,7 +820,7 @@ private fun TodoItemRow(
                             remainingTimeText(todo.dueDate, now)
                         },
                         style = if (days > 1L) {
-                            SSUType.H4ExtraBold
+                            SSUType.H4ExtraBold.copy(color = if (days in 2L..3L) R400 else N500)
                         } else {
                             SSUType.H4ExtraBold.copy(color = WHITE)
                         },
@@ -801,6 +833,16 @@ private fun TodoItemRow(
             Column(Modifier.weight(1f)) {
                 if (!isLate) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
+                        if (todo.isCyber()) {
+                            Text(
+                                text = stringResource(Res.string.cyber_title),
+                                style = SSUType.Caption1SemiBold,
+                                color = Color(0xFFD6444B),
+                                modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(Color(0xFFFFBFC1))
+                                    .padding(horizontal = 6.dp, vertical = 3.dp),
+                            )
+                            Spacer(Modifier.width(6.dp))
+                        }
                         TodoTypeBadge(todo.type)
                         Spacer(Modifier.width(6.dp))
                         Text(

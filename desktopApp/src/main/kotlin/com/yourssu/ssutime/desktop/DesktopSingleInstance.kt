@@ -82,18 +82,19 @@ internal class DesktopSingleInstance private constructor(
 
         fun acquireOrNotifyExisting(
             kernel32: Kernel32 = Kernel32.INSTANCE,
+            namespace: String = "com.yourssu.ssutime.desktop",
         ): DesktopSingleInstance? {
             val activationEventHandle = kernel32.CreateEvent(
                 null,
                 false,
                 false,
-                ACTIVATION_EVENT_NAME,
+                "Local\\$namespace.Activate",
             ) ?: throw Win32Exception(kernel32.GetLastError())
 
             val mutexHandle = kernel32.CreateMutex(
                 null,
                 false,
-                MUTEX_NAME,
+                "Local\\$namespace.SingleInstance",
             )
             val mutexError = kernel32.GetLastError()
 

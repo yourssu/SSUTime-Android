@@ -3,6 +3,7 @@ package com.yourssu.ssutime.desktop.core.cyber
 import com.yourssu.data.TodoInfo
 import com.yourssu.ssutime.desktop.DesktopSessionStore
 import io.github.chlwhdtn03.CyberApi
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -17,7 +18,9 @@ class DesktopCyberService(
     private val loginMutex = Mutex()
 
     suspend fun login(id: String, pw: String): Boolean = withContext(Dispatchers.IO) {
-        val success = runCatching { CyberApi.login(id, pw) }.getOrDefault(false)
+        runCatching { CyberApi.logout() }
+        val success = CyberApi.login(id, pw)
+        if (!success) runCatching { CyberApi.logout() }
         if (success) {
             val currentState = store.load()
             store.saveCyber(current = currentState, cyberUserId = id, cyberPassword = pw)
@@ -61,31 +64,34 @@ class DesktopCyberService(
             val allSubmitted = mutableListOf<TodoInfo>()
             val subjectInfos = cyberSubjects.map { CyberTodoMapper.mapToSubjectInfo(it) }
 
-            coroutineScope {
+            return@withContext coroutineScope {
                 val deferredList = cyberSubjects.map { subject ->
                     val subjectInfo = CyberTodoMapper.mapToSubjectInfo(subject)
                     async {
                         runCatching {
                             val weeks = CyberApi.getWeeklyLectures(subject)
-                            CyberTodoMapper.mapWeeksToTodos(subject, subjectInfo, weeks)
+                            val lectures = CyberTodoMapper.mapWeeksToTodos(subject, subjectInfo, weeks)
+                            val evaluations = CyberTodoMapper.mapEvaluationsToTodos(subjectInfo, CyberApi.getQuizzesAndAssignments(subject))
+                            (lectures.first + evaluations.first) to (lectures.second + evaluations.second)
                         }.getOrElse {
-                            Pair(emptyList<TodoInfo>(), emptyList<TodoInfo>())
+                            if (it is CancellationException) throw it
+                            null
                         }
                     }
                 }
 
                 val results = deferredList.awaitAll()
-                for ((todos, submitted) in results) {
-                    allTodos.addAll(todos)
-                    allSubmitted.addAll(submitted)
+                for (result in results) {
+                    result?.let { (todos, submitted) ->
+                        allTodos.addAll(todos)
+                        allSubmitted.addAll(submitted)
+                    }
                 }
+                return@coroutineScope CyberTodoResult(allTodos, allSubmitted, subjectInfos, results.all { it != null })
             }
 
-            CyberTodoResult(
-                todos = allTodos,
-                submitted = allSubmitted,
-                subjects = subjectInfos,
-            )
+        } catch (cancellation: CancellationException) {
+            throw cancellation
         } catch (_: Exception) {
             CyberTodoResult()
         }

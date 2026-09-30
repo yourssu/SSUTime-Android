@@ -16,6 +16,36 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class DesktopAnalyticsTest {
+    private val events = mutableListOf<com.yourssu.ssutime.desktop.analytics.PostHogEventPayload>()
+    @org.junit.Before fun interceptAnalytics() { DesktopAnalytics.testEventSink = { events.add(it) } }
+    @org.junit.After fun stopIntercepting() { DesktopAnalytics.testEventSink = null }
+
+    @Test fun `identify links anonymous events to hashed user id`() = runBlocking {
+        DesktopAnalytics.resetUser()
+        DesktopAnalytics.initializeAnonymousId("anonymous-before-login")
+        DesktopAnalytics.identifyUser("student-identity")
+        val identify = events.single { it.event == "${'$'}identify" }
+        assertEquals(DesktopAnalytics.postHogDistinctId("student-identity"), identify.distinctId)
+        assertEquals("anonymous-before-login", (identify.properties["${'$'}anon_distinct_id"] as kotlinx.serialization.json.JsonPrimitive).content)
+        DesktopAnalytics.loginSuccess()
+        assertEquals(identify.distinctId, events.last().distinctId)
+    }
+
+    @Test fun `current event properties match Android contract`() {
+        DesktopAnalytics.lmsLinkClick("cyber")
+        assertEquals("cyber", (events.last().properties["destination_type"] as kotlinx.serialization.json.JsonPrimitive).content)
+        DesktopAnalytics.loginFailIfKnown("network timeout")
+        assertTrue("error_type" !in events.last().properties)
+        DesktopAnalytics.alarmPermission(true)
+        assertTrue("entry_point" !in events.last().properties)
+        DesktopAnalytics.cyberConnectClick("home_banner")
+        assertEquals("home_banner", (events.last().properties["entry_point"] as kotlinx.serialization.json.JsonPrimitive).content)
+        DesktopAnalytics.submittedAttachmentDownload()
+        assertEquals("submitted_attachment_download", events.last().event)
+        DesktopAnalytics.taskAttachmentClick()
+        assertEquals("task_attachment_click", events.last().event)
+    }
+
 
     @Test
     fun `TodoInfo toDetailType returns video for COMMONS type or positive duration`() {
@@ -217,7 +247,7 @@ class DesktopAnalyticsTest {
         DesktopAnalytics.refreshClick()
         DesktopAnalytics.pullToRefresh()
         DesktopAnalytics.taskDetailTabClick("ai_summary")
-        DesktopAnalytics.lmsLinkClick()
+        DesktopAnalytics.lmsLinkClick("lms")
         DesktopAnalytics.hideConfirm()
         DesktopAnalytics.submitCompleteClick()
         DesktopAnalytics.viewMyPage()

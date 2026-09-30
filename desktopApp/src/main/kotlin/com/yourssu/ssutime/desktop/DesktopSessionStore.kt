@@ -29,6 +29,7 @@ data class DesktopStoredState(
     val cyberUserId: String = "",
     val protectedCyberPassword: String = "",
     val isCyberConnected: Boolean = false,
+    val isCyberBannerDismissed: Boolean = false,
     val isEnableSubmittedFile: Boolean = false,
     val anonymousDistinctId: String = "",
 )
@@ -100,6 +101,11 @@ class DesktopSessionStore(
             todoData = AppTodoData(),
             profile = null,
             anonymousDistinctId = "",
+            cyberUserId = "",
+            protectedCyberPassword = "",
+            isCyberConnected = false,
+            isCyberBannerDismissed = true,
+            isEnableSubmittedFile = false,
         )
         write(next)
         return next
@@ -130,6 +136,7 @@ class DesktopSessionStore(
             cyberUserId = cyberUserId,
             protectedCyberPassword = secretCodec.encrypt(cyberPassword),
             isCyberConnected = true,
+            isCyberBannerDismissed = true,
         )
         write(next)
         return next
@@ -140,6 +147,7 @@ class DesktopSessionStore(
             cyberUserId = "",
             protectedCyberPassword = "",
             isCyberConnected = false,
+            isCyberBannerDismissed = true,
         )
         write(next)
         return next
@@ -274,7 +282,7 @@ private fun restrictToOwner(path: Path) {
     }
 }
 
-private fun applicationDataDirectory(): Path {
+internal fun applicationDataDirectory(): Path {
     System.getenv("SSUTIME_DATA_DIR")
         ?.takeIf(String::isNotBlank)
         ?.let(Path::of)

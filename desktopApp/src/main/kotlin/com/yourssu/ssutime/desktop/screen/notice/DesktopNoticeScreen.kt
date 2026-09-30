@@ -107,9 +107,13 @@ fun DesktopNoticeScreen(
     onDiscussionExpanded: (DiscussionInfo) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var selectedSubjectIndex by rememberSaveable { mutableIntStateOf(0) }
-    val validIndex = selectedSubjectIndex.coerceIn(0, (subjects.size - 1).coerceAtLeast(0))
-    val currentSubject = subjects.getOrNull(validIndex)
+    val orderedSubjects = subjects.sortedByDescending { it.discussions.isNotEmpty() }
+    var selectedSubjectId by rememberSaveable { mutableStateOf(orderedSubjects.firstOrNull { it.discussions.any { it.readState.equals("unread", true) } }?.id) }
+    LaunchedEffect(orderedSubjects) {
+        if (selectedSubjectId == null) selectedSubjectId = orderedSubjects.firstOrNull { it.discussions.any { it.readState.equals("unread", true) } }?.id
+    }
+    val validIndex = orderedSubjects.indexOfFirst { it.id == selectedSubjectId }.coerceAtLeast(0)
+    val currentSubject = orderedSubjects.getOrNull(validIndex)
 
     LaunchedEffect(Unit) {
         DesktopAnalytics.viewNotice()
@@ -142,9 +146,9 @@ fun DesktopNoticeScreen(
 
                 if (subjects.isNotEmpty()) {
                     NoticeSubjectDropdown(
-                        subjects = subjects,
+                        subjects = orderedSubjects,
                         selectedIndex = validIndex,
-                        onSelectSubject = { selectedSubjectIndex = it },
+                        onSelectSubject = { selectedSubjectId = orderedSubjects.getOrNull(it)?.id },
                     )
                 }
                 Spacer(modifier = Modifier.height(24.dp))

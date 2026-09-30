@@ -62,9 +62,7 @@ fun AppTodo.desktopItemKey(index: Int? = null): String = buildString {
 val AppTodo.canRequestAiSummary: Boolean
     get() = !isCyber() &&
         type == AppTodoType.ASSIGNMENT &&
-        description.isNotBlank() &&
-        (subject?.id ?: subjectId) > 0 &&
-        todoId > 0
+        description.isNotBlank()
 
 fun AppTodo.toLmsUrl(): String {
     if (isCyber()) {
@@ -102,6 +100,7 @@ fun Long.toSimply(): String {
 }
 
 fun formatVideoDuration(secondsDouble: Double): String {
+    val isKorean = java.util.Locale.getDefault().language == "ko"
     val totalSeconds = secondsDouble.toInt()
     if (totalSeconds <= 0) return ""
     val hours = totalSeconds / 3600
@@ -110,15 +109,15 @@ fun formatVideoDuration(secondsDouble: Double): String {
 
     return buildString {
         if (hours > 0) {
-            append("${hours}시간")
+            append("${hours}${if (isKorean) "시간" else " hr"}")
         }
         if (minutes > 0) {
             if (isNotEmpty()) append(" ")
-            append("${minutes}분")
+            append("${minutes}${if (isKorean) "분" else " min"}")
         }
         if (seconds > 0 || isEmpty()) {
             if (isNotEmpty()) append(" ")
-            append("${seconds}초")
+            append("${seconds}${if (isKorean) "초" else " sec"}")
         }
     }
 }
@@ -132,23 +131,13 @@ fun AppTodo.effectiveSubmittedInstant(): java.time.Instant? {
     return submittedAt.toInstantOrNull() ?: dueDate.toInstantOrNull()
 }
 
-fun submittedTodoComparator(): Comparator<AppTodo> {
-    return Comparator { left, right ->
-        val leftTime = left.effectiveSubmittedInstant()
-        val rightTime = right.effectiveSubmittedInstant()
-        when {
-            leftTime != null && rightTime != null -> rightTime.compareTo(leftTime) // 최신순 (내림차순)
-            leftTime != null -> -1
-            rightTime != null -> 1
-            else -> {
-                val leftRaw = left.submittedAt.ifBlank { left.dueDate }
-                val rightRaw = right.submittedAt.ifBlank { right.dueDate }
-                rightRaw.compareTo(leftRaw)
-            }
-        }.takeIf { it != 0 }
-            ?: (left.subject?.name.orEmpty()).compareTo(right.subject?.name.orEmpty()).takeIf { it != 0 }
-            ?: left.title.compareTo(right.title).takeIf { it != 0 }
-            ?: left.todoId.compareTo(right.todoId)
+fun submittedTodoComparator(): Comparator<AppTodo> = Comparator { left, right ->
+    val leftTime = left.submittedAt.toInstantOrNull()
+    val rightTime = right.submittedAt.toInstantOrNull()
+    when {
+        leftTime != null && rightTime != null -> rightTime.compareTo(leftTime)
+        leftTime != null -> -1
+        rightTime != null -> 1
+        else -> 0
     }
 }
-

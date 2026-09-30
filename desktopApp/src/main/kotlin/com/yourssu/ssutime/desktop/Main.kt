@@ -26,6 +26,7 @@ import androidx.compose.ui.window.rememberWindowState
 import com.yourssu.data.DiscussionInfo
 import com.yourssu.data.isCyber
 import com.yourssu.data.todoUniqueKey
+import com.yourssu.ssutime.desktop.ui.util.sortedByDeadlineThenName
 import com.yourssu.ssutime.desktop.analytics.DesktopAnalytics
 import com.yourssu.ssutime.desktop.core.cyber.CyberTodoResult
 import com.yourssu.ssutime.desktop.core.cyber.DesktopCyberService
@@ -59,6 +60,7 @@ import com.yourssu.ssutime.desktop.ui.component.DesktopFloatingCardLayout
 import com.yourssu.ssutime.desktop.ui.resources.Res
 import com.yourssu.ssutime.desktop.ui.resources.checkbox
 import com.yourssu.ssutime.desktop.ui.resources.desktop_open_link_error
+import com.yourssu.ssutime.desktop.ui.resources.desktop_withdraw_error
 import com.yourssu.ssutime.desktop.ui.resources.login_unknown_error
 import com.yourssu.ssutime.desktop.ui.theme.R500
 import com.yourssu.ssutime.desktop.ui.theme.ssuTypography
@@ -88,7 +90,8 @@ private enum class DesktopRoute {
     CYBER_LOGIN,
 }
 
-fun main() {
+fun main(args: Array<String>) {
+    args.forEach { DesktopNotificationActivation().request(it) }
     val singleInstance = DesktopSingleInstance.acquireOrNotifyExisting() ?: return
 
     try {
@@ -153,11 +156,13 @@ fun main() {
                 MaterialTheme(typography = ssuTypography()) {
                     DesktopApp(
                         deadlineNotifier = deadlineNotifier,
+                        activationRequest = windowActivationRequest,
                     )
                 }
             }
         }
     } finally {
+        kotlinx.coroutines.runBlocking { kotlinx.coroutines.withTimeoutOrNull(5_000L) { DesktopAnalytics.close() } }
         singleInstance.close()
     }
 }
@@ -165,6 +170,7 @@ fun main() {
 @Composable
 private fun DesktopApp(
     deadlineNotifier: DesktopDeadlineNotifier,
+    activationRequest: Long,
 ) {
     val idState = rememberTextFieldState()
     val passwordState = rememberTextFieldState()
@@ -191,10 +197,16 @@ private fun DesktopApp(
         }
         id
     }
+    LaunchedEffect(initialAnonId, activationRequest) {
+        DesktopNotificationActivation().consume().forEach { DesktopAnalytics.notificationTap(it.properties()) }
+    }
     var route by remember { mutableStateOf(DesktopRoute.SPLASH) }
     var currentTab by remember { mutableStateOf(DesktopNavTab.TODO) }
     var previousRoute by remember { mutableStateOf<DesktopRoute?>(null) }
     var session by remember { mutableStateOf<LoginSession?>(null) }
+    var sessionCredentials by remember { mutableStateOf<StoredCredentials?>(null) }
+    var isWithdrawing by remember { mutableStateOf(false) }
+    var withdrawalError by remember { mutableStateOf<String?>(null) }
     var todoData by remember { mutableStateOf(storedState.todoData) }
     var profile by remember { mutableStateOf<AppProfile?>(storedState.profile) }
     var terms by remember { mutableStateOf<List<Term>>(emptyList()) }
@@ -211,6 +223,7 @@ private fun DesktopApp(
     var loadingProgress by remember { mutableStateOf(0f) }
     val unknownLoginError = stringResource(Res.string.login_unknown_error)
     val openLinkError = stringResource(Res.string.desktop_open_link_error)
+    val withdrawalFailureMessage = stringResource(Res.string.desktop_withdraw_error)
 
     fun saveCache(nextTodoData: AppTodoData = todoData, nextProfile: AppProfile? = profile) {
         storedState = store.update(
@@ -222,7 +235,7 @@ private fun DesktopApp(
     }
 
     suspend fun reLogin(): LoginSession {
-        val credentials = store.credentials(storedState)
+        val credentials = sessionCredentials ?: store.credentials(storedState)
             ?: throw IllegalStateException("LMS 로그인이 필요해요.")
         val nextSession = loginService.login(credentials.userId, credentials.password)
         session = nextSession
@@ -230,7 +243,7 @@ private fun DesktopApp(
     }
 
     suspend fun ensureLmsSession(force: Boolean = false) {
-        val credentials = store.credentials(storedState)
+        val credentials = sessionCredentials ?: store.credentials(storedState)
             ?: throw IllegalStateException("LMS 로그인이 필요해요.")
         if (force || !isLmsLoggedIn() || session == null) {
             reLogin()
@@ -256,6 +269,7 @@ private fun DesktopApp(
                     loadingState = { progress -> loadingProgress = progress },
                     previousData = todoData,
                     cyberResult = cyberResult,
+                    isCyberConnected = storedState.isCyberConnected,
                     onRequireReLogin = { ensureLmsSession(force = true) },
                     postHogDistinctId = distinctId,
                 )
@@ -329,6 +343,7 @@ private fun DesktopApp(
                     loadingState = { progress -> loadingProgress = progress },
                     previousData = todoData,
                     cyberResult = cyberResult,
+                    isCyberConnected = storedState.isCyberConnected,
                     onRequireReLogin = { ensureLmsSession(force = true) },
                     postHogDistinctId = distinctId,
                 )
@@ -368,11 +383,7 @@ private fun DesktopApp(
         val nextHiddenTodos = todoData.hiddenTodos.filterNot { it.todoUniqueKey() == targetKey }
         val nextTodos = (todoData.todos + todo)
             .distinctBy { it.todoUniqueKey() }
-            .sortedWith(
-                compareBy<AppTodo> { it.dueDate }
-                    .thenBy { it.subject?.name.orEmpty() }
-                    .thenBy(AppTodo::title),
-            )
+            .sortedByDeadlineThenName()
 
         todoData = todoData.copy(
             todos = nextTodos,
@@ -393,7 +404,7 @@ private fun DesktopApp(
             }
             subject.copy(discussions = updatedDiscussions)
         }
-        todoData = todoData.copy(subjects = updatedSubjects)
+        todoData = todoData.copy(subjects = updatedSubjects, readDiscussionIds = (todoData.readDiscussionIds + discussion.id).distinct())
         saveCache(nextTodoData = todoData)
     }
 
@@ -404,6 +415,7 @@ private fun DesktopApp(
         autoLogin: Boolean,
     ) {
         session = loginSession
+        sessionCredentials = StoredCredentials(id, password)
         storedState = store.save(
             current = storedState,
             userId = id,
@@ -478,6 +490,7 @@ private fun DesktopApp(
             aiSummaryStates[key] = DesktopAiSummaryUiState.Success(
                 summary = cached.summary,
                 estimatedDurationMinutes = cached.estimatedDurationMinutes,
+                attachmentLinks = cached.attachmentLinks,
             )
             return
         }
@@ -491,6 +504,7 @@ private fun DesktopApp(
                     accessToken = currentAccessToken,
                     todo = todo,
                     onRequireReLogin = { ensureLmsSession(force = true) },
+                    onRefreshToken = { reLogin().accessToken },
                 )
                 if (summary == null) {
                     aiSummaryStates[key] = DesktopAiSummaryUiState.Empty
@@ -498,6 +512,7 @@ private fun DesktopApp(
                     aiSummaryStates[key] = DesktopAiSummaryUiState.Success(
                         summary = summary.summary,
                         estimatedDurationMinutes = summary.estimatedDurationMinutes,
+                        attachmentLinks = summary.attachmentLinks,
                     )
                     todoData = todoData.copy(
                         aiSummaryCache = todoData.aiSummaries + (key to summary),
@@ -518,11 +533,11 @@ private fun DesktopApp(
             isCyberLoggingIn = true
             cyberLoginError = null
             try {
-                cyberService.login(id, pw)
+                check(cyberService.login(id, pw)) { "아이디와 비밀번호를 확인해주세요." }
                 DesktopAnalytics.cyberLoginSuccess()
                 storedState = store.load()
                 val cyberResult = runCatching { cyberService.fetchCyberTodos() }.getOrNull()
-                if (cyberResult != null) {
+                if (cyberResult?.isComplete == true) {
                     val nonCyberTodos = todoData.todos.filterNot { it.isCyber() }
                     val nonCyberSubmitted = todoData.submitted.filterNot { it.isCyber() }
                     val nonCyberSubjects = todoData.subjects.filterNot { it.id < 0 }
@@ -559,7 +574,6 @@ private fun DesktopApp(
 
     fun disconnectCyber() {
         scope.launch {
-            DesktopAnalytics.cyberDisconnectClick()
             cyberService.logout()
             storedState = store.load()
             val cleanedTodos = todoData.todos.filterNot { it.isCyber() }
@@ -580,12 +594,14 @@ private fun DesktopApp(
         scope.launch {
             runCatching { authenticator.logout() }
             cyberService.logout()
+            storedState = store.load()
             DesktopAnalytics.resetUser()
             DesktopAnalytics.flush()
             val newAnonId = DesktopAnalytics.currentAnonymousId()
             storedState = store.logout(storedState).copy(anonymousDistinctId = newAnonId)
             store.update(storedState)
             session = null
+            sessionCredentials = null
             todoData = AppTodoData()
             profile = null
             terms = emptyList()
@@ -598,11 +614,37 @@ private fun DesktopApp(
         }
     }
 
+    fun withdrawAccount() {
+        if (isWithdrawing) return
+        scope.launch {
+            isWithdrawing = true
+            withdrawalError = null
+            try {
+                var token = session?.accessToken.orEmpty()
+                if (token.isBlank()) token = reLogin().accessToken
+                val api = SsuTimeApi(httpClient)
+                var status = api.requestAccountWithdrawal(token)
+                if (status.value == 401 || status.value == 403) {
+                    status = api.requestAccountWithdrawal(reLogin().accessToken)
+                }
+                check(status.value in 200..299)
+                logout()
+            } catch (cancellation: CancellationException) {
+                throw cancellation
+            } catch (_: Exception) {
+                withdrawalError = withdrawalFailureMessage
+            } finally {
+                isWithdrawing = false
+            }
+        }
+    }
+
     LaunchedEffect(Unit) {
         todoData.aiSummaries.forEach { (key, summary) ->
             aiSummaryStates[key] = DesktopAiSummaryUiState.Success(
                 summary = summary.summary,
                 estimatedDurationMinutes = summary.estimatedDurationMinutes,
+                        attachmentLinks = summary.attachmentLinks,
             )
         }
         val credentials = store.credentials(storedState)
@@ -617,6 +659,14 @@ private fun DesktopApp(
                 autoLogin = true,
                 fromSplash = true,
             )
+        }
+    }
+
+    LaunchedEffect(storedState.autoLogin, session != null) {
+        if (!storedState.autoLogin || session == null) return@LaunchedEffect
+        while (true) {
+            delay(15 * 60_000L)
+            if (selectedTerm == null) refreshTodos()
         }
     }
 
@@ -638,6 +688,11 @@ private fun DesktopApp(
                         todoData.sentDeadlineReminderKeys + sentKeys
                     ).distinct().takeLast(500),
                 )
+                saveCache(nextTodoData = todoData)
+            }
+            val consumed = deadlineNotifier.sendNewTodosIfNeeded(todoData)
+            if (consumed.isNotEmpty()) {
+                todoData = todoData.copy(pendingNewTodoNotifications = todoData.pendingNewTodoNotifications.filterNot { it.todoKey in consumed })
                 saveCache(nextTodoData = todoData)
             }
             delay(60_000L)
@@ -717,6 +772,8 @@ private fun DesktopApp(
                             .onFailure { mainError = openLinkError }
                     },
                     isCyberConnected = storedState.isCyberConnected,
+                    isCyberBannerDismissed = storedState.isCyberBannerDismissed,
+                    onDismissCyberBanner = { storedState = store.update(storedState.copy(isCyberBannerDismissed = true)) },
                     onNavigateToCyberLogin = {
                         cyberLoginError = null
                     },
@@ -735,6 +792,9 @@ private fun DesktopApp(
                     selectedTerm = selectedTerm,
                     onTermSelected = ::selectTerm,
                     onLogout = ::logout,
+                        onWithdrawAccount = ::withdrawAccount,
+                        isWithdrawing = isWithdrawing,
+                        withdrawalError = withdrawalError,
                     showSystemNotificationSetting = DesktopDeadlineNotifier.isSupported(),
                     systemNotificationsEnabled = storedState.systemNotificationsEnabled,
                     onSystemNotificationsChanged = { enabled ->
@@ -772,6 +832,9 @@ private fun DesktopApp(
                                 .onFailure { profileError = openLinkError }
                         },
                         onLogout = ::logout,
+                        onWithdrawAccount = ::withdrawAccount,
+                        isWithdrawing = isWithdrawing,
+                        withdrawalError = withdrawalError,
                         showSystemNotificationSetting = DesktopDeadlineNotifier.isSupported(),
                         systemNotificationsEnabled = storedState.systemNotificationsEnabled,
                         onSystemNotificationsChanged = { enabled ->

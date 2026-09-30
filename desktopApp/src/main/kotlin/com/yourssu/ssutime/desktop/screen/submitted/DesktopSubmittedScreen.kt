@@ -209,6 +209,7 @@ fun DesktopSubmittedItem(
                                 .background(WHITE)
                                 .clickable {
                                     if (item.url.isNotBlank()) {
+                                        com.yourssu.ssutime.desktop.analytics.DesktopAnalytics.submittedAttachmentDownload()
                                         onOpenUrl(item.url)
                                     }
                                 }

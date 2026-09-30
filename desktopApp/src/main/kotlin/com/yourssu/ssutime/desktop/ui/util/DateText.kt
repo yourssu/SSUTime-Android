@@ -24,21 +24,13 @@ fun remainingSeconds(
 fun remainingDays(
     targetTime: String,
     nowEpochMilliseconds: Long = currentEpochMilliseconds(),
-): Long = (remainingSeconds(targetTime, nowEpochMilliseconds) / 86_400L)
-    .coerceAtLeast(0L)
+): Long = remainingDaysUntilDeadline(targetTime, Instant.ofEpochMilli(nowEpochMilliseconds))
 
 fun remainingTimeText(
     targetTime: String,
     nowEpochMilliseconds: Long = currentEpochMilliseconds(),
 ): String {
-    val seconds = remainingSeconds(targetTime, nowEpochMilliseconds).coerceAtLeast(0L)
-    if (seconds < 60L) {
-        return "${seconds}초"
-    }
-    val hours = seconds / 3_600L
-    val minutes = (seconds % 3_600L) / 60L
-    return hours.toString().padStart(2, '0') + ":" +
-        minutes.toString().padStart(2, '0')
+    return remainingTimeTextUntilDeadline(targetTime, Instant.ofEpochMilli(nowEpochMilliseconds))
 }
 
 fun formatMonthDay(targetTime: String): String =
@@ -55,15 +47,15 @@ fun formatMonthDay(targetTime: String): String =
             ),
         )
 
-fun formatMonthDayWithTime(targetTime: String): String =
+fun formatMonthDayWithTime(targetTime: String, includeSeconds: Boolean = true): String =
     targetTime.toDeadlineInstant()
         .atZone(deadlineZoneId)
         .format(
             DateTimeFormatter.ofPattern(
                 if (Locale.getDefault().language == Locale.KOREAN.language) {
-                    "MM월 dd일 HH:mm:ss"
+                    if (includeSeconds) "MM월 dd일 HH:mm:ss" else "MM월 dd일 HH:mm"
                 } else {
-                    "MMM dd HH:mm:ss"
+                    if (includeSeconds) "MMM dd HH:mm:ss" else "MMM dd HH:mm"
                 },
                 Locale.getDefault(),
             ),
@@ -74,17 +66,4 @@ fun formatUpdatedTime(targetTime: String): String =
         .atZone(deadlineZoneId)
         .format(DateTimeFormatter.ofPattern("HH:mm", Locale.getDefault()))
 
-private fun String.toDeadlineInstant(): Instant {
-    val parsed = DateTimeFormatter.ISO_DATE_TIME.parseBest(
-        this,
-        ZonedDateTime::from,
-        OffsetDateTime::from,
-        LocalDateTime::from,
-    )
-    return when (parsed) {
-        is ZonedDateTime -> parsed.toInstant()
-        is OffsetDateTime -> parsed.toInstant()
-        is LocalDateTime -> parsed.atZone(deadlineZoneId).toInstant()
-        else -> error("지원하지 않는 마감 시각 형식입니다: $this")
-    }
-}
+internal fun String.toDeadlineInstant(): Instant = toTodoDeadlineInstant()

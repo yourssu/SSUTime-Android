@@ -4,6 +4,7 @@ import com.yourssu.ssutime.desktop.analytics.DesktopAnalytics
 import com.yourssu.ssutime.desktop.core.model.AppTodo
 import com.yourssu.ssutime.desktop.core.model.AppTodoData
 import com.yourssu.ssutime.desktop.core.model.dueDate
+import com.yourssu.ssutime.desktop.ui.util.toTodoDeadlineInstantOrNull
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
@@ -63,6 +64,11 @@ class DesktopDeadlineNotifier(
         } else {
             emptyList()
         }
+    }
+
+    suspend fun sendNewTodosIfNeeded(todoData: AppTodoData, now: Instant = Instant.now()): List<String> {
+        val result = buildNewTodoAnnouncement(todoData, now) ?: return emptyList()
+        return if (result.notification == null || sendWindowsToasts(listOf(result.notification))) result.consumedKeys else emptyList()
     }
 
     fun close() {
@@ -143,6 +149,35 @@ internal data class DeadlineNotification(
     val notificationType: String = "deadline_soon",
 )
 
+internal data class NewTodoAnnouncement(val notification: DeadlineNotification?, val consumedKeys: List<String>)
+
+internal fun buildNewTodoAnnouncement(todoData: AppTodoData, now: Instant): NewTodoAnnouncement? {
+    val local = now.atZone(ZoneId.of("Asia/Seoul"))
+    if (local.hour != 18 || local.minute >= 15) return null
+    val start = now.minus(Duration.ofHours(24))
+    val ready = todoData.pendingNewTodoNotifications.filter {
+        val discovered = runCatching { Instant.parse(it.discoveredAt) }.getOrNull()
+        discovered != null && !discovered.isBefore(start) && discovered.isBefore(now)
+    }
+    val expired = todoData.pendingNewTodoNotifications.filter {
+        runCatching { Instant.parse(it.discoveredAt).isBefore(start) }.getOrDefault(true)
+    }
+    val first = ready.firstOrNull()
+    val body = first?.let {
+        val subject = it.subjectName.ifBlank { "공통" }
+        val type = when (it.type) {
+            com.yourssu.data.TodoType.COMMONS -> "강의"
+            com.yourssu.data.TodoType.QUIZ -> "퀴즈"
+            else -> "과제"
+        }
+        if (ready.size == 1) "$subject ${type}가 새로 올라왔어요." else "$subject $type 외 ${ready.size - 1}건이 올라왔어요."
+    }
+    return NewTodoAnnouncement(
+        body?.let { DeadlineNotification("새 할 일이 올라왔어요", it, emptyList(), notificationType = "new_todo") },
+        (ready + expired).map { it.todoKey },
+    )
+}
+
 private data class Reminder(
     val todo: AppTodo,
     val daysBefore: Long,
@@ -153,13 +188,14 @@ private data class Reminder(
 private data class WindowsToastPayload(
     val title: String,
     val body: String,
+    val activationUri: String,
 )
 
 private val deadlineZoneId: ZoneId = ZoneId.of("Asia/Seoul")
 private val refreshWindow: Duration = Duration.ofMinutes(15)
 private const val ssuTimeAumid = "Campo.1711AB9C2595_200qmz0tpjzc8!SSUTime"
 internal const val windowsToastXmlTemplate =
-    "<toast launch=\"--notification-activated\">" +
+    "<toast activationType=\"protocol\" launch=\"ssutime://notification\">" +
         "<visual><binding template=\"ToastGeneric\">" +
         "<text></text><text></text>" +
         "</binding></visual></toast>"
@@ -182,6 +218,7 @@ private val windowsToastCommand: String by lazy {
             ${'$'}xml.LoadXml(
                 '$windowsToastXmlTemplate'
             )
+            [void]${'$'}xml.DocumentElement.SetAttribute('launch', [string]${'$'}item.activationUri)
             ${'$'}texts = ${'$'}xml.GetElementsByTagName('text')
             [void]${'$'}texts.Item(0).AppendChild(${'$'}xml.CreateTextNode([string]${'$'}item.title))
             [void]${'$'}texts.Item(1).AppendChild(${'$'}xml.CreateTextNode([string]${'$'}item.body))
@@ -246,6 +283,7 @@ private fun List<Reminder>.toDeadlineNotifications(): List<DeadlineNotification>
 
 private fun AppTodo.toReminder(now: Instant): Reminder? {
     val dueAt = dueDate.toDeadlineInstantOrNull() ?: return null
+    if (!dueAt.isAfter(now)) return null
     val dueDateInKorea = dueAt.atZone(deadlineZoneId).toLocalDate()
     val nowInKorea = now.atZone(deadlineZoneId)
     val daysBefore = ChronoUnit.DAYS.between(
@@ -272,11 +310,11 @@ private suspend fun sendWindowsToasts(notifications: List<DeadlineNotification>)
         if (!System.getProperty("os.name").startsWith("Windows", ignoreCase = true)) {
             return@withContext false
         }
-        val payloadJson = Json.encodeToString(
+        val payloadJson = runCatching { Json.encodeToString(
             notifications.map { notification ->
-                WindowsToastPayload(notification.title, notification.body)
+                WindowsToastPayload(notification.title, notification.body, DesktopNotificationActivation().register(notification))
             },
-        )
+        ) }.getOrElse { return@withContext false }
         val payloadBase64 = Base64.getEncoder().encodeToString(
             payloadJson.toByteArray(StandardCharsets.UTF_8),
         )
@@ -314,11 +352,7 @@ private suspend fun sendWindowsToasts(notifications: List<DeadlineNotification>)
         }.getOrDefault(false)
     }
 
-private fun String.toDeadlineInstantOrNull(): Instant? = runCatching {
-    ZonedDateTime.parse(this, DateTimeFormatter.ISO_DATE_TIME).toInstant()
-}.recoverCatching {
-    Instant.parse(this)
-}.getOrNull()
+private fun String.toDeadlineInstantOrNull(): Instant? = toTodoDeadlineInstantOrNull()
 
 private fun AppTodo.displayName(): String =
     listOf(subject?.name.orEmpty(), type.kor)
