@@ -18,6 +18,7 @@ import com.yourssu.ssutime.v2.network.ApiRepository
 import com.yourssu.ssutime.v2.notification.cancelDeadlineNotifications
 import com.yourssu.ssutime.v2.notification.scheduleDeadlineNotifications
 import com.yourssu.ssutime.v2.notification.sendDeadlineNotificationsIfNeeded
+import com.yourssu.ssutime.v2.notification.sendNewTodoAnnouncementsIfNeeded
 import com.yourssu.ssutime.v2.notification.withSentDeadlineReminderKeys
 import com.yourssu.ssutime.v2.screen.my.AlertLocalStore
 import com.yourssu.ssutime.v2.todo.sortedByDeadlineThenName
@@ -190,7 +191,12 @@ class MainRepository(
 
     private suspend fun updateDeadlineNotifications(todoData: TodoData) {
         if (getAlertData().allowSystemAlert) {
-            scheduleDeadlineNotifications(context)
+            // Recover today's announcement before replacing a delayed 18:00 alarm with tomorrow's.
+            try {
+                sendNewTodoAnnouncementsIfNeeded(context)
+            } finally {
+                scheduleDeadlineNotifications(context)
+            }
             val result = sendDeadlineNotificationsIfNeeded(context, todoData)
             if (result.sentKeys.isNotEmpty()) {
                 todoDataStore.updateData { currentData ->
