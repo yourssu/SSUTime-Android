@@ -72,7 +72,6 @@ import com.yourssu.ssutime.v2.component.SButton_Small
 import com.yourssu.ssutime.v2.getStringDateWithTime
 import com.yourssu.ssutime.v2.screen.my.PopupButton
 import com.yourssu.ssutime.v2.screen.notice.openAttachmentUrl
-import com.yourssu.ssutime.v2.todo.toTodoDeadlineInstant
 import com.yourssu.ssutime.v2.ui.theme.N100
 import com.yourssu.ssutime.v2.ui.theme.N200
 import com.yourssu.ssutime.v2.ui.theme.N300
@@ -592,6 +591,7 @@ fun TodoOverView(
     onHideClick: () -> Unit = {},
     onPreviousClick: () -> Unit = {},
 ) {
+    val now = Instant.now()
     val estimatedDurationText = when {
         todo.type == TodoType.COMMONS && todo.duration > 0 -> {
             formatVideoDuration(todo.duration)
@@ -652,7 +652,7 @@ fun TodoOverView(
                         Text(
                             text = stringResource(
                                 R.string.main_due_until,
-                                getStringDateWithTime(todo.due_date, includeSeconds = false),
+                                getStringDateWithTime(todo.detailDeadline(now), includeSeconds = false),
                             ),
                             style = SSUType.Caption1SemiBold.copy(N500)
                         )
@@ -679,7 +679,7 @@ fun TodoOverView(
                 }
             }
 
-            if(todo.submittedAt.isBlank() && todo.due_date.toTodoDeadlineInstant().isBefore(Instant.now())) {
+            if (todo.isLateSubmissionAvailable(now)) {
                 Text(
                     modifier = Modifier.fillMaxWidth().padding(top = 5.dp)
                         .clip(RoundedCornerShape(8.dp))

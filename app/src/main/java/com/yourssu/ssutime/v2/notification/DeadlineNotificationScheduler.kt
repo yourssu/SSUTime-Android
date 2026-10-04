@@ -2,6 +2,7 @@ package com.yourssu.ssutime.v2.notification
 
 import android.Manifest
 import android.app.AlarmManager
+import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
@@ -9,6 +10,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Color
 import android.os.Build
+import android.util.Log
 import androidx.annotation.RequiresPermission
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
@@ -52,7 +54,6 @@ private const val NEW_TODO_NOTIFICATION_KEY = "new-todo-announcement"
 private val D_DAY_NOTIFY_TIME: LocalTime = LocalTime.of(9, 0)
 private val UPCOMING_NOTIFY_TIME: LocalTime = LocalTime.of(18, 0)
 private val REFRESH_NOTIFICATION_WINDOW: Duration = Duration.ofMinutes(15)
-private val NEW_TODO_NOTIFICATION_WINDOW: Duration = Duration.ofHours(24)
 private val NEW_TODO_NOTIFICATION_ID = NEW_TODO_NOTIFICATION_KEY.toStableNotificationId()
 
 data class DeadlineReminderSendResult(
@@ -341,6 +342,30 @@ private fun Context.showNewTodoAnnouncementNotification(message: String) {
     NotificationManagerCompat.from(this).notify(NEW_TODO_NOTIFICATION_ID, notification)
 }
 
+@RequiresPermission(Manifest.permission.POST_NOTIFICATIONS)
+suspend fun sendNewTodoAnnouncementsIfNeeded(context: Context, now: Instant = Instant.now()) {
+    dispatchNewTodoAnnouncement(
+        store = context.todoDataStore,
+        now = now,
+        canSend = {
+            val allowed = context.notificationStore.data.first().allowSystemAlert &&
+                context.canPostNotifications() &&
+                NotificationManagerCompat.from(context).areNotificationsEnabled() &&
+                context.getSystemService(NotificationManager::class.java)
+                    .getNotificationChannel(CHANNEL_ID)?.importance != NotificationManager.IMPORTANCE_NONE
+            if (!allowed) {
+                Log.i("NewTodoAnnouncement", "알림 설정 또는 권한으로 신규 할 일 알림을 보류합니다.")
+            }
+            allowed
+        },
+        send = { records ->
+            val message = requireNotNull(context.buildNewTodoAnnouncementMessage(records))
+            context.showNewTodoAnnouncementNotification(message)
+            Log.i("NewTodoAnnouncement", "신규 할 일 알림 표시를 요청했습니다. count=${records.size}, now=$now")
+        },
+    )
+}
+
 private fun TodoInfo.toNotificationItemName(context: Context): String =
     listOf(
         subject?.name.orEmpty(),
@@ -552,46 +577,22 @@ private suspend fun sendScheduledDeadlineReminders(
             }
         }
 
-        if (now.atZone(TODO_DEADLINE_ZONE_ID).toLocalTime() == UPCOMING_NOTIFY_TIME) {
-            val windowStart = now.minus(NEW_TODO_NOTIFICATION_WINDOW)
-            val pendingRecords = todoData.pendingNewTodoNotifications
-            val expiredRecords = pendingRecords.filter { record ->
-                record.discoveredAt.toInstantOrNull()?.isBefore(windowStart) != false
-            }
-            val readyRecords = pendingRecords.filter { record ->
-                val discoveredAt = record.discoveredAt.toInstantOrNull() ?: return@filter false
-                !discoveredAt.isBefore(windowStart) && discoveredAt.isBefore(now)
-            }
-            val message = context.buildNewTodoAnnouncementMessage(readyRecords)
-
-            if (message != null && context.canPostNotifications()) {
-                context.showNewTodoAnnouncementNotification(message)
-            }
-
-            val consumedRecordKeys = (expiredRecords + readyRecords)
-                .mapTo(mutableSetOf()) { it.notificationRecordKey() }
-            if (consumedRecordKeys.isNotEmpty()) {
-                context.todoDataStore.updateData { currentData ->
-                    currentData.copy(
-                        pendingNewTodoNotifications = currentData.pendingNewTodoNotifications
-                            .filterNot { it.notificationRecordKey() in consumedRecordKeys },
-                    )
-                }
-            }
-        }
+        // Use wall-clock time for announcements so delayed alarms can recover a missed batch.
+        // Deadline reminders above still use the alarm's scheduled trigger time.
+        sendNewTodoAnnouncementsIfNeeded(context)
     } finally {
         scheduleDeadlineNotifications(context)
     }
 }
 
-private fun NewTodoNotificationRecord.notificationRecordKey(): String = "$todoKey\u001F$discoveredAt"
-
-private fun String.toInstantOrNull(): Instant? = runCatching { Instant.parse(this) }.getOrNull()
-
 private suspend fun rescheduleDeadlineNotificationsIfAllowed(context: Context) {
     val alertData = context.notificationStore.data.first()
     if (alertData.allowSystemAlert) {
-        scheduleDeadlineNotifications(context)
+        try {
+            sendNewTodoAnnouncementsIfNeeded(context)
+        } finally {
+            scheduleDeadlineNotifications(context)
+        }
     } else {
         cancelDeadlineNotifications(context)
     }

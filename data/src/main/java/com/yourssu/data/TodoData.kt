@@ -26,6 +26,7 @@ data class TodoData(
     val lastWidgetRefreshErrorMessage: String = "",
     val lastWidgetRefreshFinishedAt: String = "",
     val pendingNewTodoNotifications: List<NewTodoNotificationRecord> = emptyList(),
+    val lastNewTodoAnnouncementAt: String = "",
     val sentDeadlineReminderKeys: List<String> = emptyList(),
     val readDiscussionIds: List<Int> = emptyList(),
 )

@@ -636,6 +636,7 @@ class LmsRefreshRepository(
                     todoId = todo.assignment_id ?: -1,
                     title = todo.title,
                     due_date = todo.due_date,
+                    lateAt = todo.late_at.orEmpty(),
                     type = TodoType.valueOf(todo.component_type.uppercase()),
                     subject = subjectInfoById[subject.id],
                     description = todo.description.orEmpty(),
