@@ -14,6 +14,32 @@ import java.time.temporal.ChronoUnit
 
 class LmsSmartCacheMergeTest {
 
+    @Test
+    fun buildTodoData_keepsLateDeadlineSeparateFromNormalDeadline() {
+        val subjectInfo = SubjectInfo(101, "운영체제", "교수님")
+        val due = "2026-10-04T09:00:00Z"
+        val late = "2026-10-05T09:00:00Z"
+        val subject = createTestSubject(
+            id = 101,
+            name = "운영체제",
+            todoList = listOf(io.github.chlwhdtn03.data.Lms.TodoList(
+                assignment_id = 999,
+                title = "과제",
+                component_type = "assignment",
+                due_date = due,
+                late_at = late,
+            )),
+        )
+        val result = LmsRefreshRepository.buildTodoData(
+            subjects = listOf(subject),
+            subjectInfos = listOf(subjectInfo),
+            previousData = TodoData(),
+            loadedAt = due,
+        )
+        assertEquals(due, result.todos.single().due_date)
+        assertEquals(late, result.todos.single().lateAt)
+    }
+
     private fun createTestSubject(
         id: Int,
         name: String,

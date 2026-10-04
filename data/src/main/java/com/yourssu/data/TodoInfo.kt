@@ -17,6 +17,8 @@ data class TodoInfo(
     val componentId: Int = -1, // 퀴즈일때 유효한 ID
     val moduleItemId: Int = -1, // 영상일때 유효한 ID,
     val attachments: List<AttachmentInfo> = emptyList(), // 첨부파일
+    val lateAt: String = "", // 지각 제출 마감 시각
+    val completionObservedAt: String = "", // 제출 시각이 없을 때 앱에서 완료 전환을 확인한 시각
 ) {
     var subjectId = 0
 }

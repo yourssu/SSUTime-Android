@@ -22,6 +22,7 @@ import com.yourssu.ssutime.v2.notification.sendNewTodoAnnouncementsIfNeeded
 import com.yourssu.ssutime.v2.notification.withSentDeadlineReminderKeys
 import com.yourssu.ssutime.v2.screen.my.AlertLocalStore
 import com.yourssu.ssutime.v2.todo.sortedByDeadlineThenName
+import com.yourssu.ssutime.v2.todo.withSubmissionOrder
 import com.yourssu.ssutime.v2.widget.updateAllTodoWidgets
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
@@ -48,7 +49,7 @@ class MainRepository(
     }
 
     suspend fun updateTodoData(todoData: TodoData): TodoData {
-        val updatedTodoData = todoDataStore.updateData { todoData }
+        val updatedTodoData = todoDataStore.updateData { previous -> todoData.withSubmissionOrder(previous) }
         updateAllTodoWidgets(context)
         updateDeadlineNotifications(updatedTodoData)
         return updatedTodoData
@@ -77,7 +78,7 @@ class MainRepository(
     }
 
     suspend fun updateTodoData(transform: (TodoData) -> TodoData): TodoData {
-        val updatedTodoData = todoDataStore.updateData(transform)
+        val updatedTodoData = todoDataStore.updateData { previous -> transform(previous).withSubmissionOrder(previous) }
         updateAllTodoWidgets(context)
         updateDeadlineNotifications(updatedTodoData)
         return updatedTodoData

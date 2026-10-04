@@ -72,8 +72,8 @@ internal fun List<TodoInfo>.sortedByDeadlineThenName(): List<TodoInfo> =
 
 internal fun List<TodoInfo>.sortedBySubmittedAtDescending(): List<TodoInfo> =
     sortedWith { left, right ->
-        val leftSubmittedAt = left.submittedAt.toSubmittedAtInstantOrNull()
-        val rightSubmittedAt = right.submittedAt.toSubmittedAtInstantOrNull()
+        val leftSubmittedAt = left.submissionOrderInstantOrNull()
+        val rightSubmittedAt = right.submissionOrderInstantOrNull()
 
         when {
             leftSubmittedAt != null && rightSubmittedAt != null -> rightSubmittedAt.compareTo(leftSubmittedAt)
@@ -83,9 +83,9 @@ internal fun List<TodoInfo>.sortedBySubmittedAtDescending(): List<TodoInfo> =
         }
     }
 
-private fun String.toSubmittedAtInstantOrNull(): Instant? = runCatching {
-    Instant.parse(this)
-}.getOrNull()
+internal fun TodoInfo.submissionOrderInstantOrNull(): Instant? =
+    submittedAt.toTodoDeadlineInstantOrNull()
+        ?: completionObservedAt.toTodoDeadlineInstantOrNull()
 
 internal fun compareTodosByDeadlineThenName(left: TodoInfo, right: TodoInfo): Int =
     todoDeadlineThenNameComparator().compare(left, right)
