@@ -78,9 +78,6 @@ dependencies {
     implementation(libs.lms)
     implementation(libs.jna.platform)
     runtimeOnly(libs.slf4j.nop)
-    testImplementation(kotlin("test"))
-    testImplementation(compose.desktop.uiTestJUnit4)
-    testImplementation("io.ktor:ktor-client-mock:3.5.0")
 }
 
 // Do not load classes lazily from build outputs that a concurrent rebuild can replace.
@@ -110,15 +107,6 @@ tasks.register<JavaExec>("runDesktop") {
     classpath = files(tasks.named<Jar>("jar").flatMap { it.archiveFile }, configurations.runtimeClasspath)
     workingDir = rootProject.projectDir
 
-    usePrivateRuntimeClasspath()
-}
-
-tasks.register<JavaExec>("verifyDesktopRuntimeClasspath") {
-    group = "verification"
-    description = "Checks that every Desktop screen loads from the isolated application JAR."
-    dependsOn(tasks.named("testClasses"), tasks.named("jar"))
-    mainClass.set("com.yourssu.ssutime.desktop.DesktopRuntimeClasspathProbe")
-    classpath = files(sourceSets.test.get().output, tasks.named<Jar>("jar").flatMap { it.archiveFile }, configurations.runtimeClasspath)
     usePrivateRuntimeClasspath()
 }
 

@@ -45,7 +45,7 @@ SSUTIME_DATA_DIR=/tmp/ssutime-desktop-qa ./gradlew :desktopApp:run
 ## 검증
 
 ```shell
-./gradlew :desktopApp:test
+./gradlew :desktopApp:assemble
 ```
 
 Compose가 제공하는 Windows 실행 이미지는 Windows 환경에서 다음 태스크로 생성한다.

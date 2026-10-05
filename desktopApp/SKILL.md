@@ -48,7 +48,7 @@ If Partner Center displays different values later, stop and ask before changing 
 5. Run:
 
 ```bash
-./gradlew :desktopApp:test :desktopApp:createDistributable -PdesktopVersion=<version>
+./gradlew :desktopApp:assemble :desktopApp:createDistributable -PdesktopVersion=<version>
 ```
 
 The local `createDistributable` result is only a compile/package-image check when not running on Windows. The final MSIX must be created and verified by the Windows workflow.

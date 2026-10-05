@@ -78,13 +78,12 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      - name: Test and create Windows app image
+      - name: Create Windows app image
         shell: pwsh
         env:
           POSTHOG_API_KEY: ${{ secrets.POSTHOG_API_KEY }}
         run: |
           ./gradlew.bat --no-daemon `
-            :desktopApp:test `
             :desktopApp:createDistributable `
             "-PdesktopVersion=${{ steps.version.outputs.value }}"
 

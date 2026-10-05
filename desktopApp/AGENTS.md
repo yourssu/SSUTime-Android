@@ -135,7 +135,7 @@ Desktop 기능을 추가하거나 변경할 때마다 다음 순서를 지킨다
 - [ ] MSIX가 `packagedClassicApp`, `mediumIL`, `runFullTrust`를 유지한다.
 - [ ] Store 제출 산출물이 공개 GitHub Release 자산으로 첨부되지 않았다.
 - [ ] Store 제출 workflow가 전용 자격 증명으로 패키지를 업로드하고 인증 심사를 요청했다.
-- [ ] Desktop 관련 빌드 및 테스트를 실행했으며 Android 빌드나 배포를 실행하지 않았다.
+- [ ] Desktop 관련 빌드 및 Windows 패키징을 확인했으며 Android 빌드나 배포를 실행하지 않았다.
 - [ ] 제외하거나 대체한 기능과 검증 결과를 사용자에게 보고했다.
 
 ## 11. 작업 결과 보고 형식

@@ -54,7 +54,6 @@ object DesktopAnalytics {
 
     private val identifiedDistinctId = AtomicReference<String?>(null)
     private val anonymousDistinctId = AtomicReference<String>(UUID.randomUUID().toString())
-    internal var testEventSink: ((PostHogEventPayload) -> Unit)? = null
     private val eventQueue = ConcurrentLinkedQueue<PostHogEventPayload>()
     private val isFlushing = AtomicBoolean(false)
     private var flushLoopJob: Job? = null
@@ -144,7 +143,7 @@ object DesktopAnalytics {
         flushImmediately: Boolean = false,
     ) {
         val apiKey = DesktopBuildConfig.POSTHOG_API_KEY.trim()
-        if (apiKey.isBlank() && testEventSink == null) return
+        if (apiKey.isBlank()) return
 
         val distinctId = identifiedDistinctId.get() ?: anonymousDistinctId.get()
 
@@ -178,7 +177,6 @@ object DesktopAnalytics {
             timestamp = Instant.now().toString(),
         )
 
-        testEventSink?.let { it(payload); return }
         eventQueue.add(payload)
 
         if (flushImmediately || eventQueue.size >= 10) {
