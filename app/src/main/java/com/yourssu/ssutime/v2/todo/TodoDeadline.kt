@@ -85,7 +85,7 @@ internal fun List<TodoInfo>.sortedBySubmittedAtDescending(): List<TodoInfo> =
 
 internal fun TodoInfo.submissionOrderInstantOrNull(): Instant? =
     submittedAt.toTodoDeadlineInstantOrNull()
-        ?: completionObservedAt.toTodoDeadlineInstantOrNull()
+        ?: due_date.toTodoDeadlineInstantOrNull()
 
 internal fun compareTodosByDeadlineThenName(left: TodoInfo, right: TodoInfo): Int =
     todoDeadlineThenNameComparator().compare(left, right)

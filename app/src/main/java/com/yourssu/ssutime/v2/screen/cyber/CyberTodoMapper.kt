@@ -240,7 +240,9 @@ object CyberTodoMapper {
                     else -> return@forEach
                 }
                 val status = evaluation.submitStatus.replace(" ", "")
-                val isSubmitted = status.contains("완료") && !status.contains("미완료")
+                val isSubmitted = status == "응시" || status == "제출" ||
+                    (status.contains("완료") && !status.contains("미완료") &&
+                        !status.contains("미응시") && !status.contains("미제출"))
                 val isLate = isSubmitted && status.contains("지각")
                 val todoInfo = TodoInfo(
                     todoId = toCyberEvaluationTodoId(subjectInfo.id, evaluation),

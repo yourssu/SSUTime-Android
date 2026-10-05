@@ -645,7 +645,13 @@ fun TodoOverView(
                 ) {
                     Row {
                         Text(
-                            text = stringResource(R.string.main_deadline_label),
+                            text = stringResource(
+                                if (todo.isLateSubmissionAvailable(now)) {
+                                    R.string.todo_detail_late_submission_deadline
+                                } else {
+                                    R.string.main_deadline_label
+                                },
+                            ),
                             style = SSUType.Caption1SemiBold.copy(N500)
                         )
                         Spacer(Modifier.weight(1f))
