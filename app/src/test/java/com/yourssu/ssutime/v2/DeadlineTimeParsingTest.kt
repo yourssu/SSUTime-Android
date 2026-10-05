@@ -1,5 +1,6 @@
 package com.yourssu.ssutime.v2
 
+import com.yourssu.ssutime.v2.todo.toTodoDeadlineInstant
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import java.time.Instant
@@ -19,7 +20,8 @@ class DeadlineTimeParsingTest {
         val now = Instant.parse("2026-05-17T00:00:00Z")
         val targetTime = "2026-05-19T02:00:00"
 
-        assertEquals(1, getRemainingDays(targetTime, now))
+        assertEquals(Instant.parse("2026-05-18T17:00:00Z"), targetTime.toTodoDeadlineInstant())
+        assertEquals(2, getRemainingDays(targetTime, now))
     }
 
     @Test
