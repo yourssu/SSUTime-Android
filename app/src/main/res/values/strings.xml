@@ -80,6 +80,7 @@
     <string name="main_late_submission_available">Late submission is available</string>
     <string name="main_expand_task_content_description">Expand assignment details</string>
     <string name="main_deadline_label">Deadline</string>
+    <string name="todo_detail_late_submission_deadline">Late submission deadline</string>
     <string name="main_due_until">Until %1$s</string>
     <string name="ai_summary_title">AI Summary</string>
     <string name="ai_estimated_duration">Estimated time</string>

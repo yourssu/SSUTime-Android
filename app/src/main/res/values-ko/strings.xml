@@ -78,7 +78,8 @@
     <string name="main_empty_todos">제출할 과제가 없어요</string>
     <string name="main_late_submission_available">지각 제출 가능해요</string>
     <string name="main_expand_task_content_description">과제 정보 확장</string>
-    <string name="main_deadline_label">마감기한</string>
+    <string name="main_deadline_label">마감 기한</string>
+    <string name="todo_detail_late_submission_deadline">지각 제출 마감</string>
     <string name="main_due_until">%1$s까지</string>
     <string name="ai_summary_title">AI 요약</string>
     <string name="ai_estimated_duration">예상 소요시간</string>

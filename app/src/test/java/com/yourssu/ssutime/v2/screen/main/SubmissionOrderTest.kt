@@ -9,15 +9,12 @@ import com.yourssu.ssutime.v2.todo.withSubmissionOrder
 import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
 import org.junit.Test
-import java.time.Instant
 
 class SubmissionOrderTest {
-    private val now = Instant.parse("2026-10-04T10:00:00Z")
-
     @Test
-    fun mixesSubjectsAndSourcesBySubmissionTime() {
+    fun mixesSubjectsAndSourcesBySubmissionTimeOrOriginalDeadline() {
         val oldLms = todo(1, 1).copy(submittedAt = "2026-10-04T17:00:00+09:00")
-        val cyber = todo(-10001, -1).copy(completionObservedAt = "2026-10-04T09:00:00Z")
+        val cyber = todo(-10001, -1).copy(due_date = "2026-10-04T09:00:00Z")
         val recentLms = todo(2, 2).copy(submittedAt = "2026-10-04T19:00:00")
         val unknown = todo(-10002, -2)
         val malformed = todo(3, 3).copy(submittedAt = "invalid")
@@ -29,44 +26,46 @@ class SubmissionOrderTest {
     }
 
     @Test
-    fun recordsVisibleAndHiddenCompletionTransitionsAndPreservesAcrossRefreshAndRestart() {
-        val visible = todo(-10001, -1)
-        val hidden = todo(-10002, -1)
-        val previous = TodoData(
-            todos = listOf(visible.copy(type = TodoType.COMMONS)),
-            hiddenTodos = listOf(hidden.copy(type = TodoType.QUIZ)),
-        )
-        val fresh = TodoData(submitted = listOf(visible, hidden))
-        val completed = fresh.withSubmissionOrder(previous, now)
-        assertEquals(listOf(now.toString(), now.toString()), completed.submitted.map { it.completionObservedAt })
-
-        val restored = Json.decodeFromString<TodoData>(Json.encodeToString(completed))
-        val refreshed = fresh.withSubmissionOrder(restored, now.plusSeconds(3600))
-        assertEquals(completed.submitted, refreshed.submitted)
-    }
-
-    @Test
-    fun doesNotInventHistoricalSubmissionTimeOrMixSameIdsAcrossSubjects() {
-        val historical = todo(-10001, -1)
-        val previous = TodoData(todos = listOf(historical.copy(subject = subject(-2))))
-        val completed = TodoData(submitted = listOf(historical)).withSubmissionOrder(previous, now)
-        assertEquals("", completed.submitted.single().completionObservedAt)
-    }
-
-    @Test
-    fun serverTimeTakesPrecedenceOverObservationTime() {
-        val observed = todo(-10001, -1).copy(completionObservedAt = now.toString())
-        val serverDated = todo(1, 1).copy(
+    fun submissionTimeTakesPrecedenceOverOriginalAndLateDeadlines() {
+        val dated = todo(1, 1).copy(
             submittedAt = "2026-10-04T08:00:00Z",
-            completionObservedAt = now.plusSeconds(3600).toString(),
+            due_date = "2026-10-06T10:00:00Z",
+            lateAt = "2026-10-07T10:00:00Z",
         )
-        assertEquals(listOf(observed, serverDated), listOf(serverDated, observed).sortedBySubmittedAtDescending())
+        val fallback = todo(-10001, -1).copy(
+            due_date = "2026-10-04T09:00:00Z",
+            lateAt = "2026-10-08T10:00:00Z",
+            completionObservedAt = "2026-10-09T10:00:00Z",
+        )
+        val laterSubmission = todo(2, 2).copy(submittedAt = "2026-10-04T10:00:00Z")
+        assertEquals(
+            listOf(laterSubmission, fallback, dated),
+            listOf(dated, fallback, laterSubmission).sortedBySubmittedAtDescending(),
+        )
     }
 
     @Test
-    fun legacyCacheWithoutObservationFieldStillLoads() {
-        val legacy = """{"todoId":1,"title":"과제","due_date":"","type":"SUBMITTED","subject":null}"""
-        assertEquals("", Json.decodeFromString<TodoInfo>(legacy).completionObservedAt)
+    fun invalidSubmissionTimeFallsBackToDeadlineAndUnknownDatesStayAtBottom() {
+        val invalidSubmission = todo(1, 1).copy(
+            submittedAt = "invalid",
+            due_date = "2026-10-04T12:00:00+09:00",
+        )
+        val noSubmission = todo(2, 2).copy(due_date = "2026-10-04T02:00:00Z")
+        val unknown = todo(3, 3).copy(due_date = "invalid")
+        assertEquals(
+            listOf(invalidSubmission, noSubmission, unknown),
+            listOf(unknown, noSubmission, invalidSubmission).sortedBySubmittedAtDescending(),
+        )
+    }
+
+    @Test
+    fun refreshAndRestartKeepTheSameOrderWithoutChangingOriginalDates() {
+        val earlier = todo(1, 1).copy(due_date = "2026-10-03T09:00:00Z")
+        val later = todo(-10001, -1).copy(due_date = "2026-10-04T09:00:00Z")
+        val data = TodoData(submitted = listOf(earlier, later)).withSubmissionOrder()
+        val restored = Json.decodeFromString<TodoData>(Json.encodeToString(data))
+        assertEquals(listOf(later, earlier), restored.withSubmissionOrder().submitted)
+        assertEquals(data, restored.withSubmissionOrder())
     }
 
     private fun subject(id: Int) = SubjectInfo(id = id, name = "과목 $id", professor = "")

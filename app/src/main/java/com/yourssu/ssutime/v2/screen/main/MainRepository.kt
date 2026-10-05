@@ -49,7 +49,7 @@ class MainRepository(
     }
 
     suspend fun updateTodoData(todoData: TodoData): TodoData {
-        val updatedTodoData = todoDataStore.updateData { previous -> todoData.withSubmissionOrder(previous) }
+        val updatedTodoData = todoDataStore.updateData { todoData.withSubmissionOrder() }
         updateAllTodoWidgets(context)
         updateDeadlineNotifications(updatedTodoData)
         return updatedTodoData
@@ -78,7 +78,7 @@ class MainRepository(
     }
 
     suspend fun updateTodoData(transform: (TodoData) -> TodoData): TodoData {
-        val updatedTodoData = todoDataStore.updateData { previous -> transform(previous).withSubmissionOrder(previous) }
+        val updatedTodoData = todoDataStore.updateData { previous -> transform(previous).withSubmissionOrder() }
         updateAllTodoWidgets(context)
         updateDeadlineNotifications(updatedTodoData)
         return updatedTodoData
