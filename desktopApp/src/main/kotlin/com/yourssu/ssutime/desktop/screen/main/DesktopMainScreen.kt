@@ -85,7 +85,6 @@ import com.yourssu.ssutime.desktop.screen.submitted.DesktopSubmittedScreen
 import com.yourssu.ssutime.desktop.screen.todo.DesktopTodoDetailScreen
 import com.yourssu.ssutime.desktop.ui.component.SButton
 import com.yourssu.ssutime.desktop.ui.resources.Res
-import com.yourssu.ssutime.desktop.ui.resources.cyber_title
 import com.yourssu.ssutime.desktop.ui.resources.common_close
 import com.yourssu.ssutime.desktop.ui.resources.common_refresh
 import com.yourssu.ssutime.desktop.ui.resources.common_retry
@@ -835,7 +834,7 @@ private fun TodoItemRow(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         if (todo.isCyber()) {
                             Text(
-                                text = stringResource(Res.string.cyber_title),
+                                text = "사이버대",
                                 style = SSUType.Caption1SemiBold,
                                 color = Color(0xFFD6444B),
                                 modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(Color(0xFFFFBFC1))

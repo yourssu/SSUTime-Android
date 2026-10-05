@@ -100,10 +100,13 @@ import com.yourssu.ssutime.desktop.ui.theme.R100
 import com.yourssu.ssutime.desktop.ui.theme.R400
 import com.yourssu.ssutime.desktop.ui.theme.SSUType
 import com.yourssu.ssutime.desktop.ui.theme.WHITE
-import com.yourssu.ssutime.desktop.ui.util.formatMonthDayWithTime
+import com.yourssu.ssutime.desktop.ui.util.TODO_DEADLINE_ZONE_ID
+import com.yourssu.ssutime.desktop.ui.util.toTodoDeadlineInstant
 import com.yourssu.ssutime.desktop.ui.util.parseHtmlToAnnotatedString
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 private enum class TodoDetailTab {
     DESCRIPTION,
@@ -260,7 +263,9 @@ private fun TodoDetailOverview(
                             text = stringResource(
                                 Res.string.main_due_until,
                                 runCatching {
-                                    formatMonthDayWithTime(deadline, includeSeconds = false)
+                                    deadline.toTodoDeadlineInstant()
+                                        .atZone(TODO_DEADLINE_ZONE_ID)
+                                        .format(DateTimeFormatter.ofPattern("yyyy.MM.dd HH:mm", Locale.ROOT))
                                 }.getOrDefault(deadline),
                             ),
                             style = SSUType.Caption1SemiBold,
