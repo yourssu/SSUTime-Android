@@ -69,9 +69,10 @@ import com.yourssu.ssutime.v2.analytics.Analytics
 import com.yourssu.ssutime.v2.analytics.toDetailType
 import com.yourssu.ssutime.v2.component.SButton
 import com.yourssu.ssutime.v2.component.SButton_Small
-import com.yourssu.ssutime.v2.getStringDateWithTime
 import com.yourssu.ssutime.v2.screen.my.PopupButton
 import com.yourssu.ssutime.v2.screen.notice.openAttachmentUrl
+import com.yourssu.ssutime.v2.todo.TODO_DEADLINE_ZONE_ID
+import com.yourssu.ssutime.v2.todo.toTodoDeadlineInstant
 import com.yourssu.ssutime.v2.ui.theme.N100
 import com.yourssu.ssutime.v2.ui.theme.N200
 import com.yourssu.ssutime.v2.ui.theme.N300
@@ -84,6 +85,8 @@ import com.yourssu.ssutime.v2.ui.theme.SSUType
 import com.yourssu.ssutime.v2.ui.theme.WHITE
 import org.koin.compose.viewmodel.koinViewModel
 import java.time.Instant
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 @Composable
 fun TodoDetailScreen(
@@ -658,7 +661,9 @@ fun TodoOverView(
                         Text(
                             text = stringResource(
                                 R.string.main_due_until,
-                                getStringDateWithTime(todo.detailDeadline(now), includeSeconds = false),
+                                todo.detailDeadline(now).toTodoDeadlineInstant()
+                                    .atZone(TODO_DEADLINE_ZONE_ID)
+                                    .format(DateTimeFormatter.ofPattern("yyyy.MM.dd HH:mm", Locale.ROOT)),
                             ),
                             style = SSUType.Caption1SemiBold.copy(N500)
                         )
