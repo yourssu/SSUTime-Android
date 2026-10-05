@@ -412,15 +412,20 @@ fun DesktopMyPageScreen(
                 showLogoutDialog = true
             },
         )
-        Spacer(Modifier.height(8.dp))
-        OptionButton(
-            text = stringResource(Res.string.my_withdraw),
-            onClick = {
-                DesktopAnalytics.withdrawClick()
-                showWithdrawDialog = true
-            },
-        )
         Spacer(Modifier.height(16.dp))
+        Text(
+            text = stringResource(Res.string.my_withdraw),
+            style = SSUType.Label3Medium,
+            color = N400,
+            textDecoration = TextDecoration.Underline,
+            modifier = Modifier
+                .align(Alignment.CenterHorizontally)
+                .clickable {
+                    DesktopAnalytics.withdrawClick()
+                    showWithdrawDialog = true
+                },
+        )
+        Spacer(Modifier.height(24.dp))
         }
     }
 }

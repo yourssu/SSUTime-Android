@@ -7,6 +7,7 @@ import com.yourssu.data.TodoInfo
 import com.yourssu.data.TodoType
 import com.yourssu.data.isCyber
 import kotlinx.serialization.Serializable
+import com.yourssu.ssutime.desktop.ui.util.submissionOrderInstantOrNull
 import java.text.DecimalFormat
 import java.text.DecimalFormatSymbols
 import java.util.Locale
@@ -66,7 +67,7 @@ val AppTodo.canRequestAiSummary: Boolean
 
 fun AppTodo.toLmsUrl(): String {
     if (isCyber()) {
-        return url.ifBlank { "https://lms.kcu.ac/atnlcSubj/atnlcApe/list" }
+        return url.ifBlank { "https://lms.kcu.ac" }
     }
     val currentSubjectId = subject?.id ?: subjectId
     return when (type) {
@@ -100,7 +101,7 @@ fun Long.toSimply(): String {
 }
 
 fun formatVideoDuration(secondsDouble: Double): String {
-    val isKorean = java.util.Locale.getDefault().language == "ko"
+    val isKorean = java.util.Locale.getDefault().language != "en"
     val totalSeconds = secondsDouble.toInt()
     if (totalSeconds <= 0) return ""
     val hours = totalSeconds / 3600
@@ -109,15 +110,15 @@ fun formatVideoDuration(secondsDouble: Double): String {
 
     return buildString {
         if (hours > 0) {
-            append("${hours}${if (isKorean) "시간" else " hr"}")
+            append("${hours}${if (isKorean) "시간" else "hr"}")
         }
         if (minutes > 0) {
             if (isNotEmpty()) append(" ")
-            append("${minutes}${if (isKorean) "분" else " min"}")
+            append("${minutes}${if (isKorean) "분" else "min"}")
         }
         if (seconds > 0 || isEmpty()) {
             if (isNotEmpty()) append(" ")
-            append("${seconds}${if (isKorean) "초" else " sec"}")
+            append("${seconds}${if (isKorean) "초" else "sec"}")
         }
     }
 }
@@ -132,8 +133,8 @@ fun AppTodo.effectiveSubmittedInstant(): java.time.Instant? {
 }
 
 fun submittedTodoComparator(): Comparator<AppTodo> = Comparator { left, right ->
-    val leftTime = left.submittedAt.toInstantOrNull()
-    val rightTime = right.submittedAt.toInstantOrNull()
+    val leftTime = left.submissionOrderInstantOrNull()
+    val rightTime = right.submissionOrderInstantOrNull()
     when {
         leftTime != null && rightTime != null -> rightTime.compareTo(leftTime)
         leftTime != null -> -1

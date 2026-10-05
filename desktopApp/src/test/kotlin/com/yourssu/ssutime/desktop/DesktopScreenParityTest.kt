@@ -49,6 +49,53 @@ class DesktopScreenParityTest {
         saveScreenshot("notice-read")
     }
 
+    @Test fun calendarNoticeShortcutLoadsNoticeScreenAndReturnsToCalendar() {
+        val subject = SubjectInfo(1, "QA course", "Teacher", listOf(
+            DiscussionInfo(1, "QA announcement", message = "Actual notice content", readState = "unread"),
+        ))
+        val tab = mutableStateOf(DesktopNavTab.CALENDAR)
+        compose.setContent { MaterialTheme { DesktopMainScreen(
+            todoData = TodoData(subjects = listOf(subject), loadedAt = Instant.now().toString()),
+            aiSummaryStates = emptyMap(), isLoading = false, loadingProgress = 1f, errorMessage = null,
+            onRefresh = {}, onExpandTodo = {}, currentTab = tab.value, onTabSelect = { tab.value = it },
+        ) } }
+        compose.onNodeWithContentDescription(runBlocking { getString(Res.string.calendar_notice_shortcut) }).performClick()
+        compose.onNodeWithText("QA announcement", substring = true).assertExists().performClick()
+        compose.onNodeWithText("Actual notice content").assertExists()
+        compose.onNodeWithContentDescription(runBlocking { getString(Res.string.my_back_content_description) }).performClick()
+        compose.onNodeWithText("QA announcement", substring = true).assertDoesNotExist()
+        compose.onNodeWithContentDescription(runBlocking { getString(Res.string.calendar_notice_shortcut) }).assertExists()
+    }
+
+    @Test fun learningXHtmlLinkOpensItsOriginalUrl() {
+        var opened = ""
+        compose.setContent { MaterialTheme {
+            DesktopTodoDetailScreen(
+                task.copy(description = """<p><b>설명</b> <a href="https://example.com/course?a=1&amp;b=2">자료 링크</a></p>"""),
+                null, {}, {}, {}, { opened = it },
+            )
+        } }
+        val node = compose.onNodeWithText("설명 자료 링크")
+        val layouts = mutableListOf<androidx.compose.ui.text.TextLayoutResult>()
+        node.performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.GetTextLayoutResult) { it(layouts) }
+        node.performTouchInput { click(layouts.single().getBoundingBox(4).center) }
+        compose.runOnIdle { Assert.assertEquals("https://example.com/course?a=1&b=2", opened) }
+    }
+
+    @Test fun noticeHtmlLinkOpensItsOriginalUrl() {
+        var opened = ""
+        val subject = SubjectInfo(1, "QA course", "Teacher", listOf(
+            DiscussionInfo(1, "Linked announcement", message = """<a href="https://example.com/notice">공지 링크</a>"""),
+        ))
+        compose.setContent { MaterialTheme { DesktopNoticeScreen(listOf(subject), {}, { opened = it }, {}) } }
+        compose.onNodeWithText("Linked announcement").performClick()
+        val node = compose.onNodeWithText("공지 링크")
+        val layouts = mutableListOf<androidx.compose.ui.text.TextLayoutResult>()
+        node.performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.GetTextLayoutResult) { it(layouts) }
+        node.performTouchInput { click(layouts.single().getBoundingBox(1).center) }
+        compose.runOnIdle { Assert.assertEquals("https://example.com/notice", opened) }
+    }
+
     @Test fun summaryTabAppearsAfterSuccessAndOpensLinkedAttachment() {
         val state = mutableStateOf<DesktopAiSummaryUiState>(DesktopAiSummaryUiState.Loading)
         val label = runBlocking { getString(Res.string.todo_detail_ai_summary_tab) }
@@ -64,6 +111,50 @@ class DesktopScreenParityTest {
         saveScreenshot("todo-summary")
         compose.onNodeWithText("QA file.pdf").performScrollTo().performClick()
         compose.runOnIdle { Assert.assertEquals("https://example.com/file.pdf", opened) }
+    }
+
+    @Test fun detailTabsAndHideDialogUseAndroidTextForEachTaskType() {
+        val selected = mutableStateOf(task)
+        val hide = runBlocking { getString(Res.string.todo_hide_from_list) }
+        val cancel = runBlocking { getString(Res.string.common_cancel) }
+        compose.setContent { MaterialTheme {
+            DesktopTodoDetailScreen(selected.value, null, {}, {}, {}, {})
+        } }
+        compose.onNodeWithText("러닝엑스 내용").assertExists()
+        for ((type, title) in listOf(
+            TodoType.ASSIGNMENT to Res.string.assignment_hide_popup_title,
+            TodoType.QUIZ to Res.string.quiz_hide_popup_title,
+            TodoType.COMMONS to Res.string.common_hide_popup_title,
+        )) {
+            compose.runOnIdle { selected.value = task.copy(type = type) }
+            compose.onNodeWithText(hide).performClick()
+            compose.onNodeWithText(runBlocking { getString(title) }).assertExists()
+            compose.onNodeWithText(cancel).performClick()
+        }
+    }
+
+    @Test fun deadlineLabelSwitchesOnlyDuringLateSubmissionWindow() {
+        val now = Instant.now()
+        val selected = mutableStateOf(task.copy(
+            due_date = now.minusSeconds(3600).toString(),
+            lateAt = now.plusSeconds(3600).toString(),
+        ))
+        val normalLabel = runBlocking { getString(Res.string.main_deadline_label) }
+        val lateLabel = runBlocking { getString(Res.string.todo_detail_late_submission_deadline) }
+        val lateNotice = runBlocking { getString(Res.string.todo_detail_late_notice) }
+        compose.setContent { MaterialTheme {
+            DesktopTodoDetailScreen(selected.value, null, {}, {}, {}, {})
+        } }
+        compose.onNodeWithText(lateLabel).assertExists()
+        compose.onNodeWithText(normalLabel).assertDoesNotExist()
+        compose.onNodeWithText(lateNotice).assertExists()
+        compose.runOnIdle { selected.value = selected.value.copy(type = TodoType.SUBMITTED) }
+        compose.onNodeWithText(normalLabel).assertExists()
+        compose.onNodeWithText(lateLabel).assertDoesNotExist()
+        compose.onNodeWithText(lateNotice).assertDoesNotExist()
+        compose.runOnIdle { selected.value = selected.value.copy(type = TodoType.ASSIGNMENT, lateAt = "") }
+        compose.onNodeWithText(normalLabel).assertExists()
+        compose.onNodeWithText(lateLabel).assertDoesNotExist()
     }
 
     @Test fun clickingHomeTabResetsTheSelectedDetail() {

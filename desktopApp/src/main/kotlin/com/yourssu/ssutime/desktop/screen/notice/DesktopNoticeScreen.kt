@@ -296,7 +296,9 @@ private fun NoticeAccordionItem(
 ) {
     var isExpanded by rememberSaveable(discussion.id) { mutableStateOf(false) }
     val formattedDate = remember(discussion.createdAt) { formatDiscussionDate(discussion.createdAt) }
-    val annotatedContent = remember(discussion.message) { parseHtmlToAnnotatedString(discussion.message) }
+    val annotatedContent = remember(discussion.message, onOpenUrl) {
+        parseHtmlToAnnotatedString(discussion.message, onOpenUrl)
+    }
     val isNew = discussion.readState.equals("unread", ignoreCase = true)
     val hasAttachment = discussion.attachments.isNotEmpty()
 

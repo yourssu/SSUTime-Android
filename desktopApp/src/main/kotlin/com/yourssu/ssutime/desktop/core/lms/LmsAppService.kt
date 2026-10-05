@@ -12,6 +12,7 @@ import com.yourssu.data.isCyber
 import com.yourssu.data.todoUniqueKey
 import com.yourssu.ssutime.desktop.ui.util.toTodoDeadlineInstantOrNull
 import com.yourssu.ssutime.desktop.ui.util.sortedByDeadlineThenName
+import com.yourssu.ssutime.desktop.ui.util.withSubmissionOrder
 import com.yourssu.ssutime.desktop.core.cyber.CyberTodoResult
 import com.yourssu.ssutime.desktop.core.model.AiSummary
 import com.yourssu.ssutime.desktop.core.model.AppProfile
@@ -414,6 +415,7 @@ internal fun toAppTodoData(
                 todoId = todo.assignment_id ?: -1,
                 title = todo.title,
                 due_date = todo.due_date,
+                lateAt = todo.late_at.orEmpty(),
                 type = type,
                 subject = subjectById[subject.id],
                 description = todo.description.orEmpty(),
@@ -508,7 +510,7 @@ internal fun toAppTodoData(
         loadedAt = loadedAt,
         readDiscussionIds = (locallyReadDiscussionIds + allSubjectInfos.flatMap { it.discussions }
             .filter { it.readState.equals("read", true) }.map { it.id }).toList(),
-    )
+    ).withSubmissionOrder()
 }
 
 internal fun isSameTodoItem(a: AppTodo, b: AppTodo): Boolean {

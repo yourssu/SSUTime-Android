@@ -5,6 +5,10 @@ import com.yourssu.ssutime.desktop.core.model.AppTodo
 import com.yourssu.ssutime.desktop.core.model.AppTodoData
 import com.yourssu.ssutime.desktop.core.model.dueDate
 import com.yourssu.ssutime.desktop.ui.util.toTodoDeadlineInstantOrNull
+import com.yourssu.data.NewTodoNotificationRecord
+import com.yourssu.data.TodoType
+import com.yourssu.ssutime.desktop.ui.resources.*
+import org.jetbrains.compose.resources.getString
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
@@ -46,7 +50,7 @@ class DesktopDeadlineNotifier(
             todoData = todoData,
             sentKeys = sentKeys,
             now = now,
-        )
+        ).map { it.withLocalizedDeadlineText() }
         if (notifications.isEmpty()) return emptyList()
 
         return if (sendWindowsToasts(notifications)) {
@@ -66,10 +70,46 @@ class DesktopDeadlineNotifier(
         }
     }
 
-    suspend fun sendNewTodosIfNeeded(todoData: AppTodoData, now: Instant = Instant.now()): List<String> {
-        val result = buildNewTodoAnnouncement(todoData, now) ?: return emptyList()
-        return if (result.notification == null || sendWindowsToasts(listOf(result.notification))) result.consumedKeys else emptyList()
+    internal suspend fun sendNewTodosIfNeeded(todoData: AppTodoData, now: Instant = Instant.now()): NewTodoAnnouncement? {
+        val result = buildNewTodoAnnouncement(todoData, now) ?: return null
+        val first = result.records.first()
+        val subject = first.subjectName.ifBlank { getString(Res.string.new_todo_default_subject) }
+        val type = localizedTodoType(first.type)
+        val body = if (result.records.size == 1) {
+            getString(Res.string.new_todo_notification_single, subject, type)
+        } else {
+            getString(Res.string.new_todo_notification_multiple, subject, type, result.records.size - 1)
+        }
+        val localized = result.copy(notification = result.notification.copy(
+            title = getString(Res.string.new_todo_notification_title),
+            body = body,
+        ))
+        return localized.takeIf { sendWindowsToasts(listOf(it.notification)) }
     }
+
+    private suspend fun DeadlineNotification.withLocalizedDeadlineText(): DeadlineNotification {
+        val todo = representativeTodo ?: return this
+        val itemName = listOf(todo.subject?.name.orEmpty(), localizedTodoType(todo.type))
+            .filter(String::isNotBlank).joinToString(" ")
+            .ifBlank { todo.title.ifBlank { getString(Res.string.deadline_default_item) } }
+        val message = when {
+            dDay == 0 -> getString(Res.string.deadline_today_message, itemName)
+            notificationTaskCount == 1 -> getString(Res.string.deadline_d_day_message, itemName, dDay)
+            else -> getString(Res.string.deadline_multiple_message, itemName, notificationTaskCount - 1)
+        }
+        return copy(
+            title = getString(if (dDay == 0) Res.string.deadline_title_today else Res.string.deadline_title_upcoming),
+            body = message,
+        )
+    }
+
+    private suspend fun localizedTodoType(type: TodoType): String = getString(when (type) {
+        TodoType.COMMONS -> Res.string.todo_type_lecture
+        TodoType.QUIZ -> Res.string.todo_type_quiz
+        TodoType.SUBMITTED -> Res.string.todo_type_submitted
+        TodoType.SUBMITTED_LATE -> Res.string.todo_type_submitted_late
+        else -> Res.string.todo_type_assignment
+    })
 
     fun close() {
         trayIcon?.let { icon ->
@@ -149,34 +189,46 @@ internal data class DeadlineNotification(
     val notificationType: String = "deadline_soon",
 )
 
-internal data class NewTodoAnnouncement(val notification: DeadlineNotification?, val consumedKeys: List<String>)
+internal data class NewTodoAnnouncement(
+    val notification: DeadlineNotification,
+    val cutoff: Instant,
+    val records: List<NewTodoNotificationRecord>,
+) {
+    val consumedKeys: List<String> get() = records.map { it.todoKey }
+}
 
 internal fun buildNewTodoAnnouncement(todoData: AppTodoData, now: Instant): NewTodoAnnouncement? {
-    val local = now.atZone(ZoneId.of("Asia/Seoul"))
-    if (local.hour != 18 || local.minute >= 15) return null
-    val start = now.minus(Duration.ofHours(24))
+    val localNow = now.atZone(ZoneId.of("Asia/Seoul"))
+    val todayCutoff = localNow.toLocalDate().atTime(18, 0).atZone(ZoneId.of("Asia/Seoul"))
+    val cutoff = (if (todayCutoff.toInstant().isAfter(now)) todayCutoff.minusDays(1) else todayCutoff).toInstant()
+    val lastAnnouncement = runCatching { Instant.parse(todoData.lastNewTodoAnnouncementAt) }.getOrNull()
+    if (lastAnnouncement != null && !lastAnnouncement.isBefore(cutoff)) return null
+
+    // Match Android: missed records survive until delivery; cutoff-time records wait for the next batch.
     val ready = todoData.pendingNewTodoNotifications.filter {
         val discovered = runCatching { Instant.parse(it.discoveredAt) }.getOrNull()
-        discovered != null && !discovered.isBefore(start) && discovered.isBefore(now)
+        it.type in setOf(TodoType.ASSIGNMENT, TodoType.COMMONS, TodoType.QUIZ) &&
+            discovered?.isBefore(cutoff) == true
     }
-    val expired = todoData.pendingNewTodoNotifications.filter {
-        runCatching { Instant.parse(it.discoveredAt).isBefore(start) }.getOrDefault(true)
+    val first = ready.firstOrNull() ?: return null
+    val subject = first.subjectName.ifBlank { "공통" }
+    val type = when (first.type) {
+        TodoType.COMMONS -> "강의"
+        TodoType.QUIZ -> "퀴즈"
+        else -> "과제"
     }
-    val first = ready.firstOrNull()
-    val body = first?.let {
-        val subject = it.subjectName.ifBlank { "공통" }
-        val type = when (it.type) {
-            com.yourssu.data.TodoType.COMMONS -> "강의"
-            com.yourssu.data.TodoType.QUIZ -> "퀴즈"
-            else -> "과제"
-        }
-        if (ready.size == 1) "$subject ${type}가 새로 올라왔어요." else "$subject $type 외 ${ready.size - 1}건이 올라왔어요."
-    }
+    val body = if (ready.size == 1) "$subject ${type}가 새로 올라왔어요." else "$subject $type 외 ${ready.size - 1}건이 올라왔어요."
     return NewTodoAnnouncement(
-        body?.let { DeadlineNotification("새 할 일이 올라왔어요", it, emptyList(), notificationType = "new_todo") },
-        (ready + expired).map { it.todoKey },
+        DeadlineNotification("새 할 일이 올라왔어요", body, emptyList(), notificationType = "new_todo"),
+        cutoff,
+        ready,
     )
 }
+
+internal fun AppTodoData.withSentNewTodoAnnouncement(batch: NewTodoAnnouncement): AppTodoData = copy(
+    lastNewTodoAnnouncementAt = batch.cutoff.toString(),
+    pendingNewTodoNotifications = pendingNewTodoNotifications.filterNot { it in batch.records.toSet() },
+)
 
 private data class Reminder(
     val todo: AppTodo,
@@ -283,7 +335,6 @@ private fun List<Reminder>.toDeadlineNotifications(): List<DeadlineNotification>
 
 private fun AppTodo.toReminder(now: Instant): Reminder? {
     val dueAt = dueDate.toDeadlineInstantOrNull() ?: return null
-    if (!dueAt.isAfter(now)) return null
     val dueDateInKorea = dueAt.atZone(deadlineZoneId).toLocalDate()
     val nowInKorea = now.atZone(deadlineZoneId)
     val daysBefore = ChronoUnit.DAYS.between(

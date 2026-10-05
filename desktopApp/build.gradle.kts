@@ -1,4 +1,6 @@
 import java.util.Properties
+import java.nio.file.Files
+import java.io.File
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 val desktopPackageVersion = providers
@@ -79,6 +81,45 @@ dependencies {
     testImplementation(kotlin("test"))
     testImplementation(compose.desktop.uiTestJUnit4)
     testImplementation("io.ktor:ktor-client-mock:3.5.0")
+}
+
+// Do not load classes lazily from build outputs that a concurrent rebuild can replace.
+fun JavaExec.usePrivateRuntimeClasspath() {
+    var launchDirectory: File? = null
+    doFirst {
+        val directory = Files.createTempDirectory("ssutime-desktop-run-").toFile()
+        launchDirectory = directory
+        classpath = files(classpath.files.filter { it.exists() }.mapIndexed { index, entry ->
+            val destination = directory.resolve("$index-${entry.name}")
+            if (entry.isDirectory) {
+                check(entry.copyRecursively(destination)) { "Could not copy runtime directory: $entry" }
+            } else {
+                entry.copyTo(destination)
+            }
+            destination
+        })
+    }
+    doLast { launchDirectory?.deleteRecursively() }
+}
+
+tasks.register<JavaExec>("runDesktop") {
+    group = "application"
+    description = "Runs SSUTime with a private runtime classpath that survives concurrent rebuilds."
+    dependsOn(tasks.named("jar"))
+    mainClass.set("com.yourssu.ssutime.desktop.MainKt")
+    classpath = files(tasks.named<Jar>("jar").flatMap { it.archiveFile }, configurations.runtimeClasspath)
+    workingDir = rootProject.projectDir
+
+    usePrivateRuntimeClasspath()
+}
+
+tasks.register<JavaExec>("verifyDesktopRuntimeClasspath") {
+    group = "verification"
+    description = "Checks that every Desktop screen loads from the isolated application JAR."
+    dependsOn(tasks.named("testClasses"), tasks.named("jar"))
+    mainClass.set("com.yourssu.ssutime.desktop.DesktopRuntimeClasspathProbe")
+    classpath = files(sourceSets.test.get().output, tasks.named<Jar>("jar").flatMap { it.archiveFile }, configurations.runtimeClasspath)
+    usePrivateRuntimeClasspath()
 }
 
 compose.resources {

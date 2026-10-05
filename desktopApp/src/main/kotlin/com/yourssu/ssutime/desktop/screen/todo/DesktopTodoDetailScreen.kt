@@ -76,6 +76,7 @@ import com.yourssu.ssutime.desktop.ui.resources.common_confirm
 import com.yourssu.ssutime.desktop.ui.resources.common_unknown_subject
 import com.yourssu.ssutime.desktop.ui.resources.ic_arrow_back
 import com.yourssu.ssutime.desktop.ui.resources.main_deadline_label
+import com.yourssu.ssutime.desktop.ui.resources.todo_detail_late_submission_deadline
 import com.yourssu.ssutime.desktop.ui.resources.main_due_until
 import com.yourssu.ssutime.desktop.ui.resources.todo_detail_ai_sparkle_desc
 import com.yourssu.ssutime.desktop.ui.resources.todo_detail_ai_summary_tab
@@ -87,7 +88,9 @@ import com.yourssu.ssutime.desktop.ui.resources.todo_detail_open_cyber
 import com.yourssu.ssutime.desktop.ui.resources.video_lecture_duration
 import com.yourssu.ssutime.desktop.ui.resources.todo_hide_from_list
 import com.yourssu.ssutime.desktop.ui.resources.todo_hide_popup_message
-import com.yourssu.ssutime.desktop.ui.resources.todo_hide_popup_title
+import com.yourssu.ssutime.desktop.ui.resources.assignment_hide_popup_title
+import com.yourssu.ssutime.desktop.ui.resources.common_hide_popup_title
+import com.yourssu.ssutime.desktop.ui.resources.quiz_hide_popup_title
 import com.yourssu.ssutime.desktop.ui.theme.N100
 import com.yourssu.ssutime.desktop.ui.theme.N200
 import com.yourssu.ssutime.desktop.ui.theme.N300
@@ -98,8 +101,7 @@ import com.yourssu.ssutime.desktop.ui.theme.R400
 import com.yourssu.ssutime.desktop.ui.theme.SSUType
 import com.yourssu.ssutime.desktop.ui.theme.WHITE
 import com.yourssu.ssutime.desktop.ui.util.formatMonthDayWithTime
-import com.yourssu.ssutime.desktop.ui.util.parseHtmlToPlainText
-import com.yourssu.ssutime.desktop.ui.util.remainingSeconds
+import com.yourssu.ssutime.desktop.ui.util.parseHtmlToAnnotatedString
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 
@@ -135,6 +137,9 @@ fun DesktopTodoDetailScreen(
     }
 
     val scrollState = rememberScrollState()
+    LaunchedEffect(todo.desktopItemKey()) {
+        scrollState.scrollTo(0)
+    }
 
     Column(
         modifier = modifier
@@ -177,6 +182,7 @@ fun DesktopTodoDetailScreen(
     if (showHideDialog) {
         Dialog(onDismissRequest = { showHideDialog = false }) {
             DesktopHideTodoPopup(
+                todoType = todo.type,
                 onCancel = { showHideDialog = false },
                 onConfirm = {
                     DesktopAnalytics.hideConfirm()
@@ -207,8 +213,8 @@ private fun TodoDetailOverview(
         }
     }
 
-    val seconds = runCatching { remainingSeconds(todo.dueDate) }.getOrDefault(0L)
-    val isDeadlinePassed = seconds == 0L
+    val now = java.time.Instant.now()
+    val deadline = todo.detailDeadline(now)
 
     Box(modifier = Modifier.padding(top = 16.dp)) {
         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -239,7 +245,13 @@ private fun TodoDetailOverview(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(
-                            text = stringResource(Res.string.main_deadline_label),
+                            text = stringResource(
+                                if (todo.isLateSubmissionAvailable(now)) {
+                                    Res.string.todo_detail_late_submission_deadline
+                                } else {
+                                    Res.string.main_deadline_label
+                                },
+                            ),
                             style = SSUType.Caption1SemiBold,
                             color = N500,
                         )
@@ -248,8 +260,8 @@ private fun TodoDetailOverview(
                             text = stringResource(
                                 Res.string.main_due_until,
                                 runCatching {
-                                    formatMonthDayWithTime(todo.dueDate, includeSeconds = false)
-                                }.getOrDefault(todo.dueDate),
+                                    formatMonthDayWithTime(deadline, includeSeconds = false)
+                                }.getOrDefault(deadline),
                             ),
                             style = SSUType.Caption1SemiBold,
                             color = N500,
@@ -277,7 +289,7 @@ private fun TodoDetailOverview(
                 }
             }
 
-            if (todo.submittedAt.isBlank() && isDeadlinePassed) {
+            if (todo.isLateSubmissionAvailable(now)) {
                 Text(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -400,8 +412,8 @@ private fun TodoDetailTabSection(
 
         when (currentTab) {
             TodoDetailTab.DESCRIPTION -> {
-                val parsedDescription = remember(todo.description) {
-                    parseHtmlToPlainText(todo.description).ifBlank { "상세 설명이 없습니다." }
+                val parsedDescription = remember(todo.description, onOpenAttachment) {
+                    parseHtmlToAnnotatedString(todo.description, onOpenAttachment)
                 }
                 SelectionContainer {
                     Text(
@@ -500,6 +512,7 @@ private fun TodoDetailTabSection(
 
 @Composable
 fun DesktopHideTodoPopup(
+    todoType: AppTodoType = AppTodoType.ASSIGNMENT,
     onCancel: () -> Unit,
     onConfirm: () -> Unit,
 ) {
@@ -513,7 +526,11 @@ fun DesktopHideTodoPopup(
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         Text(
-            text = stringResource(Res.string.todo_hide_popup_title),
+            text = stringResource(when (todoType) {
+                AppTodoType.QUIZ -> Res.string.quiz_hide_popup_title
+                AppTodoType.COMMONS -> Res.string.common_hide_popup_title
+                else -> Res.string.assignment_hide_popup_title
+            }),
             style = SSUType.H4SemiBold,
             color = N600,
         )

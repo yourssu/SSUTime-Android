@@ -65,7 +65,7 @@
     <string name="main_empty_todos">제출할 과제가 없어요</string>
     <string name="main_late_submission_available">지각 제출 가능해요</string>
     <string name="main_expand_task_content_description">과제 정보 확장</string>
-    <string name="main_deadline_label">마감기한</string>
+    <string name="main_deadline_label">마감 기한</string>
     <string name="main_due_until">%1$s까지</string>
     <string name="ai_summary_title">AI 요약</string>
     <string name="ai_estimated_duration">예상 소요시간</string>
@@ -162,10 +162,10 @@
     <string name="notice_attachment_invalid_path">첨부파일 경로가 유효하지 않습니다.</string>
     <string name="todo_detail_lms_link">LMS 바로가기</string>
     <string name="todo_detail_back">뒤로가기</string>
-    <string name="todo_detail_description_tab">상세 설명</string>
-    <string name="todo_detail_ai_summary_tab">AI 요약</string>
+    <string name="todo_detail_description_tab">러닝엑스 내용</string>
+    <string name="todo_detail_ai_summary_tab">첨부파일 AI 요약</string>
     <string name="todo_detail_ai_sparkle_desc">첨부된 파일 내용을 ai가 요약했어요.</string>
-    <string name="todo_detail_late_notice">마감이 지났지만 지각 제출이 가능한 과제에요!</string>
+    <string name="todo_detail_late_notice">마감이 지났지만 지각 제출이 가능한 과제예요!</string>
     <string name="cyber_connect_title">숭실 사이버 대학 연결하기</string>
     <string name="cyber_connect_login">로그인</string>
     <string name="cyber_title">숭실 사이버 대학</string>
@@ -208,7 +208,15 @@
     <string name="calendar_day_sat">토</string>
     <string name="calendar_due_time_format">%1$d시 %2$d분까지</string>
     <string name="calendar_bottom_sheet_date_format">%1$d월 %2$d일 (%3$s)</string>
-    <string name="desktop_nav_todo">할 일</string>
-    <string name="desktop_nav_my">마이페이지</string>
+    <string name="desktop_nav_todo">홈</string>
+    <string name="desktop_nav_my">마이</string>
     <string name="desktop_profile_empty">프로필 정보가 없습니다.</string>
+    <string name="assignment_hide_popup_title">과제를 숨길까요?</string>
+    <string name="common_hide_popup_title">강의를 숨길까요?</string>
+    <string name="quiz_hide_popup_title">퀴즈를 숨길까요?</string>
+    <string name="new_todo_default_subject">공통</string>
+    <string name="new_todo_notification_title">새 할 일이 올라왔어요</string>
+    <string name="new_todo_notification_single">%1$s %2$s가 새로 올라왔어요.</string>
+    <string name="new_todo_notification_multiple">%1$s %2$s 외 %3$d건이 올라왔어요.</string>
+    <string name="todo_detail_late_submission_deadline">지각 제출 마감</string>
 </resources>

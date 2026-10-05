@@ -27,6 +27,7 @@ import com.yourssu.data.DiscussionInfo
 import com.yourssu.data.isCyber
 import com.yourssu.data.todoUniqueKey
 import com.yourssu.ssutime.desktop.ui.util.sortedByDeadlineThenName
+import com.yourssu.ssutime.desktop.ui.util.withSubmissionOrder
 import com.yourssu.ssutime.desktop.analytics.DesktopAnalytics
 import com.yourssu.ssutime.desktop.core.cyber.CyberTodoResult
 import com.yourssu.ssutime.desktop.core.cyber.DesktopCyberService
@@ -557,7 +558,7 @@ private fun DesktopApp(
                         submitted = allSubmitted,
                         subjects = allSubjects,
                         hiddenTodos = (nonCyberHidden + hiddenNewTodos).distinctBy { it.todoUniqueKey() },
-                    )
+                    ).withSubmissionOrder()
                     saveCache(nextTodoData = todoData)
                 }
                 route = previousRoute ?: DesktopRoute.MAIN
@@ -690,9 +691,9 @@ private fun DesktopApp(
                 )
                 saveCache(nextTodoData = todoData)
             }
-            val consumed = deadlineNotifier.sendNewTodosIfNeeded(todoData)
-            if (consumed.isNotEmpty()) {
-                todoData = todoData.copy(pendingNewTodoNotifications = todoData.pendingNewTodoNotifications.filterNot { it.todoKey in consumed })
+            val announcement = deadlineNotifier.sendNewTodosIfNeeded(todoData)
+            if (announcement != null) {
+                todoData = todoData.withSentNewTodoAnnouncement(announcement)
                 saveCache(nextTodoData = todoData)
             }
             delay(60_000L)
