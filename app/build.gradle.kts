@@ -45,8 +45,8 @@ android {
         applicationId = "com.yourssu.ssutime.v2"
         minSdk = 26
         targetSdk = 36
-        versionCode = 59
-        versionName = "1.2.5"
+        versionCode = 60
+        versionName = "1.2.6"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         buildConfigField(

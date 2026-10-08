@@ -55,6 +55,8 @@ import com.yourssu.ssutime.v2.screen.main.LmsRefreshRepository
 import com.yourssu.ssutime.v2.screen.main.LmsRefreshStage
 import com.yourssu.ssutime.v2.screen.main.RefreshSource
 import com.yourssu.ssutime.v2.screen.main.TodoRefreshResult
+import com.yourssu.ssutime.v2.screen.main.todo.detailDeadline
+import com.yourssu.ssutime.v2.screen.main.todo.isLateSubmissionAvailable
 import com.yourssu.ssutime.v2.screen.main.todoDataStore
 import com.yourssu.ssutime.v2.todo.TODO_DEADLINE_ZONE_ID
 import com.yourssu.ssutime.v2.todo.localizedLabel
@@ -188,16 +190,25 @@ private fun DDayTodoContent(
         contentAlignment = Alignment.BottomStart,
     ) {
         Column {
-            Text(
-                text = context.getString(R.string.widget_deadline_until),
-                style = SSUType.G_Caption2Medium.copy(color = widgetTextColor),
-            )
+            if (uiState.isLateSubmission) {
+                LateBadge(
+                    text = context.getString(R.string.widget_late_submission),
+                    fontSizeSp = 9,
+                    modifier = GlanceModifier.size(52.dp, 18.dp),
+                )
+                Spacer(GlanceModifier.height(4.dp))
+            } else {
+                Text(
+                    text = context.getString(R.string.widget_deadline_until),
+                    style = SSUType.G_Caption2Medium.copy(color = widgetTextColor),
+                )
+            }
             if (uiState.isRemainingTimeText) {
                 LiveCountdownText(
                     targetEpochMillis = uiState.countdownTargetEpochMillis,
                     fallbackText = uiState.dDayText,
                     fontSizeSp = 18,
-                    color = LiveCountdownColor.White,
+                    color = if (uiState.isLateSubmission) LiveCountdownColor.Accent else LiveCountdownColor.White,
                     modifier = GlanceModifier
                         .width(96.dp)
                         .height(24.dp),
@@ -206,7 +217,9 @@ private fun DDayTodoContent(
                 Text(
                     text = uiState.dDayText,
                     maxLines = 1,
-                    style = SSUType.G_H1SemiBold.copy(color = widgetTextColor),
+                    style = SSUType.G_H1SemiBold.copy(
+                        color = if (uiState.isLateSubmission) widgetErrorTextColor else widgetTextColor,
+                    ),
                 )
             }
 
@@ -330,16 +343,18 @@ private data class DDayWidgetUiState(
     val isRefreshing: Boolean,
     val refreshProgressMessage: String? = null,
     val refreshErrorMessage: String?,
+    val isLateSubmission: Boolean = false,
 )
 
 private fun TodoData.toWidgetUiState(context: Context): DDayWidgetUiState {
     val now = Instant.now()
     val selectedTodo = todos.selectMostUrgentTodo(now)
+    val isLateSubmission = selectedTodo?.isLateSubmissionAvailable(now) == true
     val targetInstant = selectedTodo?.let {
-        it.due_date.toTodoDeadlineInstantOrNull()
+        it.detailDeadline(now).toTodoDeadlineInstantOrNull()
     }
     val remainingDays = selectedTodo?.let {
-        getRemainingDays(it.due_date, now)
+        getRemainingDays(it.detailDeadline(now), now)
     } ?: Long.MAX_VALUE
     val remainingSeconds = targetInstant?.let {
         ChronoUnit.SECONDS.between(now, it)
@@ -365,6 +380,7 @@ private fun TodoData.toWidgetUiState(context: Context): DDayWidgetUiState {
         subjectName = selectedTodo?.subject?.name ?: context.getString(R.string.widget_no_todo),
         type = selectedTodo?.type?.localizedLabel(context)
             ?: context.getString(R.string.widget_refresh_from_app),
+        isLateSubmission = isLateSubmission,
         dDayText = selectedTodo.toDdayText(remainingDays, displayRemainingSeconds),
         isRemainingTimeText = isRemainingTimeText,
         updatedAtText = loadedAt.toUpdatedAtText(context),
@@ -374,6 +390,7 @@ private fun TodoData.toWidgetUiState(context: Context): DDayWidgetUiState {
                 loadedAt = loadedAt,
                 remainingDays = remainingDays,
                 remainingSeconds = remainingSeconds,
+                isLateSubmission = isLateSubmission,
             )
         },
         countdownTargetEpochMillis = if (isRemainingTimeText) {
@@ -388,12 +405,14 @@ private fun TodoData.toWidgetUiState(context: Context): DDayWidgetUiState {
 }
 
 internal fun List<TodoInfo>.selectMostUrgentTodo(now: Instant = Instant.now()): TodoInfo? {
-    val sorted = sortedByDeadlineThenName()
-    return sorted.firstOrNull { todo ->
-        val deadline = todo.due_date.toTodoDeadlineInstantOrNull()
-        deadline == null || deadline.isAfter(now)
-    }
+    return availableWidgetTodos(now).firstOrNull()
 }
+
+internal fun List<TodoInfo>.availableWidgetTodos(now: Instant): List<TodoInfo> =
+    sortedByDeadlineThenName().filter { todo ->
+        val deadline = todo.due_date.toTodoDeadlineInstantOrNull()
+        deadline == null || deadline.isAfter(now) || todo.isLateSubmissionAvailable(now)
+    }
 
 private fun TodoInfo?.toDdayText(remainingDays: Long, remainingSeconds: Long): String {
     if (this == null) {
@@ -425,8 +444,9 @@ private fun backgroundFor(
     loadedAt: String,
     remainingDays: Long,
     remainingSeconds: Long,
+    isLateSubmission: Boolean,
 ): Int {
-    if (remainingSeconds < 0) {
+    if (isLateSubmission || remainingSeconds < 0) {
         return R.drawable.dlate
     }
 

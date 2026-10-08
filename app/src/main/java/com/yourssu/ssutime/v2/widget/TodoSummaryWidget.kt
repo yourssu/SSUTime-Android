@@ -52,9 +52,10 @@ import com.yourssu.data.TodoInfo
 import com.yourssu.ssutime.v2.MainActivity
 import com.yourssu.ssutime.v2.R
 import com.yourssu.ssutime.v2.getStringSimpleDate
+import com.yourssu.ssutime.v2.screen.main.todo.detailDeadline
+import com.yourssu.ssutime.v2.screen.main.todo.isLateSubmissionAvailable
 import com.yourssu.ssutime.v2.screen.main.todoDataStore
 import com.yourssu.ssutime.v2.todo.localizedLabel
-import com.yourssu.ssutime.v2.todo.sortedByDeadlineThenName
 import com.yourssu.ssutime.v2.todo.toTodoDeadlineInstant
 import com.yourssu.ssutime.v2.ui.theme.SSUType
 import kotlinx.coroutines.flow.first
@@ -376,11 +377,7 @@ private fun TodoLargeContent(
                     subjectFontSize = 9,
                     typeFontSize = 14,
                     dDayFontSize = 16,
-                    dDayContainerWidth = if (item?.isLate == true) {
-                        74.dp
-                    } else {
-                        52.dp
-                    },
+                    dDayContainerWidth = 52.dp,
                     dDayTextWidth = 50.dp,
                 )
                 if (index != visibleSecondarySlots - 1) {
@@ -665,19 +662,20 @@ private fun CompactTodoSlot(
             verticalAlignment = Alignment.Vertical.CenterVertically,
             horizontalAlignment = Alignment.Horizontal.End,
         ) {
-            Text(
-                text = item.dDayText,
-                modifier = GlanceModifier.width(dDayTextWidth),
-                maxLines = 1,
-                style = SSUType.G_H4SemiBold
-                    .copy(color = summaryPrimaryText, textAlign = TextAlign.End),
-            )
-            if (item.isLate) {
-                Spacer(modifier = GlanceModifier.width(4.dp))
-                LateBadge(
-                    text = context.getString(R.string.widget_late_short),
-                    fontSizeSp = 9,
-                    modifier = GlanceModifier.size(30.dp, 18.dp),
+            Column(horizontalAlignment = Alignment.Horizontal.End) {
+                if (item.isLate) {
+                    LateBadge(
+                        text = context.getString(R.string.widget_late_short),
+                        fontSizeSp = 8,
+                        modifier = GlanceModifier.size(30.dp, 14.dp),
+                    )
+                }
+                Text(
+                    text = item.dDayText,
+                    modifier = GlanceModifier.width(dDayTextWidth),
+                    maxLines = 1,
+                    style = SSUType.G_H4SemiBold
+                        .copy(color = summaryPrimaryText, textAlign = TextAlign.End),
                 )
             }
         }
@@ -773,16 +771,15 @@ internal fun TodoData.toTodoSummaryUiState(
     size: TodoSummarySize,
 ): TodoSummaryUiState {
     val now = Instant.now()
-    val sortedTodos = todos
-        .sortedByDeadlineThenName()
+    val availableTodos = todos.availableWidgetTodos(now)
+    val sortedTodos = availableTodos
         .map { it.toTodoSummaryItem(context, now) }
 
-    sortedTodos.firstOrNull { !it.isLate }?.let { primaryItem ->
-        val dueInstant = primaryItem.countdownTargetEpochMillis?.let { Instant.ofEpochMilli(it) }
-        if (dueInstant != null) {
-            scheduleWidgetDeadlineUpdate(context, dueInstant)
-        }
-    }
+    availableTodos
+        .map { it.detailDeadline(now).toTodoDeadlineInstant() }
+        .filter { it.isAfter(now) }
+        .minOrNull()
+        ?.let { scheduleWidgetDeadlineUpdate(context, it) }
 
     return TodoSummaryUiState(
         primary = sortedTodos.firstOrNull(),
@@ -796,7 +793,7 @@ internal fun TodoData.toTodoSummaryUiState(
 }
 
 private fun TodoInfo.toTodoSummaryItem(context: Context, now: Instant): TodoSummaryItem {
-    val dueInstant = widgetDueInstant()
+    val dueInstant = detailDeadline(now).toTodoDeadlineInstant()
     val rawRemainingSeconds = ChronoUnit.SECONDS.between(now, dueInstant)
     val remainingSeconds = rawRemainingSeconds.coerceAtLeast(0L)
     val remainingDays = ChronoUnit.DAYS.between(now, dueInstant).coerceAtLeast(0L)
@@ -815,7 +812,7 @@ private fun TodoInfo.toTodoSummaryItem(context: Context, now: Instant): TodoSumm
             .toEpochMilli()
             .takeIf { rawRemainingSeconds in 1..SUMMARY_SECONDS_PER_DAY },
         dDayText = dDayText,
-        isLate = rawRemainingSeconds < 0L,
+        isLate = isLateSubmissionAvailable(now),
     )
 }
 
@@ -826,10 +823,6 @@ private fun String?.toWidgetSubjectName(context: Context): String =
         ?.trim()
         ?.takeIf { it.isNotBlank() }
         ?: context.getString(R.string.widget_no_subject)
-
-private fun TodoInfo.widgetDueInstant(): Instant {
-    return due_date.toTodoDeadlineInstant()
-}
 
 private fun Long.toSummaryCountdownText(): String {
     val hours = this / 3600
