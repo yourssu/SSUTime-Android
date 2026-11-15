@@ -419,17 +419,10 @@ private fun TodoInfo?.toDdayText(remainingDays: Long, remainingSeconds: Long): S
         return "-"
     }
     return if (remainingDays == 0L) {
-        remainingSeconds.toWidgetRemainingTimeText()
+        remainingSeconds.toLiveCountdownFallbackText()
     } else {
         "D-$remainingDays"
     }
-}
-
-private fun Long.toWidgetRemainingTimeText(): String {
-    val hours = this / 3600
-    val minutes = (this % 3600) / 60
-    val seconds = this % 60
-    return "%02d:%02d:%02d".format(hours, minutes, seconds)
 }
 
 private fun String.toUpdatedAtText(context: Context): String {

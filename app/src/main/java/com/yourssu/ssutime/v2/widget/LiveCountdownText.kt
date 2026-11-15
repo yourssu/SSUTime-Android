@@ -9,6 +9,7 @@ import androidx.glance.GlanceModifier
 import androidx.glance.LocalContext
 import androidx.glance.appwidget.AndroidRemoteViews
 import com.yourssu.ssutime.v2.R
+import java.util.Locale
 
 internal enum class LiveCountdownColor {
     Accent,
@@ -46,7 +47,7 @@ internal fun LiveCountdownText(
         if (targetEpochMillis != null && remainingMillis > 0L) {
             val base = SystemClock.elapsedRealtime() + remainingMillis
             setBoolean(R.id.widget_live_countdown, "setCountDown", true)
-            setChronometer(R.id.widget_live_countdown, base, chronometerFormat(remainingMillis), true)
+            setChronometer(R.id.widget_live_countdown, base, null, true)
         } else {
             setTextViewText(R.id.widget_live_countdown, fallbackText)
         }
@@ -84,11 +85,14 @@ internal fun LateBadge(
     )
 }
 
-private fun chronometerFormat(remainingMillis: Long): String? =
-    when (remainingMillis / HOUR_MILLIS) {
-        0L -> "00:%s"
-        in 1L..9L -> "0%s"
-        else -> null
+internal fun Long.toLiveCountdownFallbackText(): String {
+    val safeSeconds = coerceAtLeast(0L)
+    val hours = safeSeconds / 3600
+    val minutes = (safeSeconds % 3600) / 60
+    val seconds = safeSeconds % 60
+    return if (hours > 0L) {
+        String.format(Locale.US, "%d:%02d:%02d", hours, minutes, seconds)
+    } else {
+        String.format(Locale.US, "%02d:%02d", minutes, seconds)
     }
-
-private const val HOUR_MILLIS = 60 * 60 * 1000L
+}

@@ -804,7 +804,7 @@ private fun TodoInfo.toTodoSummaryItem(context: Context, now: Instant): TodoSumm
         title = title.takeIf { it.isNotBlank() } ?: type.localizedLabel(context),
         type = type.localizedLabel(context),
         countdownText = if (remainingSeconds <= SUMMARY_SECONDS_PER_DAY) {
-            remainingSeconds.toSummaryCountdownText()
+            remainingSeconds.toLiveCountdownFallbackText()
         } else {
             dDayText
         },
@@ -823,13 +823,6 @@ private fun String?.toWidgetSubjectName(context: Context): String =
         ?.trim()
         ?.takeIf { it.isNotBlank() }
         ?: context.getString(R.string.widget_no_subject)
-
-private fun Long.toSummaryCountdownText(): String {
-    val hours = this / 3600
-    val minutes = (this % 3600) / 60
-    val seconds = this % 60
-    return String.format(Locale.US, "%02d:%02d:%02d", hours, minutes, seconds)
-}
 
 private fun String.toSummaryUpdatedAtText(context: Context): String {
     if (isBlank()) {
