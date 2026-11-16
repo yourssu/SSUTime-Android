@@ -1,8 +1,6 @@
 package com.yourssu.ssutime.v2.screen.main
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.basicMarquee
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -20,8 +18,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
-import androidx.compose.material.icons.outlined.AttachFile
-import androidx.compose.material.icons.outlined.FileDownload
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -38,6 +34,7 @@ import com.yourssu.data.TodoInfo
 import com.yourssu.data.TodoType
 import com.yourssu.ssutime.v2.R
 import com.yourssu.ssutime.v2.analytics.Analytics
+import com.yourssu.ssutime.v2.component.AttachmentItemCard
 import com.yourssu.ssutime.v2.todo.localizedLabel
 import com.yourssu.ssutime.v2.ui.theme.BLACK
 import com.yourssu.ssutime.v2.ui.theme.G100
@@ -198,57 +195,20 @@ fun SubmittedItem(
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 todoInfo.attachments.forEach { item ->
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(8.dp))
-                            .border(1.dp, N200, RoundedCornerShape(8.dp))
-                            .background(WHITE)
-                            .clickable {
-                                Analytics.submittedAttachmentDownload()
-                                if (item.url.isNotBlank()) {
-                                    runCatching {
-                                        uriHandler.openUri(item.url)
-                                    }
+                    AttachmentItemCard(
+                        fileName = item.display_name,
+                        trailingText = item.size.toSimply(),
+                        useMarquee = true,
+                        downloadContentDescription = "${item.display_name} ${stringResource(R.string.common_download)}",
+                        onClick = {
+                            Analytics.submittedAttachmentDownload()
+                            if (item.url.isNotBlank()) {
+                                runCatching {
+                                    uriHandler.openUri(item.url)
                                 }
                             }
-                            .padding(horizontal = 16.dp, vertical = 14.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = Icons.Outlined.AttachFile,
-                            contentDescription = stringResource(R.string.common_attachment),
-                            tint = N400,
-                            modifier = Modifier.size(20.dp)
-                        )
-
-                        Spacer(modifier = Modifier.width(8.dp))
-
-                        Text(
-                            text = item.display_name,
-                            style = SSUType.Label2Medium,
-                            color = N500,
-                            maxLines = 1,
-                            modifier = Modifier.weight(1f).basicMarquee()
-                        )
-
-                        Spacer(modifier = Modifier.width(8.dp))
-
-                        Text(
-                            text = item.size.toSimply(),
-                            style = SSUType.Caption1Medium,
-                            color = N400,
-                        )
-
-                        Spacer(modifier = Modifier.width(8.dp))
-
-                        Icon(
-                            imageVector = Icons.Outlined.FileDownload,
-                            contentDescription = "${item.display_name} ${stringResource(R.string.common_download)}",
-                            tint = N400,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
+                        },
+                    )
                 }
             }
         }

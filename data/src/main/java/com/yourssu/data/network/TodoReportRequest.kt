@@ -1,6 +1,7 @@
 package com.yourssu.data.network
 
 import com.yourssu.data.TodoInfo
+import com.yourssu.data.effectiveSubjectId
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -14,7 +15,7 @@ data class TodoReportRequest(
 
 fun TodoInfo.toTodoReportRequest(): TodoReportRequest =
     TodoReportRequest(
-        subjectId = (subject?.id ?: subjectId).toLong(),
+        subjectId = effectiveSubjectId.toLong(),
         materialCode = todoId.toLong(),
         type = type.name,
         dueDate = due_date,

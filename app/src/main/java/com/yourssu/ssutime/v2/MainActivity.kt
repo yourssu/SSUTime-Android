@@ -1,7 +1,6 @@
 package com.yourssu.ssutime.v2
 
 import android.content.Intent
-import android.net.Uri
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
@@ -9,8 +8,6 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.ActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.EnterTransition
-import androidx.compose.animation.ExitTransition
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -45,7 +42,6 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
-import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.google.android.play.core.appupdate.AppUpdateInfo
@@ -57,6 +53,8 @@ import com.yourssu.data.SubjectInfo
 import com.yourssu.data.TodoInfo
 import com.yourssu.data.TodoType
 import com.yourssu.ssutime.v2.analytics.Analytics
+import com.yourssu.ssutime.v2.component.NoTransitionNavHost
+import com.yourssu.ssutime.v2.component.openExternalUrl
 import com.yourssu.ssutime.v2.screen.cyber.CyberLoginScreen
 import com.yourssu.ssutime.v2.screen.cyber.CyberLoginViewModel
 import com.yourssu.ssutime.v2.screen.login.LoginScreen
@@ -66,6 +64,7 @@ import com.yourssu.ssutime.v2.screen.onboarding.OnBoardingRepository
 import com.yourssu.ssutime.v2.screen.onboarding.OnBoardingScreen
 import com.yourssu.ssutime.v2.screen.splash.Screens
 import com.yourssu.ssutime.v2.screen.splash.SplashScreen
+import com.yourssu.ssutime.v2.todo.toTodoTypeOrNull
 import com.yourssu.ssutime.v2.ui.theme.BLACK
 import com.yourssu.ssutime.v2.ui.theme.N500
 import com.yourssu.ssutime.v2.ui.theme.R100
@@ -135,17 +134,12 @@ class MainActivity : ComponentActivity() {
             val navController = rememberNavController()
 
             SSUTimeTheme {
-                NavHost(
+                NoTransitionNavHost(
                     navController = navController,
                     startDestination = Screens.SPLASH.name,
-                    enterTransition = { EnterTransition.None },
-                    exitTransition = { ExitTransition.None },
-                    popEnterTransition = { EnterTransition.None },
-                    popExitTransition = { ExitTransition.None },
                     modifier = Modifier
                         .fillMaxSize()
                         .background(WHITE)
-//                            .safeDrawingPadding()
                 ) {
                     composable(route = Screens.SPLASH.name) {
                         SplashScreen(
@@ -258,13 +252,11 @@ class MainActivity : ComponentActivity() {
                                 }
                             },
                             onFindIdClick = {
-                                runCatching {
-                                    val intent = Intent(
-                                        Intent.ACTION_VIEW,
-                                        Uri.parse("https://portal.kcu.ac/findId/findId.do")
-                                    )
-                                    context.startActivity(intent)
-                                }
+                                context.openExternalUrl(
+                                    url = "https://portal.kcu.ac/findId/findId.do",
+                                    addNewTaskFlag = false,
+                                    showNoAppToast = false,
+                                )
                             },
                         )
                     }
@@ -386,11 +378,6 @@ private fun Intent.notificationRepresentativeTodo(): TodoInfo? {
         ).takeIf { subjectName.isNotBlank() },
     )
 }
-
-private fun String?.toTodoTypeOrNull(): TodoType? =
-    TodoType.values().firstOrNull { type ->
-        equals(type.name, ignoreCase = true) || this == type.kor
-    }
 
 
 

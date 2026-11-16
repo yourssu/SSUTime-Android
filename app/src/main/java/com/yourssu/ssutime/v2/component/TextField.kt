@@ -29,35 +29,17 @@ fun STextField(
     placeholder: String,
 ) {
     BasicTextField(
-        modifier = Modifier
-            .clip(
-                shape = RoundedCornerShape(10.dp)
-            )
-            .background(N100)
-            .padding(
-                vertical = 20.dp,
-                horizontal = 22.dp
-            )
-            .height(20.dp),
+        modifier = sTextFieldModifier(),
         lineLimits = TextFieldLineLimits.SingleLine,
         textStyle = SSUType.Label2Medium.copy(color = N700),
         state = state,
         decorator = { innerTextField ->
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth(),
-                contentAlignment = Alignment.CenterStart
-            ) {
-                if (state.text.isEmpty()) {
-                    Text(
-                        text = placeholder,
-                        style = SSUType.Label2Medium.copy(color = N400)
-                    )
-                }
-
-                innerTextField()
-            }
-        }
+            STextFieldDecoratorContent(
+                state = state,
+                placeholder = placeholder,
+                innerTextField = innerTextField,
+            )
+        },
     )
 }
 
@@ -67,35 +49,43 @@ fun SSecureTextField(
     placeholder: String,
 ) {
     BasicSecureTextField(
-        modifier = Modifier
-            .clip(
-                shape = RoundedCornerShape(10.dp)
-            )
-            .background(N100)
-            .padding(
-                vertical = 20.dp,
-                horizontal = 22.dp
-            )
-            .height(20.dp),
+        modifier = sTextFieldModifier(),
         textStyle = SSUType.Label2Medium.copy(color = N700),
         state = state,
         decorator = { innerTextField ->
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth(),
-                contentAlignment = Alignment.CenterStart
-            ) {
-                if (state.text.isEmpty()) {
-                    Text(
-                        text = placeholder,
-                        style = SSUType.Label2Medium.copy(color = N400)
-                    )
-                }
-
-                innerTextField()
-            }
-        }
+            STextFieldDecoratorContent(
+                state = state,
+                placeholder = placeholder,
+                innerTextField = innerTextField,
+            )
+        },
     )
+}
+
+private fun sTextFieldModifier(): Modifier = Modifier
+    .clip(shape = RoundedCornerShape(10.dp))
+    .background(N100)
+    .padding(vertical = 20.dp, horizontal = 22.dp)
+    .height(20.dp)
+
+@Composable
+private fun STextFieldDecoratorContent(
+    state: TextFieldState,
+    placeholder: String,
+    innerTextField: @Composable () -> Unit,
+) {
+    Box(
+        modifier = Modifier.fillMaxWidth(),
+        contentAlignment = Alignment.CenterStart,
+    ) {
+        if (state.text.isEmpty()) {
+            Text(
+                text = placeholder,
+                style = SSUType.Label2Medium.copy(color = N400),
+            )
+        }
+        innerTextField()
+    }
 }
 
 

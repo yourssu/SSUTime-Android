@@ -10,7 +10,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.glance.GlanceComposable
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
@@ -43,15 +42,12 @@ import androidx.glance.layout.height
 import androidx.glance.layout.padding
 import androidx.glance.layout.size
 import androidx.glance.layout.width
-import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextAlign
-import androidx.glance.text.TextStyle
 import com.yourssu.data.TodoData
 import com.yourssu.data.TodoInfo
 import com.yourssu.ssutime.v2.MainActivity
 import com.yourssu.ssutime.v2.R
-import com.yourssu.ssutime.v2.getStringSimpleDate
 import com.yourssu.ssutime.v2.screen.main.todo.detailDeadline
 import com.yourssu.ssutime.v2.screen.main.todo.isLateSubmissionAvailable
 import com.yourssu.ssutime.v2.screen.main.todoDataStore
@@ -277,9 +273,6 @@ private fun TodoMediumContent(
                 height = if (useCompactHeight) 52.dp else 58.dp,
                 showSubject = false,
                 showTitle = true,
-                subjectFontSize = 8,
-                titleFontSize = 11,
-                typeFontSize = 11,
                 horizontalPadding = 4.dp,
                 verticalPadding = 5.dp,
             )
@@ -300,9 +293,6 @@ private fun TodoMediumContent(
             CompactTodoSlot(
                 item = uiState.items.getOrNull(1),
                 height = 44.dp,
-                subjectFontSize = 9,
-                typeFontSize = 14,
-                dDayFontSize = 16,
                 dDayContainerWidth = 52.dp,
                 dDayTextWidth = 50.dp,
             )
@@ -310,9 +300,6 @@ private fun TodoMediumContent(
             CompactTodoSlot(
                 item = uiState.items.getOrNull(2),
                 height = 44.dp,
-                subjectFontSize = 9,
-                typeFontSize = 14,
-                dDayFontSize = 16,
                 dDayContainerWidth = 52.dp,
                 dDayTextWidth = 50.dp,
             )
@@ -320,7 +307,6 @@ private fun TodoMediumContent(
             MoreTodosText(
                 count = uiState.hiddenCount,
                 height = 14.dp,
-                fontSize = 10,
                 barHeight = 12.dp,
             )
         }
@@ -357,9 +343,6 @@ private fun TodoLargeContent(
             height = 66.dp,
             showSubject = true,
             showTitle = true,
-            subjectFontSize = 10,
-            titleFontSize = 12,
-            typeFontSize = 12,
             horizontalPadding = 4.dp,
             verticalPadding = 5.dp,
         )
@@ -375,9 +358,6 @@ private fun TodoLargeContent(
                 CompactTodoSlot(
                     item = item,
                     height = 36.dp,
-                    subjectFontSize = 9,
-                    typeFontSize = 14,
-                    dDayFontSize = 16,
                     dDayContainerWidth = 52.dp,
                     dDayTextWidth = 50.dp,
                 )
@@ -390,7 +370,6 @@ private fun TodoLargeContent(
         MoreTodosText(
             count = moreCount,
             height = 14.dp,
-            fontSize = 10,
             barHeight = 12.dp,
         )
         Spacer(modifier = GlanceModifier.height(4.dp))
@@ -553,9 +532,6 @@ private fun PrimaryTodoCard(
     height: Dp,
     showSubject: Boolean,
     showTitle: Boolean,
-    subjectFontSize: Int,
-    titleFontSize: Int,
-    typeFontSize: Int,
     horizontalPadding: Dp,
     verticalPadding: Dp,
 ) {
@@ -611,9 +587,6 @@ private fun PrimaryTodoCard(
 private fun CompactTodoSlot(
     item: TodoSummaryItem?,
     height: Dp,
-    subjectFontSize: Int,
-    typeFontSize: Int,
-    dDayFontSize: Int,
     dDayContainerWidth: Dp,
     dDayTextWidth: Dp,
 ) {
@@ -707,7 +680,6 @@ private fun WidgetUpdatedAt(
 private fun MoreTodosText(
     count: Int,
     height: Dp,
-    fontSize: Int,
     barHeight: Dp,
 ) {
     val context = LocalContext.current
@@ -795,7 +767,7 @@ internal fun TodoData.toTodoSummaryUiState(
         primary = sortedTodos.firstOrNull(),
         items = sortedTodos.take(size.visibleTodoCount),
         hiddenCount = (sortedTodos.size - size.visibleTodoCount).coerceAtLeast(0),
-        updatedAtText = loadedAt.toSummaryUpdatedAtText(context),
+        updatedAtText = loadedAt.toWidgetUpdatedAtText(context, R.string.widget_updated_at_base),
         isRefreshing = isWidgetRefreshing,
         refreshProgressMessage = widgetRefreshProgressMessage,
         refreshErrorMessage = widgetRefreshErrorMessage,
@@ -833,22 +805,3 @@ private fun String?.toWidgetSubjectName(context: Context): String =
         ?.trim()
         ?.takeIf { it.isNotBlank() }
         ?: context.getString(R.string.widget_no_subject)
-
-private fun String.toSummaryUpdatedAtText(context: Context): String {
-    if (isBlank()) {
-        return context.getString(R.string.widget_updated_before)
-    }
-    return context.getString(R.string.widget_updated_at_base, getStringSimpleDate(context, this))
-}
-
-private fun summaryTextStyle(
-    fontSize: Int,
-    fontWeight: FontWeight,
-    color: androidx.glance.unit.ColorProvider,
-    textAlign: TextAlign? = null,
-): TextStyle = TextStyle(
-    fontSize = fontSize.sp,
-    fontWeight = fontWeight,
-    color = color,
-    textAlign = textAlign,
-)

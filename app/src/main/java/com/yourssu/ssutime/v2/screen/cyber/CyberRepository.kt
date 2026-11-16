@@ -58,12 +58,7 @@ class CyberRepository(
         }
         // 사이버대학교 투두 및 과목 제거
         mainRepository.updateTodoData { currentData ->
-            currentData.copy(
-                todos = currentData.todos.filterNot { it.isCyber() },
-                submitted = currentData.submitted.filterNot { it.isCyber() },
-                subjects = currentData.subjects.filterNot { it.id < 0 },
-                hiddenTodos = currentData.hiddenTodos.filterNot { it.isCyber() },
-            )
+            currentData.withoutCyberData()
         }
     }
 
@@ -112,8 +107,7 @@ class CyberRepository(
             val subjectInfos = cyberSubjects.map { CyberTodoMapper.mapToSubjectInfo(it) }
 
             coroutineScope {
-                val deferredList = cyberSubjects.map { subject ->
-                    val subjectInfo = CyberTodoMapper.mapToSubjectInfo(subject)
+                val deferredList = cyberSubjects.zip(subjectInfos).map { (subject, subjectInfo) ->
                     async {
                         runCatching {
                             val weeks = CyberApi.getWeeklyLectures(subject)
@@ -161,25 +155,29 @@ class CyberRepository(
 
         mainRepository.updateTodoData { currentData ->
             // 기존 사이버대 투두/과목을 먼저 제거한 후 새로운 데이터로 병합
-            val nonCyberTodos = currentData.todos.filterNot { it.isCyber() }
-            val nonCyberSubmitted = currentData.submitted.filterNot { it.isCyber() }
-            val nonCyberSubjects = currentData.subjects.filterNot { it.id < 0 }
-            val nonCyberHiddenTodos = currentData.hiddenTodos.filterNot { it.isCyber() }
+            val cleaned = currentData.withoutCyberData()
 
             val (hiddenCyberTodos, visibleCyberTodos) = result.todos.partition {
                 it.todoUniqueKey() in currentData.hiddenTodoKeys
             }
-            val mergedTodos = (nonCyberTodos + visibleCyberTodos)
-            val mergedSubmitted = (nonCyberSubmitted + result.submitted)
-            val mergedSubjects = (nonCyberSubjects + result.subjects).distinctBy { it.id }
+            val mergedTodos = cleaned.todos + visibleCyberTodos
+            val mergedSubmitted = cleaned.submitted + result.submitted
+            val mergedSubjects = (cleaned.subjects + result.subjects).distinctBy { it.id }
 
             currentData.copy(
                 todos = mergedTodos,
                 submitted = mergedSubmitted,
                 subjects = mergedSubjects,
-                hiddenTodos = nonCyberHiddenTodos + hiddenCyberTodos,
+                hiddenTodos = cleaned.hiddenTodos + hiddenCyberTodos,
             )
         }
     }
+
+    private fun com.yourssu.data.TodoData.withoutCyberData() = copy(
+        todos = todos.filterNot { it.isCyber() },
+        submitted = submitted.filterNot { it.isCyber() },
+        subjects = subjects.filterNot { it.id < 0 },
+        hiddenTodos = hiddenTodos.filterNot { it.isCyber() },
+    )
 }
 

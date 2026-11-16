@@ -64,20 +64,6 @@ fun SButton_Small(
         text = labelText,
         style = textStyle.copy(color = WHITE)
     )
-//    Button(
-//        colors = ButtonDefaults.buttonColors(
-//            disabledContentColor = WHITE,
-//            disabledContainerColor = N300,
-//            containerColor = R500
-//        ),
-//        enabled = enable,
-//        modifier = modifier,
-//        contentPadding = PaddingValues(vertical = 0.dp, horizontal = 12.dp),
-//        onClick = onClick,
-//        shape = RoundedCornerShape(8.dp)
-//    ) {
-//
-//    }
 }
 
 @Preview

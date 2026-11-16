@@ -1,8 +1,6 @@
 package com.yourssu.ssutime.v2.screen.main
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.EnterTransition
-import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
@@ -23,13 +21,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavGraph.Companion.findStartDestination
-import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.yourssu.data.CyberLoginData
 import com.yourssu.ssutime.v2.MainActivity
 import com.yourssu.ssutime.v2.analytics.Analytics
+import com.yourssu.ssutime.v2.component.NoTransitionNavHost
 import com.yourssu.ssutime.v2.component.SSUCyberConnectPopup
 import com.yourssu.ssutime.v2.component.SSUTimeBottomBar
 import com.yourssu.ssutime.v2.screen.calendar.CalendarScreen
@@ -106,13 +104,9 @@ fun MainContainerScreen(
                 .fillMaxSize()
                 .padding(bottom = innerPadding.calculateBottomPadding())
         ) {
-            NavHost(
+            NoTransitionNavHost(
                 navController = bottomNavController,
                 startDestination = MainTab.startDestination.route,
-                enterTransition = { EnterTransition.None },
-                exitTransition = { ExitTransition.None },
-                popEnterTransition = { EnterTransition.None },
-                popExitTransition = { ExitTransition.None },
                 modifier = Modifier.fillMaxSize(),
             ) {
                 composable(route = MainTab.HOME.route) {

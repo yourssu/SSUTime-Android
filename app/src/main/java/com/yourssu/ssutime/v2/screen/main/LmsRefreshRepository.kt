@@ -10,6 +10,7 @@ import com.yourssu.data.SubjectInfo
 import com.yourssu.data.TodoData
 import com.yourssu.data.TodoInfo
 import com.yourssu.data.TodoType
+import com.yourssu.data.effectiveSubjectId
 import com.yourssu.data.isCyber
 import com.yourssu.data.network.LmsSessionCookieRequest
 import com.yourssu.data.network.LmsSessionRequest
@@ -19,6 +20,7 @@ import com.yourssu.data.todoUniqueKey
 import com.yourssu.ssutime.v2.accessToken
 import com.yourssu.ssutime.v2.analytics.Analytics
 import com.yourssu.ssutime.v2.analytics.SentryExceptionReporter
+import com.yourssu.ssutime.v2.component.withoutTrailingNumericSuffix
 import com.yourssu.ssutime.v2.lms.ensureLmsLoggedIn
 import com.yourssu.ssutime.v2.lms.getLmsCookies
 import com.yourssu.ssutime.v2.lms.getLmsTerms
@@ -29,8 +31,10 @@ import com.yourssu.ssutime.v2.screen.cyber.CyberTodoResult
 import com.yourssu.ssutime.v2.screen.login.LoginRepository
 import com.yourssu.ssutime.v2.todo.sortedByDeadlineThenName
 import com.yourssu.ssutime.v2.todo.sortedBySubmittedAtDescending
+import com.yourssu.ssutime.v2.todo.toInstantOrNull
 import com.yourssu.ssutime.v2.todo.toTodoDeadlineInstantOrNull
 import io.github.chlwhdtn03.LmsApi
+import io.github.chlwhdtn03.data.Lms.Attachment
 import io.github.chlwhdtn03.data.Lms.Subject
 import io.github.chlwhdtn03.data.Lms.Submission
 import io.github.chlwhdtn03.data.Lms.Term
@@ -66,7 +70,6 @@ private val NEW_TODO_NOTIFICATION_TYPES = setOf(
 private const val LMS_API_TOKEN_ERROR_MESSAGE = "API 토큰값을 불러오지 못했습니다. 다시 시도해주세요."
 private const val LMS_API_TOKEN_MAX_RETRIES = 2
 private val BACKGROUND_REFRESH_LOCK_WINDOW: Duration = Duration.ofMinutes(3)
-private val TRAILING_COURSE_NUMBER = Regex("\\s*\\(\\d+\\)\\s*$")
 
 sealed interface LmsRefreshStage {
     data object LoggingIn : LmsRefreshStage
@@ -201,13 +204,7 @@ class LmsRefreshRepository(
         )
         val subjects = fetchSubjects(term, loginData, loadingState)
         val previousData = mainRepository.getTodoData()
-        val locallyReadDiscussionIds = (
-            previousData.readDiscussionIds +
-            previousData.subjects
-                .flatMap { it.discussions }
-                .filter { it.readState.equals("read", ignoreCase = true) }
-                .map { it.id }
-        ).toSet()
+        val locallyReadDiscussionIds = previousData.collectLocallyReadDiscussionIds()
         val subjectInfos = buildSubjectInfos(subjects, locallyReadDiscussionIds)
         buildTodoData(
             subjects = subjects,
@@ -297,44 +294,27 @@ class LmsRefreshRepository(
         loginIfNeeded(source, loginData, forceLogin)
 
         onRefreshStage(LmsRefreshStage.LoadingTerms)
-        var terms: List<Term>
-        var currentTerm: Term?
-        try {
-            terms = getLmsTerms()
-            currentTerm = terms.currentTermAt(Clock.System.now())
-        } catch (e: Exception) {
-            if (loginData.hasAutoLoginCredentials) {
-                Log.i(TAG, "LMS 세션 만료 의심으로 재로그인 후 재시도합니다.")
-                loginIfNeeded(source, loginData, forceLogin = true)
-                terms = getLmsTerms()
-                currentTerm = terms.currentTermAt(Clock.System.now())
-            } else {
-                throw e
-            }
+        val (terms, currentTerm) = withReloginRetry(
+            source = source,
+            loginData = loginData,
+            retryLogMessage = "LMS 세션 만료 의심으로 재로그인 후 재시도합니다.",
+        ) {
+            val loadedTerms = getLmsTerms()
+            loadedTerms to loadedTerms.currentTermAt(Clock.System.now())
         }
         if (currentTerm == null) {
             throw IllegalStateException("현재 진행 중인 학기 정보를 찾지 못했어요.")
         }
         onRefreshStage(LmsRefreshStage.LoadingSubjects(currentTerm.name.orEmpty()))
-        val subjects = try {
+        val subjects = withReloginRetry(
+            source = source,
+            loginData = loginData,
+            retryLogMessage = "과목 조회 실패로 재로그인 후 재시도합니다.",
+        ) {
             fetchSubjects(currentTerm, loginData, loadingState)
-        } catch (e: Exception) {
-            if (loginData.hasAutoLoginCredentials) {
-                Log.i(TAG, "과목 조회 실패로 재로그인 후 재시도합니다.")
-                loginIfNeeded(source, loginData, forceLogin = true)
-                fetchSubjects(currentTerm, loginData, loadingState)
-            } else {
-                throw e
-            }
         }
         val cachedData = mainRepository.getTodoData()
-        val locallyReadDiscussionIds = (
-            cachedData.readDiscussionIds +
-            cachedData.subjects
-                .flatMap { it.discussions }
-                .filter { it.readState.equals("read", ignoreCase = true) }
-                .map { it.id }
-        ).toSet()
+        val locallyReadDiscussionIds = cachedData.collectLocallyReadDiscussionIds()
         val subjectInfos = buildSubjectInfos(subjects, locallyReadDiscussionIds)
         val completedAt = Instant.now()
         val cyberLoginData = cyberRepository.getLoginData()
@@ -382,7 +362,7 @@ class LmsRefreshRepository(
             subjectInfos = subjectInfos.filter { it.id > 0 },
             semester = currentTerm.toString(),
             todos = (todoData.todos + todoData.submitted.filter { it.isReportableSubmission })
-                .filter { (it.subject?.id ?: it.subjectId) > 0 },
+                .filter { it.effectiveSubjectId > 0 },
             loginData,
         )
         TodoRefreshResult.Success(todoData, summary).also {
@@ -513,60 +493,77 @@ class LmsRefreshRepository(
         }
     }
 
+    private suspend fun <T> withReloginRetry(
+        source: RefreshSource,
+        loginData: LoginData,
+        retryLogMessage: String,
+        block: suspend () -> T,
+    ): T = try {
+        block()
+    } catch (e: Exception) {
+        if (e is CancellationException || !loginData.hasAutoLoginCredentials) throw e
+        Log.i(TAG, retryLogMessage)
+        loginIfNeeded(source, loginData, forceLogin = true)
+        block()
+    }
+
     private suspend fun reportEnrollmentsToBackend(
         subjects: List<SubjectInfo>,
         semester: String,
         loginData: LoginData,
-    ) {
-        if (subjects.isEmpty() || !prepareBackendToken(loginData)) {
-            return
-        }
-
-        var tokenRefreshAttempted = false
-        subjects.forEach { subject ->
-            runCatching {
-                var status = apiRepository.addEnrollment(subject.toAddEnrollmentRequest(semester))
-                if (status.isAuthFailure() && !tokenRefreshAttempted) {
-                    tokenRefreshAttempted = true
-                    if (refreshBackendToken(loginData)) {
-                        status = apiRepository.addEnrollment(subject.toAddEnrollmentRequest(semester))
-                    }
-                }
-
-                if (status.value !in 200..299 && status != HttpStatusCode.Conflict) {
-                    Log.w(TAG, "Enrollment 백엔드 등록 실패: ${subject.name}, status=$status")
-                }
-            }.onFailure { exception ->
-                SentryExceptionReporter.capture(exception)
-                Log.e(TAG, "Enrollment 백엔드 등록 중 오류가 발생했습니다: ${subject.name}", exception)
-            }
-        }
+    ) = reportItemsToBackend(
+        items = subjects,
+        loginData = loginData,
+        actionName = "Enrollment 백엔드 등록",
+        itemLabel = { it.name },
+        isSuccessStatus = { it.value in 200..299 || it == HttpStatusCode.Conflict },
+    ) { subject ->
+        apiRepository.addEnrollment(subject.toAddEnrollmentRequest(semester))
     }
 
-    private suspend fun reportTodosToBackend(todos: List<TodoInfo>, loginData: LoginData) {
-        if (todos.isEmpty() || !prepareBackendToken(loginData)) {
+    private suspend fun reportTodosToBackend(todos: List<TodoInfo>, loginData: LoginData) =
+        reportItemsToBackend(
+            items = todos,
+            loginData = loginData,
+            actionName = "Todo 백엔드 제보",
+            itemLabel = { it.title },
+            onFailureLog = { todo -> Log.w(TAG, todo.toTodoReportRequest().toString()) },
+        ) { todo ->
+            apiRepository.reportTodo(todo.toTodoReportRequest())
+        }
+
+    private suspend fun <T> reportItemsToBackend(
+        items: List<T>,
+        loginData: LoginData,
+        actionName: String,
+        itemLabel: (T) -> String,
+        isSuccessStatus: (HttpStatusCode) -> Boolean = { it.value in 200..299 },
+        onFailureLog: (T) -> Unit = {},
+        send: suspend (T) -> HttpStatusCode,
+    ) {
+        if (items.isEmpty() || !prepareBackendToken(loginData)) {
             return
         }
 
         var tokenRefreshAttempted = false
-        todos.forEach { todo ->
+        items.forEach { item ->
+            val label = itemLabel(item)
             runCatching {
-                val request = todo.toTodoReportRequest()
-                var status = apiRepository.reportTodo(request)
+                var status = send(item)
                 if (status.isAuthFailure() && !tokenRefreshAttempted) {
                     tokenRefreshAttempted = true
                     if (refreshBackendToken(loginData)) {
-                        status = apiRepository.reportTodo(request)
+                        status = send(item)
                     }
                 }
 
-                if (status.value !in 200..299) {
-                    Log.w(TAG, "Todo 백엔드 제보 실패: ${todo.title}, status=$status")
-                    Log.w(TAG, request.toString())
+                if (!isSuccessStatus(status)) {
+                    Log.w(TAG, "$actionName 실패: $label, status=$status")
+                    onFailureLog(item)
                 }
             }.onFailure { exception ->
                 SentryExceptionReporter.capture(exception)
-                Log.e(TAG, "Todo 백엔드 제보 중 오류가 발생했습니다: ${todo.title}", exception)
+                Log.e(TAG, "$actionName 중 오류가 발생했습니다: $label", exception)
             }
         }
     }
@@ -663,23 +660,8 @@ class LmsRefreshRepository(
                     duration = todo.durationOfVideo ?: -1.0,
                     componentId = todo.component_id ?: -1,
                     moduleItemId = todo.moduleItemId ?: -1,
-                    attachments = todo.attachments?.map {
-                        AttachmentInfo(
-                            id = it.id,
-                            uuid = it.uuid,
-                            folder_id = it.folder_id,
-                            display_name = it.display_name,
-                            file_name = it.file_name,
-                            content_type = it.content_type,
-                            size = it.size,
-                            url = it.url,
-                            thumbnail_url = it.thumbnail_url,
-                            created_at = it.created_at,
-                            updated_at = it.modified_at,
-                            modified_at = it.modified_at,
-                            mime_class = it.mime_class
-                        )
-                    } ?: emptyList(),
+                    attachments = todo.attachments?.map { it.toAttachmentInfo(useModifiedAtAsUpdatedAt = true) }
+                        ?: emptyList(),
                 )
             }
         }
@@ -708,23 +690,7 @@ class LmsRefreshRepository(
                         subject = subjectInfoById[subject.id],
                         submittedAt = todo.submitted_at.orEmpty(),
                         url = todo.url.orEmpty(),
-                        attachments = todo.attachments?.map {
-                            AttachmentInfo(
-                                id = it.id,
-                                uuid = it.uuid,
-                                folder_id = it.folder_id,
-                                display_name = it.display_name,
-                                file_name = it.file_name,
-                                content_type = it.content_type,
-                                size = it.size,
-                                url = it.url,
-                                thumbnail_url = it.thumbnail_url,
-                                created_at = it.created_at,
-                                updated_at = it.updated_at,
-                                modified_at = it.modified_at,
-                                mime_class = it.mime_class
-                            )
-                        } ?: emptyList(),
+                        attachments = todo.attachments?.map { it.toAttachmentInfo() } ?: emptyList(),
                     )
                 }
         }
@@ -735,13 +701,7 @@ class LmsRefreshRepository(
             reportedSubmitted.sortedBySubmittedAtDescending()
         }
 
-        val locallyReadDiscussionIds = (
-            previousData.readDiscussionIds +
-            previousData.subjects
-                .flatMap { it.discussions }
-                .filter { it.readState.equals("read", ignoreCase = true) }
-                .map { it.id }
-        ).toSet()
+        val locallyReadDiscussionIds = previousData.collectLocallyReadDiscussionIds()
 
         val lmsSubjectInfos = buildSubjectInfos(subjects, locallyReadDiscussionIds)
         val allSubjectInfos = if (isCyberConnected) {
@@ -754,30 +714,21 @@ class LmsRefreshRepository(
         val currentSubjectIds = subjects.map { it.id }.toSet()
         val cyberSubjectIds = if (isCyberConnected) cyberResult.subjects.map { it.id }.toSet() else emptySet()
         val allCurrentSubjectIds = currentSubjectIds + cyberSubjectIds
+        val isCyberComplete = isCyberConnected && cyberResult.isComplete
         val currentNow = Instant.now()
 
         // 1. 미완료 할 일 스마트 머지: 네트워크 일시 누락으로 빠진 미완료 할 일 보존
         val previousCandidateTodos = previousData.todos + previousData.hiddenTodos
-        val preservedTodos = previousCandidateTodos.filter { prevTodo ->
-            // 완전한 사이버대 조회에서는 응답에 없는 항목을 삭제된 것으로 처리합니다.
-            if (isCyberConnected && cyberResult.isComplete && prevTodo.isCyber()) return@filter false
-
-            val sid = prevTodo.subject?.id ?: prevTodo.subjectId
-            if (sid !in allCurrentSubjectIds) return@filter false
-
-            if (allTodos.any { isSameTodoItem(it, prevTodo) }) return@filter false
-            if (allSubmitted.any { isSameTodoItem(it, prevTodo) }) return@filter false
+        val preservedTodos = previousCandidateTodos.preserveMissingItems(
+            isCyberComplete = isCyberComplete,
+            allCurrentSubjectIds = allCurrentSubjectIds,
+            subjectInfoById = subjectInfoById,
+        ) { prevTodo ->
+            if (allTodos.any { isSameTodoItem(it, prevTodo) }) return@preserveMissingItems false
+            if (allSubmitted.any { isSameTodoItem(it, prevTodo) }) return@preserveMissingItems false
 
             val deadlineInstant = prevTodo.due_date.toTodoDeadlineInstantOrNull()
-            if (deadlineInstant != null && deadlineInstant.isBefore(currentNow)) {
-                return@filter false
-            }
-
-            true
-        }.map { todo ->
-            val sid = todo.subject?.id ?: todo.subjectId
-            val updatedSubject = subjectInfoById[sid] ?: todo.subject?.copy(discussions = emptyList())
-            todo.copy(subject = updatedSubject)
+            deadlineInstant == null || !deadlineInstant.isBefore(currentNow)
         }
 
         val mergedAllTodos = (allTodos + preservedTodos)
@@ -785,20 +736,13 @@ class LmsRefreshRepository(
             .sortedByDeadlineThenName()
 
         // 2. 제출 완료 할 일 스마트 머지: 일시 누락된 제출 목록 보존
-        val preservedSubmitted = previousData.submitted.filter { prevSub ->
-            if (isCyberConnected && cyberResult.isComplete && prevSub.isCyber()) return@filter false
-
-            val sid = prevSub.subject?.id ?: prevSub.subjectId
-            if (sid !in allCurrentSubjectIds) return@filter false
-
-            if (allSubmitted.any { isSameTodoItem(it, prevSub) }) return@filter false
-            if (mergedAllTodos.any { isSameTodoItem(it, prevSub) }) return@filter false
-
-            true
-        }.map { sub ->
-            val sid = sub.subject?.id ?: sub.subjectId
-            val updatedSubject = subjectInfoById[sid] ?: sub.subject?.copy(discussions = emptyList())
-            sub.copy(subject = updatedSubject)
+        val preservedSubmitted = previousData.submitted.preserveMissingItems(
+            isCyberComplete = isCyberComplete,
+            allCurrentSubjectIds = allCurrentSubjectIds,
+            subjectInfoById = subjectInfoById,
+        ) { prevSub ->
+            !allSubmitted.any { isSameTodoItem(it, prevSub) } &&
+                !mergedAllTodos.any { isSameTodoItem(it, prevSub) }
         }
 
         val mergedAllSubmitted = (allSubmitted + preservedSubmitted)
@@ -826,8 +770,8 @@ class LmsRefreshRepository(
     }
 
     private fun isSameTodoItem(a: TodoInfo, b: TodoInfo): Boolean {
-        val aSubjectId = a.subject?.id ?: a.subjectId
-        val bSubjectId = b.subject?.id ?: b.subjectId
+        val aSubjectId = a.effectiveSubjectId
+        val bSubjectId = b.effectiveSubjectId
         if (aSubjectId != bSubjectId && aSubjectId > 0 && bSubjectId > 0) return false
 
         if (a.todoId > 0 && b.todoId > 0) return a.todoId == b.todoId
@@ -914,8 +858,7 @@ class LmsRefreshRepository(
     }
 }
 
-internal fun String.withoutTrailingCourseNumber(): String =
-    replace(TRAILING_COURSE_NUMBER, "")
+internal fun String.withoutTrailingCourseNumber(): String = withoutTrailingNumericSuffix()
 
 enum class RefreshSource {
     FOREGROUND,
@@ -975,6 +918,41 @@ private fun Submission.isReportableSubmission(): Boolean =
 
 private const val TAG = "LmsRefreshRepository"
 
-private fun String.toInstantOrNull(): Instant? = runCatching {
-    Instant.parse(this)
-}.getOrNull()
+private fun TodoData.collectLocallyReadDiscussionIds(): Set<Int> = (
+    readDiscussionIds +
+        subjects.flatMap { it.discussions }
+            .filter { it.readState.equals("read", ignoreCase = true) }
+            .map { it.id }
+    ).toSet()
+
+private inline fun List<TodoInfo>.preserveMissingItems(
+    isCyberComplete: Boolean,
+    allCurrentSubjectIds: Set<Int>,
+    subjectInfoById: Map<Int, SubjectInfo>,
+    extraKeepCondition: (TodoInfo) -> Boolean,
+): List<TodoInfo> =
+    filter { prevItem ->
+        if (isCyberComplete && prevItem.isCyber()) return@filter false
+        if (prevItem.effectiveSubjectId !in allCurrentSubjectIds) return@filter false
+        extraKeepCondition(prevItem)
+    }.map { item ->
+        val updatedSubject = subjectInfoById[item.effectiveSubjectId] ?: item.subject?.copy(discussions = emptyList())
+        item.copy(subject = updatedSubject)
+    }
+
+private fun Attachment.toAttachmentInfo(useModifiedAtAsUpdatedAt: Boolean = false): AttachmentInfo =
+    AttachmentInfo(
+        id = id,
+        uuid = uuid,
+        folder_id = folder_id,
+        display_name = display_name,
+        file_name = file_name,
+        content_type = content_type,
+        size = size,
+        url = url,
+        thumbnail_url = thumbnail_url,
+        created_at = created_at,
+        updated_at = if (useModifiedAtAsUpdatedAt) modified_at else updated_at,
+        modified_at = modified_at,
+        mime_class = mime_class,
+    )

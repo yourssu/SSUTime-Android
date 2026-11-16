@@ -40,8 +40,8 @@ import com.yourssu.data.TodoType
 import com.yourssu.ssutime.v2.R
 import com.yourssu.ssutime.v2.analytics.Analytics
 import com.yourssu.ssutime.v2.component.SSUTimeTopBar
-import com.yourssu.ssutime.v2.screen.calendar.badgeBackgroundColor
-import com.yourssu.ssutime.v2.screen.calendar.badgeTextColor
+import com.yourssu.ssutime.v2.todo.badgeBackgroundColor
+import com.yourssu.ssutime.v2.todo.badgeTextColor
 import com.yourssu.ssutime.v2.todo.labelResId
 import com.yourssu.ssutime.v2.ui.theme.BLACK
 import com.yourssu.ssutime.v2.ui.theme.N100

@@ -1,20 +1,15 @@
 package com.yourssu.ssutime.v2.screen.main
 
 import android.Manifest
-import android.app.NotificationManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
-import android.net.Uri
 import android.os.Build
-import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.EnterTransition
-import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -46,7 +41,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ModalBottomSheet
@@ -88,18 +82,18 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
-import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.yourssu.data.AlertData
 import com.yourssu.data.TodoInfo
-import com.yourssu.data.TodoType
 import com.yourssu.data.isCyber
 import com.yourssu.data.todoUniqueKey
 import com.yourssu.ssutime.v2.MainActivity
 import com.yourssu.ssutime.v2.R
 import com.yourssu.ssutime.v2.analytics.Analytics
 import com.yourssu.ssutime.v2.component.IosLoadingSpinner
+import com.yourssu.ssutime.v2.component.LoadingOverlay
+import com.yourssu.ssutime.v2.component.NoTransitionNavHost
 import com.yourssu.ssutime.v2.component.OutlinedButton
 import com.yourssu.ssutime.v2.component.SButton
 import com.yourssu.ssutime.v2.component.SCheckBox
@@ -108,7 +102,11 @@ import com.yourssu.ssutime.v2.component.preventBottomSheetJitter
 import com.yourssu.ssutime.v2.getRemainingDays
 import com.yourssu.ssutime.v2.getRemainingTimeText
 import com.yourssu.ssutime.v2.getStringSimpleDate
+import com.yourssu.ssutime.v2.notification.canUseFullScreenIntent
+import com.yourssu.ssutime.v2.notification.fullScreenIntentSettingsIntentOrNull
 import com.yourssu.ssutime.v2.screen.main.todo.TodoDetailScreen
+import com.yourssu.ssutime.v2.todo.badgeBackgroundColor
+import com.yourssu.ssutime.v2.todo.badgeTextColor
 import com.yourssu.ssutime.v2.todo.localizedLabel
 import com.yourssu.ssutime.v2.todo.toTodoDeadlineInstantOrNull
 import com.yourssu.ssutime.v2.ui.theme.N100
@@ -255,13 +253,9 @@ fun MainScreen(
                 errorCause = viewModel.showNetworkCause.value
             )
         } else {
-            NavHost(
+            NoTransitionNavHost(
                 navController = mainContentNavController,
                 startDestination = MAIN_LIST_ROUTE,
-                enterTransition = { EnterTransition.None },
-                exitTransition = { ExitTransition.None },
-                popEnterTransition = { EnterTransition.None },
-                popExitTransition = { ExitTransition.None },
                 modifier = Modifier.fillMaxSize(),
             ) {
                 composable(MAIN_LIST_ROUTE) {
@@ -272,7 +266,6 @@ fun MainScreen(
                         loadedAt = viewModel.loadedAt.value,
                         showWidgetBadge = viewModel.showWidgetBadge.value,
                         isRefreshing = viewModel.isLoading.value,
-                        refreshProgress = viewModel.loadingProgress.value,
                         onClickTodo = { todo ->
                             selectedTodoKey = todo.todoUniqueKey()
                             selectedTodoFallbackJson = Json.encodeToString(
@@ -404,7 +397,7 @@ fun MainScreen(
                     )
 
                     if (allowCalling && !context.canUseFullScreenIntent()) {
-                        context.fullScreenIntentSettingsIntent()?.let { intent ->
+                        context.fullScreenIntentSettingsIntentOrNull()?.let { intent ->
                             fullScreenIntentSettingsLauncher.launch(intent)
                         }
                     }
@@ -414,23 +407,11 @@ fun MainScreen(
         }
 
         if (showInitialLmsLoading) {
-            InitialLmsLoadingOverlay()
+            LoadingOverlay(
+                indicatorColor = R500,
+                trackColor = R100,
+            )
         }
-    }
-}
-
-@Composable
-private fun InitialLmsLoadingOverlay() {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color(0x80000000)),
-        contentAlignment = Alignment.Center,
-    ) {
-        CircularProgressIndicator(
-            color = R500,
-            trackColor = R100,
-        )
     }
 }
 
@@ -502,7 +483,6 @@ fun MainFragment(
     loadedAt: String = "",
     showWidgetBadge: Boolean = false,
     isRefreshing: Boolean = false,
-    refreshProgress: Float = 0f,
     onRefresh: () -> Unit = {},
     onClickTodo: (TodoInfo) -> Unit = {},
     onClickRefresh: () -> Unit = {},
@@ -730,113 +710,43 @@ fun TodoList(
         modifier = modifier,
     ) {
         if (immediateTodos.isNotEmpty()) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = stringResource(R.string.main_urgent_tasks_title),
-                    style = SSUType.H3SemiBold
-                )
-                Spacer(Modifier.weight(1f))
-                Text(
-                    modifier = Modifier
-                        .border(width = 1.dp, color = N300, shape = RoundedCornerShape(8.dp))
-                        .clickable { onClickSubmitted() }
-                        .padding(8.dp),
-                    text = stringResource(R.string.main_submitted_count, submittedSize),
-                    style = SSUType.Caption1SemiBold,
-                    color = N500,
-                )
-            }
-
-            immediateTodos.forEach {
-                key(it.todoUniqueKey()) {
-                    Spacer(Modifier.height(8.dp))
-                    TodoItem(
-                        todoInfo = it,
-                        now = now,
-                        onClickTodo = { arg -> onClickTodo(arg) },
-                    )
-                }
-            }
+            TodoSectionHeaderWithSubmitted(
+                title = stringResource(R.string.main_urgent_tasks_title),
+                titleStyle = SSUType.H3SemiBold,
+                submittedSize = submittedSize,
+                onClickSubmitted = onClickSubmitted,
+            )
+            TodoItemsColumn(todos = immediateTodos, now = now, onClickTodo = onClickTodo)
 
             if (freeTodos.isNotEmpty()) {
                 Spacer(Modifier.height(28.dp))
-
                 Text(
                     text = stringResource(R.string.main_relaxed_tasks_title),
                     style = SSUType.H5SemiBold
                 )
-
-                freeTodos.forEach {
-                    key(it.todoUniqueKey()) {
-                        Spacer(Modifier.height(8.dp))
-                        TodoItem(
-                            todoInfo = it,
-                            now = now,
-                            onClickTodo = { arg -> onClickTodo(arg) },
-                        )
-                    }
-                }
+                TodoItemsColumn(todos = freeTodos, now = now, onClickTodo = onClickTodo)
             }
         } else if (freeTodos.isNotEmpty()) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = stringResource(R.string.main_relaxed_tasks_title),
-                    style = SSUType.H5SemiBold
-                )
-                Spacer(Modifier.weight(1f))
-                Text(
-                    modifier = Modifier
-                        .border(width = 1.dp, color = N300, shape = RoundedCornerShape(8.dp))
-                        .clickable { onClickSubmitted() }
-                        .padding(8.dp),
-                    text = stringResource(R.string.main_submitted_count, submittedSize),
-                    style = SSUType.Caption1SemiBold,
-                    color = N500,
-                )
-            }
-            freeTodos.forEach {
-                key(it.todoUniqueKey()) {
-                    Spacer(Modifier.height(8.dp))
-                    TodoItem(
-                        todoInfo = it,
-                        now = now,
-                        onClickTodo = { arg -> onClickTodo(arg) },
-                    )
-                }
-            }
+            TodoSectionHeaderWithSubmitted(
+                title = stringResource(R.string.main_relaxed_tasks_title),
+                titleStyle = SSUType.H5SemiBold,
+                submittedSize = submittedSize,
+                onClickSubmitted = onClickSubmitted,
+            )
+            TodoItemsColumn(todos = freeTodos, now = now, onClickTodo = onClickTodo)
         } else {
             val density = LocalDensity.current
             var emptyHeaderHeightPx by remember { mutableIntStateOf(0) }
             val emptyHeaderHeight = with(density) { emptyHeaderHeightPx.toDp() }
             val emptyContentMinHeight = maxOf(180.dp, emptyStateMinHeight - emptyHeaderHeight)
 
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .onSizeChanged { emptyHeaderHeightPx = it.height },
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = stringResource(R.string.main_todo_list_title),
-                    style = SSUType.H3SemiBold
-                )
-                Spacer(Modifier.weight(1f))
-                Text(
-                    modifier = Modifier
-                        .border(width = 1.dp, color = N300, shape = RoundedCornerShape(8.dp))
-                        .clickable { onClickSubmitted() }
-                        .padding(8.dp),
-                    text = stringResource(R.string.main_submitted_count, submittedSize),
-                    style = SSUType.Caption1SemiBold,
-                    color = N500,
-                )
-            }
+            TodoSectionHeaderWithSubmitted(
+                title = stringResource(R.string.main_todo_list_title),
+                titleStyle = SSUType.H3SemiBold,
+                submittedSize = submittedSize,
+                onClickSubmitted = onClickSubmitted,
+                modifier = Modifier.onSizeChanged { emptyHeaderHeightPx = it.height },
+            )
 
             Column(
                 modifier = Modifier
@@ -860,6 +770,53 @@ fun TodoList(
 }
 
 @Composable
+private fun TodoSectionHeaderWithSubmitted(
+    title: String,
+    titleStyle: androidx.compose.ui.text.TextStyle,
+    submittedSize: Int,
+    onClickSubmitted: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = title,
+            style = titleStyle,
+        )
+        Spacer(Modifier.weight(1f))
+        Text(
+            modifier = Modifier
+                .border(width = 1.dp, color = N300, shape = RoundedCornerShape(8.dp))
+                .clickable { onClickSubmitted() }
+                .padding(8.dp),
+            text = stringResource(R.string.main_submitted_count, submittedSize),
+            style = SSUType.Caption1SemiBold,
+            color = N500,
+        )
+    }
+}
+
+@Composable
+private fun TodoItemsColumn(
+    todos: List<TodoInfo>,
+    now: Instant,
+    onClickTodo: (TodoInfo) -> Unit,
+) {
+    todos.forEach { todo ->
+        key(todo.todoUniqueKey()) {
+            Spacer(Modifier.height(8.dp))
+            TodoItem(
+                todoInfo = todo,
+                now = now,
+                onClickTodo = onClickTodo,
+            )
+        }
+    }
+}
+
+@Composable
 fun TodoItem(
     todoInfo: TodoInfo,
     now: Instant = Instant.now(),
@@ -871,13 +828,18 @@ fun TodoItem(
         ChronoUnit.SECONDS.between(now, it).coerceAtLeast(0L)
     } ?: 0L
     val isLate = deadlineInstant != null && leftDay == 0L && remainingSeconds == 0L
+    val badgeRes = when (leftDay) {
+        3L -> R.drawable.day3
+        2L -> R.drawable.day2
+        1L -> R.drawable.day_red2
+        0L -> when {
+            isLate -> R.drawable.late
+            remainingSeconds < 60L -> R.drawable.seconds
+            else -> R.drawable.timer
+        }
+        else -> -1
+    }
 
-//    Log.d("리컴포지션", "${todoInfo.todoId} 리컴포지션 발생 (남은시간: ${
-//        getRemainingTimeText(
-//            todoInfo.due_date,
-//            now
-//        )
-//    })")
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -901,24 +863,10 @@ fun TodoItem(
                         .background(WHITE),
                     contentAlignment = Alignment.Center
                 ) {
-                    val res = when (leftDay) {
-                        3L -> R.drawable.day3
-                        2L -> R.drawable.day2
-                        1L -> R.drawable.day_red2
-                        0L -> if (isLate) {
-                            R.drawable.late
-                        } else if (remainingSeconds < 60L) {
-                            R.drawable.seconds
-                        } else {
-                            R.drawable.timer
-                        }
-                        else -> -1
-                    }
-
-                    if (res > 0) {
+                    if (badgeRes > 0) {
                         Image(
-                            painter = painterResource(res),
-                            contentDescription = "day-$res"
+                            painter = painterResource(badgeRes),
+                            contentDescription = "day-$badgeRes"
                         )
                     }
 
@@ -946,7 +894,7 @@ fun TodoItem(
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        if(!isLate) {
+                        if (!isLate) {
                             if (todoInfo.isCyber()) {
                                 Text(
                                     modifier = Modifier
@@ -962,23 +910,11 @@ fun TodoItem(
                             Text(
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(6.dp))
-                                    .background(
-                                        when (todoInfo.type) {
-                                            TodoType.COMMONS -> Color(0xFFF7DBF7)
-                                            TodoType.QUIZ -> Color(0xFFFFD7C2)
-                                            TodoType.ASSIGNMENT -> Color(0xFFD8E5F7)
-                                            else -> Color(0xFFF7DBF7)
-                                        }
-                                    )
+                                    .background(todoInfo.type.badgeBackgroundColor())
                                     .padding(horizontal = 6.dp, vertical = 3.dp),
                                 text = todoInfo.type.localizedLabel(),
                                 style = SSUType.Caption1SemiBold,
-                                color = when(todoInfo.type) {
-                                    TodoType.COMMONS -> Color(0xFFFF39D0)
-                                    TodoType.QUIZ -> Color(0xFFFF5F0B)
-                                    TodoType.ASSIGNMENT -> Color(0xFF007BFF)
-                                    else -> Color(0xFFFF39D0)
-                                }
+                                color = todoInfo.type.badgeTextColor(),
                             )
                             Spacer(Modifier.width(6.dp))
 
@@ -1130,28 +1066,4 @@ fun CallingAlertBody(
             enable = enableCallingAlert.value || radioOptions.any { it == selectedOption }
         )
     }
-}
-
-private fun Context.canUseFullScreenIntent(): Boolean {
-    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-        return true
-    }
-
-    return getSystemService(NotificationManager::class.java).canUseFullScreenIntent()
-}
-
-private fun Context.fullScreenIntentSettingsIntent(): Intent? {
-    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-        return null
-    }
-
-    val packageUri = Uri.parse("package:$packageName")
-    val fullScreenIntentSettings = Intent(Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT).apply {
-        data = packageUri
-    }
-
-    return fullScreenIntentSettings.takeIf { it.resolveActivity(packageManager) != null }
-        ?: Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-            data = packageUri
-        }.takeIf { it.resolveActivity(packageManager) != null }
 }

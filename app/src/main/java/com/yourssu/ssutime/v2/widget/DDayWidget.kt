@@ -74,7 +74,6 @@ private const val WIDGET_REFRESH_TIMEOUT_MILLIS = 30_000L
 private val WidgetRefreshSizeKey = ActionParameters.Key<String>("widget_size")
 
 private val widgetWhite = ColorProvider(day = Color.White, night = Color.White)
-private val widgetTextColor = ColorProvider(day = Color.White, night = Color.White)
 private val widgetErrorTextColor = ColorProvider(day = Color(0xFFFE4F4C), night = Color(0xFFFE4F4C))
 private val widgetRefreshDescriptionColor = ColorProvider(day = Color(0xFF4B515B), night = Color(0xFF4B515B))
 
@@ -174,12 +173,12 @@ private fun DDayTodoContent(
         Text(
             text = uiState.subjectName,
             maxLines = 1,
-            style = SSUType.G_Caption1SemiBold.copy(color = widgetTextColor),
+            style = SSUType.G_Caption1SemiBold.copy(color = widgetWhite),
         )
         Text(
             text = uiState.type,
             maxLines = 1,
-            style = SSUType.G_H3SemiBold.copy(color = widgetTextColor),
+            style = SSUType.G_H3SemiBold.copy(color = widgetWhite),
         )
     }
 
@@ -200,7 +199,7 @@ private fun DDayTodoContent(
             } else {
                 Text(
                     text = context.getString(R.string.widget_deadline_until),
-                    style = SSUType.G_Caption2Medium.copy(color = widgetTextColor),
+                    style = SSUType.G_Caption2Medium.copy(color = widgetWhite),
                 )
             }
             if (uiState.isRemainingTimeText) {
@@ -218,7 +217,7 @@ private fun DDayTodoContent(
                     text = uiState.dDayText,
                     maxLines = 1,
                     style = SSUType.G_H1SemiBold.copy(
-                        color = if (uiState.isLateSubmission) widgetErrorTextColor else widgetTextColor,
+                        color = if (uiState.isLateSubmission) widgetErrorTextColor else widgetWhite,
                     ),
                 )
             }
@@ -226,7 +225,7 @@ private fun DDayTodoContent(
             Text(
                 text = uiState.updatedAtText,
                 maxLines = 1,
-                style = SSUType.G_Caption3Regular.copy(color = widgetTextColor),
+                style = SSUType.G_Caption3Regular.copy(color = widgetWhite),
             )
         }
     }
@@ -253,7 +252,7 @@ private fun DDayEmptyContent() {
         Text(
             text = context.getString(R.string.widget_empty_text),
             maxLines = 1,
-            style = SSUType.G_Caption2SemiBold.copy(color = widgetTextColor),
+            style = SSUType.G_Caption2SemiBold.copy(color = widgetWhite),
         )
     }
 }
@@ -314,7 +313,7 @@ private fun DDayRefreshErrorContent(message: String) {
             modifier = GlanceModifier.fillMaxWidth(),
             maxLines = 1,
             style = SSUType.G_Caption1SemiBold.copy(
-                color = widgetTextColor,
+                color = widgetWhite,
                 textAlign = TextAlign.Center,
             ),
         )
@@ -324,7 +323,7 @@ private fun DDayRefreshErrorContent(message: String) {
             modifier = GlanceModifier.fillMaxWidth(),
             maxLines = 2,
             style = SSUType.G_Caption2Medium.copy(
-                color = widgetTextColor,
+                color = widgetWhite,
                 textAlign = TextAlign.Center,
             ),
         )
@@ -383,15 +382,15 @@ private fun TodoData.toWidgetUiState(context: Context): DDayWidgetUiState {
         isLateSubmission = isLateSubmission,
         dDayText = selectedTodo.toDdayText(remainingDays, displayRemainingSeconds),
         isRemainingTimeText = isRemainingTimeText,
-        updatedAtText = loadedAt.toUpdatedAtText(context),
-        backgroundResId = selectedTodo?.let {
+        updatedAtText = loadedAt.toWidgetUpdatedAtText(context, R.string.widget_updated_at),
+        backgroundResId = if (selectedTodo != null) {
             backgroundFor(
-                todo = it,
-                loadedAt = loadedAt,
                 remainingDays = remainingDays,
                 remainingSeconds = remainingSeconds,
                 isLateSubmission = isLateSubmission,
             )
+        } else {
+            null
         },
         countdownTargetEpochMillis = if (isRemainingTimeText) {
             targetInstant?.toEpochMilli()
@@ -425,16 +424,17 @@ private fun TodoInfo?.toDdayText(remainingDays: Long, remainingSeconds: Long): S
     }
 }
 
-private fun String.toUpdatedAtText(context: Context): String {
+internal fun String.toWidgetUpdatedAtText(
+    context: Context,
+    @androidx.annotation.StringRes updatedAtResId: Int,
+): String {
     if (isBlank()) {
         return context.getString(R.string.widget_updated_before)
     }
-    return context.getString(R.string.widget_updated_at, getStringSimpleDate(context, this))
+    return context.getString(updatedAtResId, getStringSimpleDate(context, this))
 }
 
 private fun backgroundFor(
-    todo: TodoInfo,
-    loadedAt: String,
     remainingDays: Long,
     remainingSeconds: Long,
     isLateSubmission: Boolean,

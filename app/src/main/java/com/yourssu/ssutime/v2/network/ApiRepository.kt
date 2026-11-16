@@ -21,6 +21,7 @@ import io.ktor.client.call.body
 import io.ktor.client.engine.android.Android
 import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.client.request.HttpRequestBuilder
 import io.ktor.client.request.bearerAuth
 import io.ktor.client.request.delete
 import io.ktor.client.request.get
@@ -77,9 +78,7 @@ class ApiRepository(
         val response = client.post(
             urlString = "$baseUrl/auth/devices"
         ) {
-            bearerAuth(accessToken)
-            contentType(ContentType.Application.Json)
-            setBody(fcmRequest)
+            authorizedJson(fcmRequest)
         }
         Log.i("ApiRepository", "FCM token registered: ${response.status}")
         return response.status
@@ -89,9 +88,7 @@ class ApiRepository(
         val response = client.put(
             urlString = "$baseUrl/auth/notification-settings"
         ) {
-            bearerAuth(accessToken)
-            contentType(ContentType.Application.Json)
-            setBody(NotificationSetting(enabled, minutes))
+            authorizedJson(NotificationSetting(enabled, minutes))
         }
         if (BuildConfig.DEBUG_MODE) {
             Log.i("ApiRepository", "setNotificationSetting response: ${response.bodyAsText()}")
@@ -107,9 +104,7 @@ class ApiRepository(
         val response = client.post(
             urlString = "$baseUrl/enrollments"
         ) {
-            bearerAuth(accessToken)
-            contentType(ContentType.Application.Json)
-            setBody(enrollment)
+            authorizedJson(enrollment)
         }
 
         Log.i("ApiRepository", enrollment.name + " Add Enrollment Status Code : ${response.status.value}")
@@ -120,9 +115,7 @@ class ApiRepository(
         val response = client.delete(
             urlString = "$baseUrl/enrollments"
         ) {
-            bearerAuth(accessToken)
-            contentType(ContentType.Application.Json)
-            setBody(enrollment)
+            authorizedJson(enrollment)
         }
         Log.i("ApiRepository", enrollment.id.toString() + " Delete Enrollment Status Code : ${response.status.value}")
         return response.status
@@ -132,9 +125,7 @@ class ApiRepository(
         val response = client.get(
             urlString = "$baseUrl/enrollments"
         ) {
-            bearerAuth(accessToken)
-            contentType(ContentType.Application.Json)
-            setBody(enrollment)
+            authorizedJson(enrollment)
         }
         if (BuildConfig.DEBUG_MODE) {
             Log.i("ApiRepository", "getEnrollments response: ${response.bodyAsText()}")
@@ -149,9 +140,7 @@ class ApiRepository(
         val response = client.post(
             urlString = "$baseUrl/todo/report"
         ) {
-            bearerAuth(accessToken)
-            contentType(ContentType.Application.Json)
-            setBody(todo)
+            authorizedJson(todo)
         }
         Log.i(
             "ApiRepository",
@@ -164,8 +153,7 @@ class ApiRepository(
         val response = client.get(
             urlString = "$baseUrl/todo/todos"
         ) {
-            bearerAuth(accessToken)
-            contentType(ContentType.Application.Json)
+            authorizedJson()
         }
 
         Log.i("ApiRepository", "Get Todos Status Code : ${response.status.value}")
@@ -184,9 +172,7 @@ class ApiRepository(
         val response = client.post(
             urlString = "$baseUrl/todo/report-with-analysis"
         ) {
-            bearerAuth(accessToken)
-            contentType(ContentType.Application.Json)
-            setBody(todo)
+            authorizedJson(todo)
         }
         Log.i("ApiRepository", "Assignment analysis request response: ${response.status.value}")
         val responseText = response.bodyAsText()
@@ -211,9 +197,7 @@ class ApiRepository(
         val response = client.post(
             urlString = "$baseUrl/auth/withdrawal-requests"
         ) {
-            bearerAuth(accessToken)
-            contentType(ContentType.Application.Json)
-            setBody(AccountWithdrawalRequest(reason = reason))
+            authorizedJson(AccountWithdrawalRequest(reason = reason))
         }
         val responseText = response.bodyAsText()
         if (BuildConfig.DEBUG_MODE) {
@@ -229,6 +213,14 @@ class ApiRepository(
             }
         } else {
             throw IllegalStateException("Account withdrawal failed with status ${response.status.value}")
+        }
+    }
+
+    private fun HttpRequestBuilder.authorizedJson(body: Any? = null) {
+        bearerAuth(accessToken)
+        contentType(ContentType.Application.Json)
+        if (body != null) {
+            setBody(body)
         }
     }
 }

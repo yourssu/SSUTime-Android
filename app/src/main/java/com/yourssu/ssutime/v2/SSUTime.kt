@@ -38,6 +38,7 @@ import com.yourssu.ssutime.v2.todo.TODO_DEADLINE_ZONE_ID
 import com.yourssu.ssutime.v2.todo.remainingDaysUntilDeadline
 import com.yourssu.ssutime.v2.todo.remainingTimeTextUntilDeadline
 import com.yourssu.ssutime.v2.todo.toTodoDeadlineInstantOrNull
+import kotlinx.serialization.KSerializer
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 import org.koin.android.ext.koin.androidContext
@@ -118,64 +119,7 @@ val appModule = module {
 }
 
 // Compose Preview를 위한 koinModule
-val previewModule = module {
-    single<DataStore<LoginData>> { androidContext().loginDataStore }
-    single<DataStore<CyberLoginData>>(named("cyberLoginDataStore")) { androidContext().cyberLoginDataStore }
-    single<DataStore<TodoData>>(named("todoDataStore")) { androidContext().todoDataStore }
-    single<DataStore<OnBoardingData>>(named("onBoardingDataStore")) { androidContext().onBoardingDataStore }
-    single<DataStore<AlertData>>(named("alertDataStore")) { androidContext().notificationStore }
-    single<DataStore<LabsData>>(named("labsDataStore")) { androidContext().labsDataStore }
-
-    single { LoginRepository(get()) }
-    single {
-        ApiRepository()
-    }
-    single {
-        MainRepository(
-            get(named("todoDataStore")),
-            get(named("alertDataStore")),
-            get(named("labsDataStore")),
-            get(),
-            get(),
-            androidContext()
-        )
-    }
-    single {
-        CyberRepository(
-            get(named("cyberLoginDataStore")),
-            get()
-        )
-    }
-    single {
-        LmsRefreshRepository(
-            get(),
-            get(),
-            get(),
-            get()
-        )
-    }
-    single { TermSelectionStore() }
-    single {
-        OnBoardingRepository(
-            get(
-                named("onBoardingDataStore")
-            )
-        )
-    }
-    viewModel { MyViewModel(get(), get(), get(), get(), get()) }
-    viewModel { SplashViewModel(get(), get()) }
-    viewModel { LoginViewModel(get(), get(), get()) }
-    viewModel { CyberLoginViewModel(get()) }
-    viewModel { TodoDetailViewModel(get(), get(), get()) }
-    viewModel {
-        OnBoardingViewModel(
-            androidContext(),
-            get(),
-            get()
-        )
-    }
-    viewModel { MainViewModel(get(), get(), get()) }
-}
+val previewModule = appModule
 
 
 val Context.loginDataStore: DataStore<LoginData> by dataStore(
@@ -191,39 +135,18 @@ val Context.cyberLoginDataStore: DataStore<CyberLoginData> by dataStore(
     corruptionHandler = ReplaceFileCorruptionHandler { CyberLoginDataSerializer.defaultValue },
 )
 
-object CyberLoginDataSerializer : Serializer<CyberLoginData> {
-    override val defaultValue: CyberLoginData = CyberLoginData()
-
-    override suspend fun readFrom(input: InputStream): CyberLoginData =
-        try {
-            val storedValue = input.readBytes().decodeToString()
-            val json = if (LoginDataCrypto.isEncrypted(storedValue)) {
-                LoginDataCrypto.decrypt(storedValue).decodeToString()
-            } else {
-                storedValue
-            }
-            Json.decodeFromString<CyberLoginData>(json)
-        } catch (serialization: SerializationException) {
-            SentryExceptionReporter.capture(serialization)
-            throw CorruptionException("사이버 계정 정보를 읽어오지 못했습니다.", serialization)
-        } catch (security: GeneralSecurityException) {
-            SentryExceptionReporter.capture(security)
-            throw CorruptionException("사이버 계정 정보를 복호화하지 못했습니다.", security)
-        } catch (illegalArgument: IllegalArgumentException) {
-            SentryExceptionReporter.capture(illegalArgument)
-            throw CorruptionException("사이버 계정 정보 암호문 형식이 올바르지 않습니다.", illegalArgument)
-        }
-
-    override suspend fun writeTo(t: CyberLoginData, output: OutputStream) {
-        val json = Json.encodeToString(CyberLoginData.serializer(), t)
-        val encryptedValue = LoginDataCrypto.encrypt(json.encodeToByteArray())
-        output.write(encryptedValue.encodeToByteArray())
-    }
+private val EncryptedDataStoreJson = Json {
+    ignoreUnknownKeys = true
+    coerceInputValues = true
+    encodeDefaults = true
 }
 
-
-object LoginDataSerializer : Serializer<LoginData> {
-    override val defaultValue: LoginData = LoginData(id = "", pw = "", isAutoLogin = false, accessToken = "")
+open class EncryptedJsonDataStoreSerializer<T>(
+    override val defaultValue: T,
+    private val kSerializer: KSerializer<T>,
+    private val subjectLabel: String,
+    private val trackPlainTextMigration: Boolean = false,
+) : Serializer<T> {
     @Volatile
     private var lastReadWasPlainText = false
 
@@ -234,37 +157,50 @@ object LoginDataSerializer : Serializer<LoginData> {
         lastReadWasPlainText = false
     }
 
-    override suspend fun readFrom(input: InputStream): LoginData =
+    override suspend fun readFrom(input: InputStream): T =
         try {
             val storedValue = input.readBytes().decodeToString()
             val json = if (LoginDataCrypto.isEncrypted(storedValue)) {
                 lastReadWasPlainText = false
                 LoginDataCrypto.decrypt(storedValue).decodeToString()
             } else {
-                lastReadWasPlainText = true
+                if (trackPlainTextMigration) lastReadWasPlainText = true
                 storedValue
             }
-            Json.decodeFromString<LoginData>(json)
+            EncryptedDataStoreJson.decodeFromString(kSerializer, json)
         } catch (serialization: SerializationException) {
             SentryExceptionReporter.capture(serialization)
-            throw CorruptionException("계정 정보를 읽어오지 못했습니다.", serialization)
+            throw CorruptionException("${subjectLabel}를 읽어오지 못했습니다.", serialization)
         } catch (security: GeneralSecurityException) {
             lastReadWasPlainText = false
             SentryExceptionReporter.capture(security)
-            throw CorruptionException("계정 정보를 복호화하지 못했습니다.", security)
+            throw CorruptionException("${subjectLabel}를 복호화하지 못했습니다.", security)
         } catch (illegalArgument: IllegalArgumentException) {
             lastReadWasPlainText = false
             SentryExceptionReporter.capture(illegalArgument)
-            throw CorruptionException("계정 정보 암호문 형식이 올바르지 않습니다.", illegalArgument)
+            throw CorruptionException("$subjectLabel 암호문 형식이 올바르지 않습니다.", illegalArgument)
         }
 
-    override suspend fun writeTo(t: LoginData, output: OutputStream) {
-        val json = Json.encodeToString(LoginData.serializer(), t)
+    override suspend fun writeTo(t: T, output: OutputStream) {
+        val json = EncryptedDataStoreJson.encodeToString(kSerializer, t)
         val encryptedValue = LoginDataCrypto.encrypt(json.encodeToByteArray())
         output.write(encryptedValue.encodeToByteArray())
-        clearPlainTextMigrationFlag()
+        if (trackPlainTextMigration) clearPlainTextMigrationFlag()
     }
 }
+
+object CyberLoginDataSerializer : EncryptedJsonDataStoreSerializer<CyberLoginData>(
+    defaultValue = CyberLoginData(),
+    kSerializer = CyberLoginData.serializer(),
+    subjectLabel = "사이버 계정 정보",
+)
+
+object LoginDataSerializer : EncryptedJsonDataStoreSerializer<LoginData>(
+    defaultValue = LoginData(id = "", pw = "", isAutoLogin = false, accessToken = ""),
+    kSerializer = LoginData.serializer(),
+    subjectLabel = "계정 정보",
+    trackPlainTextMigration = true,
+)
 
 private object LoginDataEncryptionMigration : DataMigration<LoginData> {
     override suspend fun shouldMigrate(currentData: LoginData): Boolean =
@@ -297,8 +233,7 @@ fun getStringDate(targetTime: String): String {
 
 fun getStringDateWithTime(targetTime: String, includeSeconds: Boolean = true): String {
     val targetInstant = targetTime.toTodoDeadlineInstantOrNull() ?: return targetTime
-    val pattern = if (includeSeconds) monthDayTimePattern() else monthDayTimeWithoutSecondsPattern()
-    val formatter = DateTimeFormatter.ofPattern(pattern, Locale.getDefault())
+    val formatter = DateTimeFormatter.ofPattern(monthDayTimePattern(includeSeconds), Locale.getDefault())
 
     return targetInstant
         .atZone(TODO_DEADLINE_ZONE_ID)
@@ -330,8 +265,9 @@ fun getStringSimpleDate(context: Context, targetTime: String): String {
 private fun monthDayPattern(): String =
     if (Locale.getDefault().language == Locale.KOREAN.language) "MM월 dd일" else "MMM dd"
 
-private fun monthDayTimePattern(): String =
-    if (Locale.getDefault().language == Locale.KOREAN.language) "MM월 dd일 HH:mm:ss" else "MMM dd HH:mm:ss"
-
-private fun monthDayTimeWithoutSecondsPattern(): String =
-    if (Locale.getDefault().language == Locale.KOREAN.language) "MM월 dd일 HH:mm" else "MMM dd HH:mm"
+private fun monthDayTimePattern(includeSeconds: Boolean): String {
+    val isKorean = Locale.getDefault().language == Locale.KOREAN.language
+    val datePart = if (isKorean) "MM월 dd일" else "MMM dd"
+    val timePart = if (includeSeconds) "HH:mm:ss" else "HH:mm"
+    return "$datePart $timePart"
+}

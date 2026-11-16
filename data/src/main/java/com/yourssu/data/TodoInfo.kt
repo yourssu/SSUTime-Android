@@ -29,14 +29,17 @@ enum class TodoType(
     COMMONS("강의"), ASSIGNMENT("과제"), QUIZ("퀴즈"), SUBMITTED("정상 제출"), SUBMITTED_LATE("지각 제출")
 }
 
+val TodoInfo.effectiveSubjectId: Int
+    get() = subject?.id ?: subjectId
+
 fun TodoInfo.todoUniqueKey(): String =
     if (todoId > 0 || isCyber()) {
-        "${subject?.id ?: subjectId}:$todoId:${type.name}"
+        "$effectiveSubjectId:$todoId:${type.name}"
     } else {
-        "${subject?.id ?: subjectId}:$todoId:${type.name}:$title:$due_date"
+        "$effectiveSubjectId:$todoId:${type.name}:$title:$due_date"
     }
 
 fun TodoInfo.isCyber(): Boolean =
-    (subject?.id ?: subjectId) < 0 || url.contains("kcu.ac") || todoId <= -10000
+    effectiveSubjectId < 0 || url.contains("kcu.ac") || todoId <= -10000
 
 

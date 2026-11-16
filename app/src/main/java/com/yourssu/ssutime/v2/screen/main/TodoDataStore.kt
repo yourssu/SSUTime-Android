@@ -1,17 +1,12 @@
 package com.yourssu.ssutime.v2.screen.main
 
 import android.content.Context
-import androidx.datastore.core.CorruptionException
 import androidx.datastore.core.DataStore
-import androidx.datastore.core.Serializer
 import androidx.datastore.core.handlers.ReplaceFileCorruptionHandler
 import androidx.datastore.dataStore
 import com.yourssu.data.TodoData
-import com.yourssu.ssutime.v2.analytics.SentryExceptionReporter
-import kotlinx.serialization.SerializationException
+import com.yourssu.ssutime.v2.datastore.JsonDataStoreSerializer
 import kotlinx.serialization.json.Json
-import java.io.InputStream
-import java.io.OutputStream
 
 val Context.todoDataStore: DataStore<TodoData> by dataStore(
     fileName = "todos.json",
@@ -19,28 +14,13 @@ val Context.todoDataStore: DataStore<TodoData> by dataStore(
     corruptionHandler = ReplaceFileCorruptionHandler { TodoDataSerializer.defaultValue },
 )
 
-private val todoJson = Json {
-    ignoreUnknownKeys = true
-    coerceInputValues = true
-    encodeDefaults = true
-}
-
-object TodoDataSerializer : Serializer<TodoData> {
-    override val defaultValue: TodoData = TodoData()
-    override suspend fun readFrom(input: InputStream): TodoData =
-        try {
-            todoJson.decodeFromString<TodoData>(
-                input.readBytes().decodeToString()
-            )
-        } catch (serialization: SerializationException) {
-            SentryExceptionReporter.capture(serialization)
-            throw CorruptionException("과제 정보를 읽어오지 못했습니다.", serialization)
-        }
-
-    override suspend fun writeTo(t: TodoData, output: OutputStream) {
-        output.write(
-            todoJson.encodeToString(TodoData.serializer(), t)
-                .encodeToByteArray()
-        )
-    }
-}
+object TodoDataSerializer : JsonDataStoreSerializer<TodoData>(
+    defaultValue = TodoData(),
+    kSerializer = TodoData.serializer(),
+    readErrorMessage = "과제 정보를 읽어오지 못했습니다.",
+    json = Json {
+        ignoreUnknownKeys = true
+        coerceInputValues = true
+        encodeDefaults = true
+    },
+)

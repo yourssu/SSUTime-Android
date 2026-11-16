@@ -149,21 +149,17 @@ fun TipFragment(
             textAlign = TextAlign.Center
         )
         Spacer(Modifier.height(30.dp))
-        TipItem(
-            key = "1",
-            tipText = stringResource(R.string.onboarding_tip_assignment)
-        )
-        Spacer(Modifier.height(12.dp))
-        TipItem(
-            key = "1",
-            tipText = stringResource(R.string.onboarding_tip_quiz)
-        )
-        Spacer(Modifier.height(12.dp))
-        TipItem(
-            key = "1",
-            tipText = stringResource(R.string.onboarding_tip_lecture)
-        )
-        Spacer(Modifier.height(12.dp))
+        listOf(
+            R.string.onboarding_tip_assignment,
+            R.string.onboarding_tip_quiz,
+            R.string.onboarding_tip_lecture,
+        ).forEach { tipResId ->
+            TipItem(
+                key = "1",
+                tipText = stringResource(tipResId)
+            )
+            Spacer(Modifier.height(12.dp))
+        }
         TipItem(
             tipText = stringResource(R.string.onboarding_tip_cyber_excluded),
             isWarning = true
@@ -195,13 +191,14 @@ fun TipItem(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(10.dp))
-            .background(if(isWarning) R100 else N100)
-            .run {
-                if(isWarning)
-                    this.border(width = 1.dp, color = R300, shape = RoundedCornerShape(10.dp))
-                else
-                    this
-            }
+            .background(if (isWarning) R100 else N100)
+            .then(
+                if (isWarning) {
+                    Modifier.border(width = 1.dp, color = R300, shape = RoundedCornerShape(10.dp))
+                } else {
+                    Modifier
+                }
+            )
 
     ) {
         Row(

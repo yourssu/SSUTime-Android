@@ -1,6 +1,7 @@
 package com.yourssu.data.network
 
 import com.yourssu.data.TodoInfo
+import com.yourssu.data.effectiveSubjectId
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -31,6 +32,6 @@ data class AttachmentLinkResponse(
 
 
 fun ReportedTodoResponse.matches(todo: TodoInfo): Boolean =
-    subjectId == (todo.subject?.id ?: todo.subjectId).toLong() &&
+    subjectId == todo.effectiveSubjectId.toLong() &&
         materialCode == todo.todoId.toLong() &&
         type == todo.type.name

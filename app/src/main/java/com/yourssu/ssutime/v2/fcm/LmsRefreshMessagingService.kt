@@ -21,6 +21,7 @@ import com.yourssu.ssutime.v2.screen.main.RefreshSource
 import com.yourssu.ssutime.v2.screen.main.TodoRefreshResult
 import com.yourssu.ssutime.v2.screen.main.sortedForMainDisplay
 import com.yourssu.ssutime.v2.todo.toTodoDeadlineInstantOrNull
+import com.yourssu.ssutime.v2.todo.toTodoTypeOrNull
 import com.yourssu.ssutime.v2.widget.updateAllTodoWidgets
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -214,12 +215,7 @@ private fun RemoteMessage.toFallbackTodoInfo(): TodoInfo? {
             ?: data["due_date"]
             ?: data["deadline"]
             ?: "",
-        type = data["todoType"].toTodoType(),
+        type = data["todoType"].toTodoTypeOrNull() ?: TodoType.ASSIGNMENT,
         subject = subject,
     )
 }
-
-private fun String?.toTodoType(): TodoType =
-    TodoType.values().firstOrNull { type ->
-        equals(type.name, ignoreCase = true) || this == type.kor
-    } ?: TodoType.ASSIGNMENT

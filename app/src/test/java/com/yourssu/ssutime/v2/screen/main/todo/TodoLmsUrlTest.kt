@@ -3,6 +3,7 @@ package com.yourssu.ssutime.v2.screen.main.todo
 import com.yourssu.data.SubjectInfo
 import com.yourssu.data.TodoInfo
 import com.yourssu.data.TodoType
+import com.yourssu.ssutime.v2.component.parseHtmlToAnnotatedString
 import org.junit.Assert.assertEquals
 import org.junit.Test
 

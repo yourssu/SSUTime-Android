@@ -2,6 +2,7 @@ package com.yourssu.data.network
 
 import com.yourssu.data.TodoInfo
 import com.yourssu.data.TodoType
+import com.yourssu.data.effectiveSubjectId
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -67,7 +68,7 @@ val AssignmentAnalysisResponse.hasNoAnalyzableAttachment: Boolean
 fun TodoInfo.toReportWithAnalysisRequestOrNull(
     lmsSession: LmsSessionRequest,
 ): TodoReportWithAnalysisRequest? {
-    val subjectId = (subject?.id ?: subjectId).toLong()
+    val subjectId = effectiveSubjectId.toLong()
     val assignmentId = todoId.toLong()
     val assignmentHtml = description.takeIf { it.isNotBlank() } ?: return null
     if (type != TodoType.ASSIGNMENT) {

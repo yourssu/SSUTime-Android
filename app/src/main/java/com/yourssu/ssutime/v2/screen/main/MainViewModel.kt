@@ -11,19 +11,15 @@ import com.yourssu.data.SubjectInfo
 import com.yourssu.data.TodoData
 import com.yourssu.data.TodoInfo
 import com.yourssu.ssutime.v2.analytics.SentryExceptionReporter
+import com.yourssu.ssutime.v2.todo.TODO_DEADLINE_ZONE_ID
 import com.yourssu.ssutime.v2.todo.sortedBySubmittedAtDescending
 import io.github.chlwhdtn03.data.Lms.Term
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
-import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
-import java.time.ZoneId
 import kotlin.time.ExperimentalTime
-
-private val REFRESH_DATE_ZONE_ID: ZoneId = ZoneId.of("Asia/Seoul")
-private val SUBMITTED_VISIBLE_WINDOW: Duration = Duration.ofHours(24)
 
 @OptIn(ExperimentalTime::class)
 class MainViewModel(
@@ -185,73 +181,55 @@ class MainViewModel(
         allowRefresh: Boolean = true,
         showBlockingLoading: Boolean = true,
         source: RefreshSource = RefreshSource.FOREGROUND,
-    ): TodoData? {
-        if (isLoading.value) {
-            return null
-        }
+    ): TodoData? = runTodoLoad(
+        showBlockingLoading = showBlockingLoading,
+        errorLogMessage = "과제 정보를 갱신하지 못했습니다.",
+    ) {
+        val cachedTodoData = mainRepository.getTodoData()
+        val hasCachedTodoData = cachedTodoData.todos.isNotEmpty() || cachedTodoData.submitted.isNotEmpty()
+        val shouldRefresh = allowRefresh && (forceRefresh || shouldRefreshOnOpen(cachedTodoData))
 
-        isLoading.value = true
-        loadingProgress.value = 0f
-        showLoading.value = showBlockingLoading
-        showNetworkError.value = false
-
-        return try {
-            val cachedTodoData = mainRepository.getTodoData()
-            val hasCachedTodoData = cachedTodoData.todos.isNotEmpty() || cachedTodoData.submitted.isNotEmpty()
-            val shouldRefresh = allowRefresh && (forceRefresh || shouldRefreshOnOpen(cachedTodoData))
-
-            if (!shouldRefresh) {
-                if (!allowRefresh) {
-                    lmsRefreshRepository.awaitOnboardingInitialRefreshIfRunning()
-                }
-                val latestTodoData = mainRepository.getTodoData()
-                val onboardingError = lmsRefreshRepository.consumeOnboardingRefreshError()
-                if (latestTodoData.loadedAt.isBlank() && !onboardingError.isNullOrBlank()) {
-                    showNetworkCause.value = onboardingError
-                    showNetworkError.value = true
-                    null
-                } else {
-                    updateTodoState(latestTodoData)
-                    latestTodoData
-                }
+        if (!shouldRefresh) {
+            if (!allowRefresh) {
+                lmsRefreshRepository.awaitOnboardingInitialRefreshIfRunning()
+            }
+            val latestTodoData = mainRepository.getTodoData()
+            val onboardingError = lmsRefreshRepository.consumeOnboardingRefreshError()
+            if (latestTodoData.loadedAt.isBlank() && !onboardingError.isNullOrBlank()) {
+                showNetworkCause.value = onboardingError
+                showNetworkError.value = true
+                null
             } else {
-                when (val refreshResult = lmsRefreshRepository.refreshTodos(
-                    source = source,
-                    forceLogin = forceLogin,
-                    loadingState = { progress ->
-                        loadingProgress.value = progress
-                    },
-                )) {
-                    is TodoRefreshResult.Success -> {
-                        loadingProgress.value = 1f
-                        showNetworkError.value = false
-                        updateTodoState(refreshResult.todoData)
-                        refreshResult.todoData
-                    }
+                updateTodoState(latestTodoData)
+                latestTodoData
+            }
+        } else {
+            when (val refreshResult = lmsRefreshRepository.refreshTodos(
+                source = source,
+                forceLogin = forceLogin,
+                loadingState = { progress ->
+                    loadingProgress.floatValue = progress
+                },
+            )) {
+                is TodoRefreshResult.Success -> {
+                    loadingProgress.floatValue = 1f
+                    showNetworkError.value = false
+                    updateTodoState(refreshResult.todoData)
+                    refreshResult.todoData
+                }
 
-                    is TodoRefreshResult.Skipped -> {
-                        Log.i(javaClass.name, refreshResult.reason)
-                        cachedTodoData.takeIf { hasCachedTodoData }
-                    }
+                is TodoRefreshResult.Skipped -> {
+                    Log.i(javaClass.name, refreshResult.reason)
+                    cachedTodoData.takeIf { hasCachedTodoData }
+                }
 
-                    is TodoRefreshResult.Failure -> {
-                        Log.e(javaClass.name, refreshResult.message, refreshResult.throwable)
-                        showNetworkError.value = true
-                        showNetworkCause.value = refreshResult.message
-                        null
-                    }
+                is TodoRefreshResult.Failure -> {
+                    Log.e(javaClass.name, refreshResult.message, refreshResult.throwable)
+                    showNetworkError.value = true
+                    showNetworkCause.value = refreshResult.message
+                    null
                 }
             }
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-            SentryExceptionReporter.capture(e)
-            Log.e(javaClass.name, "과제 정보를 갱신하지 못했습니다.", e)
-            showNetworkError.value = true
-            showNetworkCause.value = e.localizedMessage ?: "알 수 없는 에러"
-            null
-        } finally {
-            isLoading.value = false
-            showLoading.value = false
         }
     }
 
@@ -259,6 +237,30 @@ class MainViewModel(
         term: Term,
         forceLogin: Boolean = false,
         showBlockingLoading: Boolean = true,
+    ): TodoData? = runTodoLoad(
+        showBlockingLoading = showBlockingLoading,
+        errorLogMessage = "선택한 학기 정보를 불러오지 못했습니다.",
+    ) {
+        val todoData = lmsRefreshRepository.loadTodosForTerm(
+            term = term,
+            forceLogin = forceLogin,
+            loadingState = { progress ->
+                loadingProgress.floatValue = progress
+            },
+        )
+        if (termSelectionStore.selectedTerm.value?.id != term.id) {
+            return@runTodoLoad null
+        }
+
+        loadingProgress.floatValue = 1f
+        updateTodoState(todoData)
+        todoData
+    }
+
+    private suspend fun runTodoLoad(
+        showBlockingLoading: Boolean,
+        errorLogMessage: String,
+        block: suspend () -> TodoData?,
     ): TodoData? {
         if (isLoading.value) {
             return null
@@ -270,24 +272,11 @@ class MainViewModel(
         showNetworkError.value = false
 
         return try {
-            val todoData = lmsRefreshRepository.loadTodosForTerm(
-                term = term,
-                forceLogin = forceLogin,
-                loadingState = { progress ->
-                    loadingProgress.floatValue = progress
-                },
-            )
-            if (termSelectionStore.selectedTerm.value?.id != term.id) {
-                return null
-            }
-
-            loadingProgress.floatValue = 1f
-            updateTodoState(todoData)
-            todoData
+            block()
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             SentryExceptionReporter.capture(e)
-            Log.e(javaClass.name, "선택한 학기 정보를 불러오지 못했습니다.", e)
+            Log.e(javaClass.name, errorLogMessage, e)
             showNetworkError.value = true
             showNetworkCause.value = e.localizedMessage ?: "알 수 없는 에러"
             null
@@ -323,23 +312,13 @@ class MainViewModel(
 
         val loadedDate = todoData.loadedAt.toLocalDateOrNull()
             ?: return true
-        val today = LocalDate.now(REFRESH_DATE_ZONE_ID)
+        val today = LocalDate.now(TODO_DEADLINE_ZONE_ID)
         return loadedDate.isBefore(today)
     }
 
     private fun String.toLocalDateOrNull(): LocalDate? = runCatching {
         Instant.parse(this)
-            .atZone(REFRESH_DATE_ZONE_ID)
+            .atZone(TODO_DEADLINE_ZONE_ID)
             .toLocalDate()
-    }.getOrNull()
-
-    private fun List<TodoInfo>.filterRecentlySubmitted(): List<TodoInfo> = filter { todo ->
-        val submittedInstant = todo.submittedAt.toInstantOrNull() ?: return@filter false
-        val threshold = Instant.now().minus(SUBMITTED_VISIBLE_WINDOW)
-        submittedInstant.isAfter(threshold)
-    }
-
-    private fun String.toInstantOrNull(): Instant? = runCatching {
-        Instant.parse(this)
     }.getOrNull()
 }

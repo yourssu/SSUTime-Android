@@ -176,13 +176,6 @@ fun Context.canPostCallAlert(): Boolean {
     return true
 }
 
-private fun Context.canPostNotifications(): Boolean {
-    val notificationManager = getSystemService(NotificationManager::class.java) ?: return false
-    return notificationManager.areNotificationsEnabled() &&
-        (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
-            checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED)
-}
-
 private fun Context.logFullScreenIntentPermission() {
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
         return

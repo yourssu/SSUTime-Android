@@ -2,18 +2,10 @@
 
 package com.yourssu.ssutime.v2.screen.my
 
-import android.Manifest
-import android.app.NotificationManager
 import android.content.Context
 import android.content.Intent
-import android.content.pm.PackageManager
-import android.net.Uri
-import android.os.Build
-import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.EnterTransition
-import androidx.compose.animation.ExitTransition
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -59,7 +51,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -67,9 +58,7 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
-import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.yourssu.data.AlertData
@@ -79,7 +68,14 @@ import com.yourssu.ssutime.v2.R
 import com.yourssu.ssutime.v2.SSUCyberAccountConnectedBadge
 import com.yourssu.ssutime.v2.SSUCyberAccountHelperBadge
 import com.yourssu.ssutime.v2.analytics.Analytics
+import com.yourssu.ssutime.v2.component.ConfirmPopup
+import com.yourssu.ssutime.v2.component.NoTransitionNavHost
+import com.yourssu.ssutime.v2.component.withoutTrailingNumericSuffix
 import com.yourssu.ssutime.v2.notification.canPostCallAlert
+import com.yourssu.ssutime.v2.notification.canPostNotifications
+import com.yourssu.ssutime.v2.notification.canUseFullScreenIntent
+import com.yourssu.ssutime.v2.notification.fullScreenIntentSettingsIntent
+import com.yourssu.ssutime.v2.notification.notificationSettingsIntent
 import com.yourssu.ssutime.v2.ui.theme.BLACK
 import com.yourssu.ssutime.v2.ui.theme.N100
 import com.yourssu.ssutime.v2.ui.theme.N200
@@ -95,10 +91,6 @@ import org.koin.compose.viewmodel.koinViewModel
 
 const val MY_PAGE_MAIN_ROUTE = "my_page_main"
 const val HIDDEN_TODOS_ROUTE = "hidden_todos"
-private val TRAILING_STUDENT_ID_SUFFIX = Regex("""\s*\(\d+\)\s*$""")
-
-private fun String.withoutTrailingStudentId(): String =
-    replace(TRAILING_STUDENT_ID_SUFFIX, "").trim()
 
 @Composable
 fun MyPageScreen(
@@ -117,13 +109,9 @@ fun MyPageScreen(
         }
     }
 
-    NavHost(
+    NoTransitionNavHost(
         navController = myNavController,
         startDestination = MY_PAGE_MAIN_ROUTE,
-        enterTransition = { EnterTransition.None },
-        exitTransition = { ExitTransition.None },
-        popEnterTransition = { EnterTransition.None },
-        popExitTransition = { ExitTransition.None },
     ) {
         composable(MY_PAGE_MAIN_ROUTE) {
             MyPageContent(
@@ -376,7 +364,7 @@ fun MyPageContent(
                 modifier = Modifier.size(100.dp, 100.dp)
             )
             Text(
-                text = loginInfo?.user_name?.withoutTrailingStudentId()
+                text = loginInfo?.user_name?.withoutTrailingNumericSuffix()?.trim()
                     ?: stringResource(R.string.common_loading),
                 style = SSUType.H3SemiBold,
             )
@@ -384,24 +372,17 @@ fun MyPageContent(
                 text = loginInfo?.dept_name ?: "",
                 style = SSUType.H4SemiBold,
             )
-            if(BuildConfig.DEBUG_MODE) {
+            if (BuildConfig.DEBUG_MODE) {
                 TermDropdown(
                     terms = terms,
                     selectedTerm = selectedTerm ?: currentTerm,
                     onTermSelected = viewModel::selectTerm,
                 )
             } else {
-                if(currentTerm == null) {
-                    Text(
-                        text = stringResource(R.string.my_no_term_info),
-                        style = SSUType.Caption1SemiBold,
-                    )
-                } else {
-                    Text(
-                        text = currentTerm.name ?: stringResource(R.string.my_no_term_info),
-                        style = SSUType.Caption1SemiBold,
-                    )
-                }
+                Text(
+                    text = currentTerm?.name ?: stringResource(R.string.my_no_term_info),
+                    style = SSUType.Caption1SemiBold,
+                )
             }
         }
 
@@ -614,18 +595,6 @@ fun MyPageContent(
         )
 
         Spacer(Modifier.height(24.dp))
-
-//        OptionButton(
-//            text = "디버그: 10초 후 전화알림"
-//        ) {
-//            viewModel.sendDebugCallAlertAfterDelay(context)
-//        }
-
-//        OptionButton(
-//            text = "디버그: 푸시알림"
-//        ) {
-//            context.showDebugNotification()
-//        }
     }
 }
 
@@ -696,56 +665,6 @@ private enum class NotificationSettingsRequest {
     CallAlertPostNotifications,
     CallAlertFullScreenIntent,
 }
-
-private fun Context.canPostNotifications(): Boolean {
-    val notificationManager = getSystemService(NotificationManager::class.java) ?: return false
-    return notificationManager.areNotificationsEnabled() &&
-        (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
-            ContextCompat.checkSelfPermission(
-                this,
-                Manifest.permission.POST_NOTIFICATIONS,
-            ) == PackageManager.PERMISSION_GRANTED)
-}
-
-private fun Context.canUseFullScreenIntent(): Boolean {
-    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-        return true
-    }
-
-    return getSystemService(NotificationManager::class.java).canUseFullScreenIntent()
-}
-
-private fun Context.notificationSettingsIntent(): Intent {
-    val notificationSettingsIntent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-        Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
-            putExtra(Settings.EXTRA_APP_PACKAGE, packageName)
-        }
-    } else {
-        null
-    }
-
-    return notificationSettingsIntent?.takeIf { it.resolveActivity(packageManager) != null }
-        ?: appDetailsSettingsIntent()
-}
-
-private fun Context.fullScreenIntentSettingsIntent(): Intent {
-    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-        return appDetailsSettingsIntent()
-    }
-
-    val packageUri = Uri.parse("package:$packageName")
-    val fullScreenIntentSettings = Intent(Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT).apply {
-        data = packageUri
-    }
-
-    return fullScreenIntentSettings.takeIf { it.resolveActivity(packageManager) != null }
-        ?: appDetailsSettingsIntent()
-}
-
-private fun Context.appDetailsSettingsIntent(): Intent =
-    Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-        data = Uri.parse("package:$packageName")
-    }
 
 @Composable
 fun ToggleOption(
@@ -883,33 +802,6 @@ fun OptionButton(
 }
 
 @Composable
-fun PopupButton(
-    modifier: Modifier = Modifier,
-    text: String,
-    color: Color = Color.Unspecified,
-    textColor: Color = Color.Unspecified,
-    onClick: () -> Unit
-) {
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .clickable { onClick() }
-            .background(color = color)
-            .padding(14.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.Center
-    ) {
-        Text(
-            text = text,
-            style = SSUType.H5SemiBold,
-            color = textColor
-        )
-    }
-}
-
-
-@Composable
 @Preview(showBackground = true)
 fun previewToggleOption() {
     ToggleOption(
@@ -980,43 +872,12 @@ fun LogoutPopup(
     onCancel: () -> Unit = {},
     onConfirm: () -> Unit = {}
 ) {
-    Column(
-        Modifier
-            .width(300.dp)
-            .clip(RoundedCornerShape(16.dp))
-            .background(WHITE)
-            .padding(top = 18.dp, start = 12.dp, end = 12.dp, bottom = 12.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        Text(
-            text = stringResource(R.string.my_logout),
-            style = SSUType.H4SemiBold,
-        )
-        Text(
-            text = stringResource(R.string.my_logout_message),
-            style = SSUType.Body1Medium
-        )
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
-            PopupButton(
-                modifier = Modifier
-                    .weight(1f),
-                text = stringResource(R.string.common_cancel),
-                color = N200,
-                onClick = onCancel
-            )
-            PopupButton(
-                modifier = Modifier
-                    .weight(1f),
-                text = stringResource(R.string.common_confirm),
-                color = R400,
-                textColor = WHITE,
-                onClick = onConfirm
-            )
-        }
-    }
+    ConfirmPopup(
+        title = stringResource(R.string.my_logout),
+        message = stringResource(R.string.my_logout_message),
+        onCancel = onCancel,
+        onConfirm = onConfirm,
+    )
 }
 
 @Composable
@@ -1024,37 +885,10 @@ private fun WithdrawPopup(
     onCancel: () -> Unit,
     onConfirm: () -> Unit,
 ) {
-    Column(
-        Modifier
-            .width(300.dp)
-            .clip(RoundedCornerShape(16.dp))
-            .background(WHITE)
-            .padding(top = 18.dp, start = 12.dp, end = 12.dp, bottom = 12.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-    ) {
-        Text(
-            text = stringResource(R.string.my_withdraw),
-            style = SSUType.H4SemiBold,
-        )
-        Text(
-            text = stringResource(R.string.my_withdraw_message),
-            style = SSUType.Body1Medium,
-        )
-        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            PopupButton(
-                modifier = Modifier.weight(1f),
-                text = stringResource(R.string.common_cancel),
-                color = N200,
-                onClick = onCancel,
-            )
-            PopupButton(
-                modifier = Modifier.weight(1f),
-                text = stringResource(R.string.common_confirm),
-                color = R400,
-                textColor = WHITE,
-                onClick = onConfirm,
-            )
-        }
-    }
+    ConfirmPopup(
+        title = stringResource(R.string.my_withdraw),
+        message = stringResource(R.string.my_withdraw_message),
+        onCancel = onCancel,
+        onConfirm = onConfirm,
+    )
 }

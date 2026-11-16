@@ -34,6 +34,7 @@ import com.google.firebase.messaging.FirebaseMessaging
 import com.yourssu.ssutime.v2.R
 import com.yourssu.ssutime.v2.analytics.Analytics
 import com.yourssu.ssutime.v2.analytics.SentryExceptionReporter
+import com.yourssu.ssutime.v2.component.LoadingOverlay
 import com.yourssu.ssutime.v2.component.SButton
 import com.yourssu.ssutime.v2.component.SCheckBox
 import com.yourssu.ssutime.v2.component.SSecureTextField
@@ -135,27 +136,8 @@ fun LoginScreen(
         )
     }
 
-    if(!isLoading)
-        return
-
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(
-                Color(0x80000000)
-            ),
-        contentAlignment = Alignment.Center,
-    ) {
-        Column(
-            Modifier.fillMaxSize(),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            CircularProgressIndicator(
-                color = MaterialTheme.colorScheme.secondary,
-                trackColor = MaterialTheme.colorScheme.surfaceVariant,
-            )
-        }
+    if (isLoading) {
+        LoadingOverlay()
     }
 
 }

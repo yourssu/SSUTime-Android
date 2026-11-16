@@ -1,7 +1,5 @@
 package com.yourssu.ssutime.v2.screen.calendar
 
-import androidx.compose.animation.EnterTransition
-import androidx.compose.animation.ExitTransition
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -43,26 +41,27 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.yourssu.data.TodoInfo
-import com.yourssu.data.TodoType
 import com.yourssu.data.todoUniqueKey
 import com.yourssu.ssutime.v2.R
 import com.yourssu.ssutime.v2.analytics.Analytics
+import com.yourssu.ssutime.v2.component.NoTransitionNavHost
 import com.yourssu.ssutime.v2.component.SSUTimeTopBar
 import com.yourssu.ssutime.v2.component.preventBottomSheetJitter
 import com.yourssu.ssutime.v2.screen.main.MainViewModel
 import com.yourssu.ssutime.v2.screen.main.todo.TodoDetailScreen
 import com.yourssu.ssutime.v2.screen.notice.NoticeScreen
 import com.yourssu.ssutime.v2.todo.TODO_DEADLINE_ZONE_ID
+import com.yourssu.ssutime.v2.todo.badgeBackgroundColor
+import com.yourssu.ssutime.v2.todo.badgeTextColor
+import com.yourssu.ssutime.v2.todo.labelResId
 import com.yourssu.ssutime.v2.todo.toTodoDeadlineInstantOrNull
 import com.yourssu.ssutime.v2.ui.theme.N100
 import com.yourssu.ssutime.v2.ui.theme.N200
@@ -93,37 +92,6 @@ private val LocalDateNullableSaver = Saver<LocalDate?, String>(
     save = { it?.toString() ?: "" },
     restore = { it.takeIf { s -> s.isNotBlank() }?.let { s -> runCatching { LocalDate.parse(s) }.getOrNull() } }
 )
-
-/**
- * TodoType별 뱃지 배경색 매핑 (MainScreen 기준)
- */
-fun TodoType.badgeBackgroundColor(): Color = when (this) {
-    TodoType.COMMONS -> Color(0xFFF7DBF7)     // 영상/강의
-    TodoType.QUIZ -> Color(0xFFFFD7C2)        // 퀴즈
-    TodoType.ASSIGNMENT -> Color(0xFFD8E5F7)  // 과제
-    else -> Color(0xFFF7DBF7)
-}
-
-/**
- * TodoType별 뱃지 텍스트색 매핑 (MainScreen 기준)
- */
-fun TodoType.badgeTextColor(): Color = when (this) {
-    TodoType.COMMONS -> Color(0xFFFF39D0)     // 영상/강의
-    TodoType.QUIZ -> Color(0xFFFF5F0B)        // 퀴즈
-    TodoType.ASSIGNMENT -> Color(0xFF007BFF)  // 과제
-    else -> Color(0xFFFF39D0)
-}
-
-/**
- * TodoType별 다국어 지원 문자열 리소스 ID 매핑
- */
-fun TodoType.toDisplayNameRes(): Int = when (this) {
-    TodoType.COMMONS -> R.string.todo_type_lecture
-    TodoType.ASSIGNMENT -> R.string.todo_type_assignment
-    TodoType.QUIZ -> R.string.todo_type_quiz
-    TodoType.SUBMITTED -> R.string.todo_type_submitted
-    TodoType.SUBMITTED_LATE -> R.string.todo_type_submitted_late
-}
 
 /**
  * TodoInfo의 마감일을 LocalDate로 파싱
@@ -166,13 +134,9 @@ fun CalendarScreen(
         }
     }
 
-    NavHost(
+    NoTransitionNavHost(
         navController = calendarNavController,
         startDestination = CALENDAR_MAIN_ROUTE,
-        enterTransition = { EnterTransition.None },
-        exitTransition = { ExitTransition.None },
-        popEnterTransition = { EnterTransition.None },
-        popExitTransition = { ExitTransition.None },
         modifier = modifier.fillMaxSize(),
     ) {
         composable(route = CALENDAR_MAIN_ROUTE) {
@@ -374,13 +338,6 @@ fun CalendarScreenContent(
             )
         }
     }
-}
-
-@Composable
-fun CalendarTopBar(
-    modifier: Modifier = Modifier,
-) {
-    SSUTimeTopBar(modifier = modifier)
 }
 
 /**
@@ -801,7 +758,7 @@ fun CalendarTodoDetailItem(
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = stringResource(todo.type.toDisplayNameRes()),
+                    text = stringResource(todo.type.labelResId()),
                     style = SSUType.Caption1SemiBold,
                     color = todo.type.badgeTextColor()
                 )

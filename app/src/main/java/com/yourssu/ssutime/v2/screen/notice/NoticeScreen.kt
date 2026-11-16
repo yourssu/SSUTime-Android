@@ -1,10 +1,6 @@
 package com.yourssu.ssutime.v2.screen.notice
 
 import android.content.Context
-import android.content.Intent
-import android.net.Uri
-import android.text.Html
-import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -36,8 +32,6 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
-import androidx.compose.material.icons.outlined.AttachFile
-import androidx.compose.material.icons.outlined.FileDownload
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
@@ -57,15 +51,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.Placeholder
 import androidx.compose.ui.text.PlaceholderVerticalAlign
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.TextLinkStyles
 import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.fromHtml
-import androidx.compose.ui.text.style.TextDecoration
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -74,7 +62,11 @@ import com.yourssu.data.DiscussionInfo
 import com.yourssu.data.SubjectInfo
 import com.yourssu.ssutime.v2.R
 import com.yourssu.ssutime.v2.analytics.Analytics
+import com.yourssu.ssutime.v2.component.AttachmentSection
 import com.yourssu.ssutime.v2.component.SSUTimeTopBar
+import com.yourssu.ssutime.v2.component.openExternalUrl
+import com.yourssu.ssutime.v2.component.parseHtmlToAnnotatedString
+import com.yourssu.ssutime.v2.todo.TODO_DEADLINE_ZONE_ID
 import com.yourssu.ssutime.v2.ui.theme.BLACK
 import com.yourssu.ssutime.v2.ui.theme.N100
 import com.yourssu.ssutime.v2.ui.theme.N200
@@ -86,7 +78,6 @@ import com.yourssu.ssutime.v2.ui.theme.R400
 import com.yourssu.ssutime.v2.ui.theme.SSUType
 import com.yourssu.ssutime.v2.ui.theme.WHITE
 import java.time.Instant
-import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
@@ -101,54 +92,8 @@ internal fun formatDiscussionDate(dateString: String): String {
     return runCatching {
         val instant = Instant.parse(dateString)
         val formatter = DateTimeFormatter.ofPattern("yyyy.MM.dd. a h:mm", Locale.KOREA)
-        instant.atZone(ZoneId.of("Asia/Seoul")).format(formatter)
+        instant.atZone(TODO_DEADLINE_ZONE_ID).format(formatter)
     }.getOrElse { dateString }
-}
-
-/**
- * HTML 형식의 문자열을 일반 텍스트로 변환
- */
-internal fun parseHtmlToPlainText(html: String): String {
-    if (html.isBlank()) return ""
-    return runCatching {
-        Html.fromHtml(html, Html.FROM_HTML_MODE_COMPACT).toString().trim()
-    }.getOrElse { html }
-}
-
-/**
- * HTML 형식의 문자열을 Compose의 AnnotatedString으로 변환
- */
-internal fun parseHtmlToAnnotatedString(html: String): AnnotatedString {
-    if (html.isBlank()) return AnnotatedString("")
-    return runCatching {
-        AnnotatedString.fromHtml(
-            htmlString = html,
-            linkStyles = TextLinkStyles(
-                style = SpanStyle(
-                    color = Color(0xFF007BFF),
-                    textDecoration = TextDecoration.Underline,
-                )
-            )
-        )
-    }.getOrElse { AnnotatedString(html) }
-}
-
-/**
- * 첨부파일 또는 공지 URL 열기
- */
-fun openAttachmentUrl(context: Context, url: String) {
-    if (url.isBlank()) {
-        Toast.makeText(context, context.getString(R.string.notice_attachment_invalid_path), Toast.LENGTH_SHORT).show()
-        return
-    }
-    runCatching {
-        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK
-        }
-        context.startActivity(intent)
-    }.onFailure {
-        Toast.makeText(context, context.getString(R.string.common_open_link_no_app), Toast.LENGTH_SHORT).show()
-    }
 }
 
 /**
@@ -274,7 +219,7 @@ fun NoticeScreen(
             .fillMaxSize()
             .background(WHITE)
     ) {
-        NoticeTopBar(
+        SSUTimeTopBar(
             onLogoClick = onBackClick
         )
 
@@ -329,7 +274,7 @@ fun NoticeScreen(
                             onAttachmentClick(discussion)
                             val targetUrl = discussion.attachments.firstOrNull()?.url?.takeIf { it.isNotBlank() }
                                 ?: discussion.url
-                             openAttachmentUrl(context, targetUrl)
+                            context.openExternalUrl(targetUrl, showInvalidToast = true)
                         }
                     )
 
@@ -361,17 +306,6 @@ fun NoticeScreen(
             }
         }
     }
-}
-
-@Composable
-fun NoticeTopBar(
-    modifier: Modifier = Modifier,
-    onLogoClick: () -> Unit = {},
-) {
-    SSUTimeTopBar(
-        modifier = modifier,
-        onLogoClick = onLogoClick,
-    )
 }
 
 @Composable
@@ -623,103 +557,17 @@ fun NoticeAccordionItem(
                 }
 
                 if (hasAttachment) {
-                    DiscussionAttachmentSection(
+                    AttachmentSection(
                         attachments = discussion.attachments,
-                        onOpenUrl = { url ->
-                            openAttachmentUrl(context, url)
+                        nameProvider = { _, attachment -> attachment.name },
+                        onItemClick = { attachment ->
+                            context.openExternalUrl(attachment.url, showInvalidToast = true)
                         },
-                        modifier = Modifier.padding(top = 16.dp)
+                        modifier = Modifier.padding(top = 16.dp),
                     )
                 }
             }
         }
-    }
-}
-
-/**
- * 첨부파일 목록 섹션
- */
-@Composable
-fun DiscussionAttachmentSection(
-    attachments: List<DiscussionAttachment>,
-    onOpenUrl: (String) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    if (attachments.isEmpty()) return
-
-    Column(
-        modifier = modifier.fillMaxWidth()
-    ) {
-        Text(
-            text = stringResource(R.string.common_attachment),
-            style = SSUType.Caption1SemiBold,
-            color = N400
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Column(
-            modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            attachments.forEachIndexed { index, attachment ->
-                val fileName = attachment.name.takeIf { it.isNotBlank() } ?: stringResource(R.string.common_attachment_numbered, index + 1)
-                DiscussionAttachmentItem(
-                    fileName = fileName,
-                    onClick = {
-                        onOpenUrl(attachment.url)
-                    }
-                )
-            }
-        }
-    }
-}
-
-/**
- * 개별 첨부파일 카드 아이템
- */
-@Composable
-fun DiscussionAttachmentItem(
-    fileName: String,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(8.dp))
-            .border(1.dp, N200, RoundedCornerShape(8.dp))
-            .background(WHITE)
-            .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 14.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(
-            imageVector = Icons.Outlined.AttachFile,
-            contentDescription = stringResource(R.string.common_attachment),
-            tint = N400,
-            modifier = Modifier.size(20.dp)
-        )
-
-        Spacer(modifier = Modifier.width(8.dp))
-
-        Text(
-            text = fileName,
-            style = SSUType.Label2Medium,
-            color = N500,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.weight(1f)
-        )
-
-        Spacer(modifier = Modifier.width(8.dp))
-
-        Icon(
-            imageVector = Icons.Outlined.FileDownload,
-            contentDescription = stringResource(R.string.common_download),
-            tint = N400,
-            modifier = Modifier.size(20.dp)
-        )
     }
 }
 

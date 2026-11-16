@@ -1,10 +1,8 @@
 package com.yourssu.ssutime.v2.screen.my
 
 import android.content.Context
-import android.content.Intent
 import android.util.Log
 import androidx.compose.runtime.mutableStateOf
-import androidx.core.net.toUri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.yourssu.data.AlertData
@@ -15,22 +13,20 @@ import com.yourssu.data.UiState
 import com.yourssu.ssutime.v2.accessToken
 import com.yourssu.ssutime.v2.analytics.Analytics
 import com.yourssu.ssutime.v2.analytics.SentryExceptionReporter
+import com.yourssu.ssutime.v2.component.openExternalUrl
 import com.yourssu.ssutime.v2.lms.ensureLmsLoggedIn
 import com.yourssu.ssutime.v2.lms.getLmsLoginInfo
 import com.yourssu.ssutime.v2.lms.getLmsTerms
 import com.yourssu.ssutime.v2.network.ApiRepository
-import com.yourssu.ssutime.v2.notification.showCallAlert
 import com.yourssu.ssutime.v2.screen.cyber.CyberRepository
 import com.yourssu.ssutime.v2.screen.login.LoginRepository
 import com.yourssu.ssutime.v2.screen.main.MainRepository
 import com.yourssu.ssutime.v2.screen.main.TermSelectionStore
 import com.yourssu.ssutime.v2.screen.main.currentTermAt
-import com.yourssu.ssutime.v2.screen.main.sortedForMainDisplay
 import io.github.chlwhdtn03.LmsApi
 import io.github.chlwhdtn03.data.Lms.Info
 import io.github.chlwhdtn03.data.Lms.Term
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -117,20 +113,7 @@ class MyViewModel(
 
             val loadSuccess = runCatching {
                 if (LmsApi.isLoggined) {
-                    val info = getLmsLoginInfo()
-                    loginInfo.value = info
-                    val loadedTerms = getLmsTerms()
-                        .sortedWith(
-                            compareByDescending<Term> { it.start_at }
-                                .thenByDescending { it.id }
-                        )
-                    terms.value = loadedTerms
-                    currentTerm.value = loadedTerms.currentTermAt(now = Clock.System.now())
-
-                    val selectedTermId = selectedTerm.value?.id
-                    if (selectedTermId != null && loadedTerms.none { it.id == selectedTermId }) {
-                        termSelectionStore.clear()
-                    }
+                    fetchAndApplyLmsData()
                     true
                 } else {
                     false
@@ -141,25 +124,29 @@ class MyViewModel(
             if (!loadSuccess && loginData.hasAutoLoginCredentials) {
                 runCatching {
                     if (ensureLmsLoggedIn(loginData.id, loginData.pw, force = true)) {
-                        loginInfo.value = getLmsLoginInfo()
-                        val loadedTerms = getLmsTerms()
-                            .sortedWith(
-                                compareByDescending<Term> { it.start_at }
-                                    .thenByDescending { it.id }
-                            )
-                        terms.value = loadedTerms
-                        currentTerm.value = loadedTerms.currentTermAt(now = Clock.System.now())
-
-                        val selectedTermId = selectedTerm.value?.id
-                        if (selectedTermId != null && loadedTerms.none { it.id == selectedTermId }) {
-                            termSelectionStore.clear()
-                        }
+                        fetchAndApplyLmsData()
                     }
                 }.onFailure { exception ->
                     SentryExceptionReporter.capture(exception)
                     Log.e(TAG, "마이페이지 LMS 정보 로드 재시도 실패", exception)
                 }
             }
+        }
+    }
+
+    private suspend fun fetchAndApplyLmsData() {
+        loginInfo.value = getLmsLoginInfo()
+        val loadedTerms = getLmsTerms()
+            .sortedWith(
+                compareByDescending<Term> { it.start_at }
+                    .thenByDescending { it.id }
+            )
+        terms.value = loadedTerms
+        currentTerm.value = loadedTerms.currentTermAt(now = Clock.System.now())
+
+        val selectedTermId = selectedTerm.value?.id
+        if (selectedTermId != null && loadedTerms.none { it.id == selectedTermId }) {
+            termSelectionStore.clear()
         }
     }
 
@@ -220,12 +207,8 @@ class MyViewModel(
             isWithdrawing = true
             runCatching {
                 apiRepository.requestAccountWithdrawal(reason)
-            }.onSuccess { response ->
-                if (response.status.equals("REQUESTED", ignoreCase = true) || response.status.isNotBlank()) {
-                    logout()
-                } else {
-                    logout()
-                }
+            }.onSuccess {
+                logout()
             }.onFailure { exception ->
                 isWithdrawing = false
                 SentryExceptionReporter.capture(exception)
@@ -234,46 +217,24 @@ class MyViewModel(
         }
     }
 
-    fun sendDebugCallAlertAfterDelay(context: Context) {
-        val appContext = context.applicationContext
-        viewModelScope.launch {
-            delay(10_000L)
-            val todo = mainRepository.getTodoData().todos.selectDebugCallAlertTodo()
-            if (todo == null) {
-                Log.i(TAG, "디버그 전화 알림을 표시할 Todo가 없습니다.")
-                return@launch
-            }
-
-            showCallAlert(appContext, todo)
-        }
-    }
-
-    private fun List<TodoInfo>.selectDebugCallAlertTodo(): TodoInfo? =
-        sortedForMainDisplay().firstOrNull()
-
     fun openKakaoTalkQA(context: Context) {
         Analytics.kakaoClick()
-        val intent = Intent(Intent.ACTION_VIEW, KAKAO_TALK_QA_URL.toUri()).apply {
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        }
-        runCatching {
-            context.startActivity(intent)
-        }.onFailure { exception ->
-            SentryExceptionReporter.capture(exception)
-            Log.e(TAG, "문의하기 링크를 열지 못했습니다.", exception)
-        }
+        openExternalLink(context, KAKAO_TALK_QA_URL, "문의하기 링크를 열지 못했습니다.")
     }
 
     fun openURL(context: Context, url: String) {
-        val intent = Intent(Intent.ACTION_VIEW, url.toUri()).apply {
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        }
-        runCatching {
-            context.startActivity(intent)
-        }.onFailure { exception ->
-            SentryExceptionReporter.capture(exception)
-            Log.e(TAG, "링크를 열지 못했습니다.", exception)
-        }
+        openExternalLink(context, url, "링크를 열지 못했습니다.")
+    }
+
+    private fun openExternalLink(context: Context, url: String, failureMessage: String) {
+        context.openExternalUrl(
+            url = url,
+            showNoAppToast = false,
+            onFailure = { exception ->
+                SentryExceptionReporter.capture(exception)
+                Log.e(TAG, failureMessage, exception)
+            },
+        )
     }
 
     private companion object {

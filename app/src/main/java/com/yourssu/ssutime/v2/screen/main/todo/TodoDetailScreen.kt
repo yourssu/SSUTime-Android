@@ -1,9 +1,6 @@
 package com.yourssu.ssutime.v2.screen.main.todo
 
 import android.content.Context
-import android.content.Intent
-import android.net.Uri
-import android.widget.Toast
 import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -25,8 +22,6 @@ import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
-import androidx.compose.material.icons.outlined.AttachFile
-import androidx.compose.material.icons.outlined.FileDownload
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.PrimaryTabRow
@@ -48,10 +43,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.TextLinkStyles
-import androidx.compose.ui.text.fromHtml
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
@@ -61,16 +52,19 @@ import androidx.compose.ui.window.Dialog
 import com.yourssu.data.SubjectInfo
 import com.yourssu.data.TodoInfo
 import com.yourssu.data.TodoType
+import com.yourssu.data.effectiveSubjectId
 import com.yourssu.data.isCyber
 import com.yourssu.data.network.AttachmentLinkResponse
 import com.yourssu.data.todoUniqueKey
 import com.yourssu.ssutime.v2.R
 import com.yourssu.ssutime.v2.analytics.Analytics
 import com.yourssu.ssutime.v2.analytics.toDetailType
+import com.yourssu.ssutime.v2.component.AttachmentSection
+import com.yourssu.ssutime.v2.component.ConfirmPopup
 import com.yourssu.ssutime.v2.component.SButton
 import com.yourssu.ssutime.v2.component.SButton_Small
-import com.yourssu.ssutime.v2.screen.my.PopupButton
-import com.yourssu.ssutime.v2.screen.notice.openAttachmentUrl
+import com.yourssu.ssutime.v2.component.openExternalUrl
+import com.yourssu.ssutime.v2.component.parseHtmlToAnnotatedString
 import com.yourssu.ssutime.v2.todo.TODO_DEADLINE_ZONE_ID
 import com.yourssu.ssutime.v2.todo.toTodoDeadlineInstantOrNull
 import com.yourssu.ssutime.v2.ui.theme.N100
@@ -273,26 +267,6 @@ fun TodoDetailTabArea(
     }
 }
 
-/**
- * HTML 형식의 문자열을 Compose의 AnnotatedString으로 변환
- */
-internal fun parseHtmlToAnnotatedString(html: String): AnnotatedString {
-    if (html.isBlank()) return AnnotatedString("")
-    return runCatching {
-        AnnotatedString.fromHtml(
-            htmlString = html,
-            linkStyles = TextLinkStyles(
-                style = SpanStyle(
-                    color = Color(0xFF007BFF),
-                    textDecoration = TextDecoration.Underline,
-                )
-            )
-        )
-    }.getOrElse {
-        AnnotatedString(html)
-    }
-}
-
 @Composable
 fun DescriptionScreen(
     description: String,
@@ -364,11 +338,13 @@ fun SummaryScreen(
                 }
 
                 if (state is AiSummaryUiState.Success && state.summary.isNotBlank() && state.attachmentLinks.isNotEmpty()) {
-                    TodoAttachmentSection(
+                    AttachmentSection(
                         attachments = state.attachmentLinks,
-                        onOpenUrl = { url ->
-                            openAttachmentUrl(context, url)
-                        }
+                        nameProvider = { _, attachment -> attachment.fileName },
+                        onItemClick = { attachment ->
+                            Analytics.taskAttachmentClick()
+                            context.openExternalUrl(attachment.url, showInvalidToast = true)
+                        },
                     )
                 }
             }
@@ -377,103 +353,13 @@ fun SummaryScreen(
 }
 
 /**
- * 첨부파일 목록 섹션
- */
-@Composable
-fun TodoAttachmentSection(
-    attachments: List<AttachmentLinkResponse>,
-    onOpenUrl: (String) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    if (attachments.isEmpty()) return
-
-    Column(
-        modifier = modifier.fillMaxWidth()
-    ) {
-        Text(
-            text = stringResource(R.string.common_attachment),
-            style = SSUType.Caption1SemiBold,
-            color = N400
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Column(
-            modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            attachments.forEachIndexed { index, attachment ->
-                val fileName = attachment.fileName.takeIf { it.isNotBlank() }
-                    ?: stringResource(R.string.common_attachment_numbered, index + 1)
-                TodoAttachmentItem(
-                    fileName = fileName,
-                    onClick = {
-                        Analytics.taskAttachmentClick()
-                        onOpenUrl(attachment.url)
-                    }
-                )
-            }
-        }
-    }
-}
-
-/**
- * 개별 첨부파일 카드 아이템
- */
-@Composable
-fun TodoAttachmentItem(
-    fileName: String,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(8.dp))
-            .border(1.dp, N200, RoundedCornerShape(8.dp))
-            .background(WHITE)
-            .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 14.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(
-            imageVector = Icons.Outlined.AttachFile,
-            contentDescription = stringResource(R.string.common_attachment),
-            tint = N400,
-            modifier = Modifier.size(20.dp)
-        )
-
-        Spacer(modifier = Modifier.width(8.dp))
-
-        Text(
-            text = fileName,
-            style = SSUType.Label2Medium,
-            color = N500,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.weight(1f)
-        )
-
-        Spacer(modifier = Modifier.width(8.dp))
-
-        Icon(
-            imageVector = Icons.Outlined.FileDownload,
-            contentDescription = stringResource(R.string.common_download),
-            tint = N400,
-            modifier = Modifier.size(20.dp)
-        )
-    }
-}
-
-
-/**
  * 할일 유형별 LMS 상세 페이지 URL 생성
  */
 fun TodoInfo.toLmsUrl(): String {
     if (isCyber()) {
         return url.ifBlank { "https://lms.kcu.ac" }
     }
-    val currentSubjectId = subject?.id ?: subjectId
+    val currentSubjectId = effectiveSubjectId
     return when (type) {
         TodoType.QUIZ -> "https://canvas.ssu.ac.kr/courses/$currentSubjectId/quizzes/$componentId"
         TodoType.ASSIGNMENT -> "https://canvas.ssu.ac.kr/courses/$currentSubjectId/assignments/$todoId"
@@ -487,15 +373,7 @@ fun TodoInfo.toLmsUrl(): String {
  * LMS 외부 브라우저 이동
  */
 fun openTodoLmsUrl(context: Context, todo: TodoInfo) {
-    val lmsUrl = todo.toLmsUrl()
-    runCatching {
-        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(lmsUrl)).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK
-        }
-        context.startActivity(intent)
-    }.onFailure {
-        Toast.makeText(context, context.getString(R.string.common_open_link_no_app), Toast.LENGTH_SHORT).show()
-    }
+    context.openExternalUrl(todo.toLmsUrl())
 }
 
 @Composable
@@ -733,42 +611,13 @@ fun HideTodoPopup(
         else -> R.string.assignment_hide_popup_title
     }
 
-    Column(
-        Modifier
-            .width(300.dp)
-            .clip(RoundedCornerShape(16.dp))
-            .background(WHITE)
-            .padding(top = 18.dp, start = 12.dp, end = 12.dp, bottom = 12.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        Text(
-            text = stringResource(titleRes),
-            style = SSUType.H4SemiBold
-        )
-        Text(
-            text = stringResource(R.string.todo_hide_popup_message),
-            style = SSUType.Body1Medium,
-            textAlign = TextAlign.Center
-        )
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
-            PopupButton(
-                modifier = Modifier.weight(1f),
-                text = stringResource(R.string.common_cancel),
-                color = N200,
-                onClick = onCancel
-            )
-            PopupButton(
-                modifier = Modifier.weight(1f),
-                text = stringResource(R.string.common_confirm),
-                color = R400,
-                textColor = WHITE,
-                onClick = onConfirm
-            )
-        }
-    }
+    ConfirmPopup(
+        title = stringResource(titleRes),
+        message = stringResource(R.string.todo_hide_popup_message),
+        onCancel = onCancel,
+        onConfirm = onConfirm,
+        messageTextAlign = TextAlign.Center,
+    )
 }
 
 @Preview(showBackground = true)

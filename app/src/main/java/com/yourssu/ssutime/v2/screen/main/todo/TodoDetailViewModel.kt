@@ -9,6 +9,7 @@ import androidx.lifecycle.viewModelScope
 import com.yourssu.data.AiSummaryCache
 import com.yourssu.data.TodoInfo
 import com.yourssu.data.TodoType
+import com.yourssu.data.effectiveSubjectId
 import com.yourssu.data.network.AssignmentAnalysisResponse
 import com.yourssu.data.network.AttachmentLinkResponse
 import com.yourssu.data.network.ReportedTodoResponse
@@ -78,67 +79,70 @@ class TodoDetailViewModel(
                 requestAiSummary(todo)
             }
 
-            if (analysisResult.isFailure) {
-                val exception = analysisResult.exceptionOrNull()
-                if (exception != null) {
-                    SentryExceptionReporter.capture(exception)
-                    Log.e(javaClass.name, "AI 요약 요청에 실패했습니다: ${todo.title}", exception)
-                }
-                if (fallbackSuccess != null) {
-                    return@launch
-                }
-            } else {
-                val analysisResponse = analysisResult.getOrNull()
-                if (analysisResponse?.hasNoAnalyzableAttachment == true) {
-                    Log.i(javaClass.name, "분석 가능한 첨부파일이 없습니다: ${todo.title}")
-                    val reportedTodo = runCatching { findReportedTodo(todo) }.getOrNull()
-                    reportedTodo?.toAiSummarySuccessOrNull()?.let { success ->
-                        cacheAndShowAiSummary(key, success)
+            analysisResult.onFailure { exception ->
+                SentryExceptionReporter.capture(exception)
+                Log.e(javaClass.name, "AI 요약 요청에 실패했습니다: ${todo.title}", exception)
+                if (fallbackSuccess != null) return@launch
+            }.onSuccess { analysisResponse ->
+                when {
+                    analysisResponse?.hasNoAnalyzableAttachment == true -> {
+                        Log.i(javaClass.name, "분석 가능한 첨부파일이 없습니다: ${todo.title}")
+                        val existing = runCatching { findReportedTodo(todo) }.getOrNull()
+                            ?.toAiSummarySuccessOrNull()
+                        if (existing != null) {
+                            cacheAndShowAiSummary(key, existing)
+                        } else {
+                            aiSummaryState = fallbackSuccess ?: AiSummaryUiState.Empty
+                        }
                         return@launch
                     }
-                    aiSummaryState = fallbackSuccess ?: AiSummaryUiState.Empty
-                    return@launch
+
+                    analysisResponse?.isSuccessful == true -> {
+                        pollReportedTodoAndCache(todo, key, fallbackSuccess)
+                        return@launch
+                    }
+
+                    analysisResponse?.isFailed == true -> {
+                        aiSummaryState = fallbackSuccess ?: AiSummaryUiState.Error
+                        return@launch
+                    }
+
+                    analysisResponse?.isSkipped == true -> {
+                        aiSummaryState = fallbackSuccess ?: AiSummaryUiState.Empty
+                        return@launch
+                    }
                 }
-
-                if (analysisResponse?.isSuccessful == true) {
-                    pollReportedTodoAndCache(todo, key, fallbackSuccess)
-                    return@launch
-                }
-                if (analysisResponse?.isFailed == true) {
-                    aiSummaryState = fallbackSuccess ?: AiSummaryUiState.Error
-                    return@launch
-                }
-                if (analysisResponse?.isSkipped == true) {
-                    aiSummaryState = fallbackSuccess ?: AiSummaryUiState.Empty
-                    return@launch
-                }
             }
 
-            val reportedTodoResult = runCatching {
-                findReportedTodo(todo)
-            }
-            val reportedTodo = reportedTodoResult.getOrNull()
-            reportedTodo?.toAiSummarySuccessOrNull()?.let { success ->
-                cacheAndShowAiSummary(key, success)
-                return@launch
-            }
+            resolveReportedTodoState(todo, key)
+        }
+    }
 
-            if (reportedTodoResult.isFailure) {
-                reportedTodoResult.exceptionOrNull()?.let(SentryExceptionReporter::capture)
-                aiSummaryState = AiSummaryUiState.Error
-                return@launch
-            }
+    private suspend fun resolveReportedTodoState(todo: TodoInfo, key: String) {
+        val reportedTodoResult = runCatching {
+            findReportedTodo(todo)
+        }
+        val reportedTodo = reportedTodoResult.getOrNull()
+        reportedTodo?.toAiSummarySuccessOrNull()?.let { success ->
+            cacheAndShowAiSummary(key, success)
+            return
+        }
 
-            if (reportedTodo?.isProvisional == true) {
-                pollReportedTodoAndCache(todo, key)
-                return@launch
-            }
+        if (reportedTodoResult.isFailure) {
+            reportedTodoResult.exceptionOrNull()?.let(SentryExceptionReporter::capture)
+            aiSummaryState = AiSummaryUiState.Error
+            return
+        }
 
-            aiSummaryState = if (reportedTodo?.isConfirmed == true) {
-                AiSummaryUiState.Empty
-            } else {
-                AiSummaryUiState.Error
-            }
+        if (reportedTodo?.isProvisional == true) {
+            pollReportedTodoAndCache(todo, key)
+            return
+        }
+
+        aiSummaryState = if (reportedTodo?.isConfirmed == true) {
+            AiSummaryUiState.Empty
+        } else {
+            AiSummaryUiState.Error
         }
     }
 
@@ -231,7 +235,7 @@ sealed interface AiSummaryUiState {
 }
 
 fun TodoInfo.aiSummaryKey(): String =
-    "${subject?.id ?: subjectId}:$todoId:${type.name}"
+    "$effectiveSubjectId:$todoId:${type.name}"
 
 fun TodoInfo.canRequestAiSummary(): Boolean =
     type == TodoType.ASSIGNMENT && description.isNotBlank()

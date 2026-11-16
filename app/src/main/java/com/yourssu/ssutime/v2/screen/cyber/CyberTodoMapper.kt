@@ -90,19 +90,21 @@ object CyberTodoMapper {
     /**
      * 일반 Canvas LMS 과목(양수 ID)과 충돌을 방지하기 위해 음수 고유 ID를 생성합니다.
      */
-    fun toCyberSubjectId(subject: CyberSubject): Int {
-        val key = "CYBER_${subject.courseCode}_${subject.deptCode}_${subject.year}_${subject.semesterCode}"
-        val hash = key.hashCode().let { if (it == Int.MIN_VALUE) 1 else abs(it) }
-        return -(100_000 + (hash % 1_000_000))
-    }
+    fun toCyberSubjectId(subject: CyberSubject): Int =
+        toNegativeHashId(
+            key = "CYBER_${subject.courseCode}_${subject.deptCode}_${subject.year}_${subject.semesterCode}",
+            offset = 100_000,
+        )
 
     /**
      * 사이버대 투두의 고유 음수 ID를 생성합니다.
      */
-    fun toCyberTodoId(subjectId: Int, weekNo: Int, lectureNo: Int): Int {
-        val key = "$subjectId:$weekNo:$lectureNo"
+    fun toCyberTodoId(subjectId: Int, weekNo: Int, lectureNo: Int): Int =
+        toNegativeHashId(key = "$subjectId:$weekNo:$lectureNo", offset = 10_000)
+
+    private fun toNegativeHashId(key: String, offset: Int): Int {
         val hash = key.hashCode().let { if (it == Int.MIN_VALUE) 1 else abs(it) }
-        return -(10_000 + (hash % 1_000_000))
+        return -(offset + (hash % 1_000_000))
     }
 
     /**
@@ -157,25 +159,14 @@ object CyberTodoMapper {
             val isAttendanceAbsent = week.attendanceStatus.contains("결석")
 
             if (week.lectures.isEmpty()) {
-                val isCompleted = isAttendanceDone || isAttendanceLate || isAttendanceAbsent
-                val todoType = when {
-                    isAttendanceLate -> TodoType.SUBMITTED_LATE
-                    isCompleted -> TodoType.SUBMITTED
-                    else -> TodoType.COMMONS
-                }
-                val title = buildString {
-                    append("${week.weekNo}주차")
-                    if (week.topic.isNotBlank()) {
-                        append(" - ${week.topic}")
-                    }
-                }
-                val todoInfo = TodoInfo(
-                    todoId = toCyberTodoId(subjectInfo.id, week.weekNo, 0),
-                    title = title,
-                    due_date = dueDate,
-                    type = todoType,
-                    subject = subjectInfo,
-                    url = CYBER_LMS_URL,
+                val (todoInfo, isCompleted) = createLectureTodoItem(
+                    subjectInfo = subjectInfo,
+                    weekNo = week.weekNo,
+                    lectureNo = 0,
+                    topic = week.topic,
+                    dueDate = dueDate,
+                    isCompleted = isAttendanceDone || isAttendanceLate || isAttendanceAbsent,
+                    isAttendanceLate = isAttendanceLate,
                 )
                 if (isCompleted) {
                     submitted.add(todoInfo)
@@ -184,27 +175,15 @@ object CyberTodoMapper {
                 }
             } else {
                 for (lecture in week.lectures) {
-                    val isCompleted = lecture.isCompleted || isAttendanceDone || isAttendanceLate || isAttendanceAbsent
-                    val todoType = when {
-                        isAttendanceLate -> TodoType.SUBMITTED_LATE
-                        isCompleted -> TodoType.SUBMITTED
-                        else -> TodoType.COMMONS
-                    }
-                    val title = buildString {
-                        append("${week.weekNo}주차 ${lecture.lectureNo}강")
-                        if (week.topic.isNotBlank()) {
-                            append(" - ${week.topic}")
-                        }
-                    }
-                    val duration = parseDurationSeconds(lecture.baseTime.ifBlank { lecture.studyTime })
-                    val todoInfo = TodoInfo(
-                        todoId = toCyberTodoId(subjectInfo.id, week.weekNo, lecture.lectureNo),
-                        title = title,
-                        due_date = dueDate,
-                        type = todoType,
-                        subject = subjectInfo,
-                        duration = duration,
-                        url = CYBER_LMS_URL,
+                    val (todoInfo, isCompleted) = createLectureTodoItem(
+                        subjectInfo = subjectInfo,
+                        weekNo = week.weekNo,
+                        lectureNo = lecture.lectureNo,
+                        topic = week.topic,
+                        dueDate = dueDate,
+                        isCompleted = lecture.isCompleted || isAttendanceDone || isAttendanceLate || isAttendanceAbsent,
+                        isAttendanceLate = isAttendanceLate,
+                        duration = parseDurationSeconds(lecture.baseTime.ifBlank { lecture.studyTime }),
                     )
                     if (isCompleted) {
                         submitted.add(todoInfo)
@@ -216,6 +195,34 @@ object CyberTodoMapper {
         }
 
         return Pair(todos, submitted)
+    }
+
+    private fun createLectureTodoItem(
+        subjectInfo: SubjectInfo,
+        weekNo: Int,
+        lectureNo: Int,
+        topic: String,
+        dueDate: String,
+        isCompleted: Boolean,
+        isAttendanceLate: Boolean,
+        duration: Double = -1.0,
+    ): Pair<TodoInfo, Boolean> {
+        val prefix = if (lectureNo == 0) "${weekNo}주차" else "${weekNo}주차 ${lectureNo}강"
+        val title = if (topic.isNotBlank()) "$prefix - $topic" else prefix
+        val todoType = when {
+            isAttendanceLate -> TodoType.SUBMITTED_LATE
+            isCompleted -> TodoType.SUBMITTED
+            else -> TodoType.COMMONS
+        }
+        return TodoInfo(
+            todoId = toCyberTodoId(subjectInfo.id, weekNo, lectureNo),
+            title = title,
+            due_date = dueDate,
+            type = todoType,
+            subject = subjectInfo,
+            duration = duration,
+            url = CYBER_LMS_URL,
+        ) to isCompleted
     }
 
     fun mapEvaluationsToTodos(
@@ -258,7 +265,7 @@ object CyberTodoMapper {
                 )
                 if (isSubmitted) {
                     submitted.add(todoInfo)
-                } else if (dueDate.isNotBlank()) {
+                } else {
                     todos.add(todoInfo)
                 }
             }
@@ -273,9 +280,9 @@ object CyberTodoMapper {
             .toString()
     }.getOrDefault("")
 
-    private fun toCyberEvaluationTodoId(subjectId: Int, evaluation: CyberEvaluation): Int {
-        val key = "$subjectId:${evaluation.typeCode}:${evaluation.week}:${evaluation.round}:${evaluation.title}"
-        val hash = key.hashCode().let { if (it == Int.MIN_VALUE) 1 else abs(it) }
-        return -(10_000 + (hash % 1_000_000))
-    }
+    private fun toCyberEvaluationTodoId(subjectId: Int, evaluation: CyberEvaluation): Int =
+        toNegativeHashId(
+            key = "$subjectId:${evaluation.typeCode}:${evaluation.week}:${evaluation.round}:${evaluation.title}",
+            offset = 10_000,
+        )
 }

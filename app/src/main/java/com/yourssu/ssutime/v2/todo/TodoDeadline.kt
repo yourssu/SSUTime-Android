@@ -14,6 +14,10 @@ import kotlin.math.max
 
 internal val TODO_DEADLINE_ZONE_ID: ZoneId = ZoneId.of("Asia/Seoul")
 
+internal fun String.toInstantOrNull(): Instant? = runCatching {
+    Instant.parse(this)
+}.getOrNull()
+
 internal fun String.toTodoDeadlineInstant(): Instant = toTodoDeadlineInstantOrNull()
     ?: error("Unsupported target time format: $this")
 

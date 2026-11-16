@@ -43,13 +43,13 @@ import androidx.compose.ui.unit.dp
 import com.yourssu.ssutime.v2.MainActivity
 import com.yourssu.ssutime.v2.R
 import com.yourssu.ssutime.v2.analytics.Analytics
+import com.yourssu.ssutime.v2.todo.TODO_DEADLINE_ZONE_ID
 import com.yourssu.ssutime.v2.ui.theme.G400
 import com.yourssu.ssutime.v2.ui.theme.R500
 import com.yourssu.ssutime.v2.ui.theme.SSUTimeTheme
 import com.yourssu.ssutime.v2.ui.theme.SSUType
 import com.yourssu.ssutime.v2.ui.theme.WHITE
 import java.time.Instant
-import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
@@ -368,7 +368,7 @@ private fun String.toDisplayDueDate(context: android.content.Context): String =
     } else {
         runCatching {
             DateTimeFormatter.ofPattern(callAlertDatePattern(), Locale.getDefault())
-                .withZone(ZoneId.of("Asia/Seoul"))
+                .withZone(TODO_DEADLINE_ZONE_ID)
                 .format(Instant.parse(this))
         }.getOrElse { this }
     }

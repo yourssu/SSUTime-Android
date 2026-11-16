@@ -7,8 +7,6 @@ import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import android.content.pm.PackageManager
-import android.graphics.Color
 import android.os.Build
 import android.util.Log
 import androidx.annotation.RequiresPermission
@@ -39,8 +37,6 @@ import java.time.Duration
 import java.time.Instant
 import java.time.LocalTime
 import java.time.ZonedDateTime
-import java.time.format.DateTimeFormatter
-import java.util.Locale
 
 private const val DEADLINE_REMINDER_TAG = "deadline_reminder"
 private const val MORNING_REMINDER_REQUEST_CODE = 90_000
@@ -55,6 +51,8 @@ private val D_DAY_NOTIFY_TIME: LocalTime = LocalTime.of(9, 0)
 private val UPCOMING_NOTIFY_TIME: LocalTime = LocalTime.of(18, 0)
 private val REFRESH_NOTIFICATION_WINDOW: Duration = Duration.ofHours(6)
 private val NEW_TODO_NOTIFICATION_ID = NEW_TODO_NOTIFICATION_KEY.toStableNotificationId()
+
+private val ANNOUNCABLE_TODO_TYPES = setOf(TodoType.ASSIGNMENT, TodoType.COMMONS, TodoType.QUIZ)
 
 data class DeadlineReminderSendResult(
     val sentKeys: List<String> = emptyList(),
@@ -80,7 +78,7 @@ fun sendDeadlineNotificationsIfNeeded(
     todoData: TodoData,
     now: Instant = Instant.now(),
 ): DeadlineReminderSendResult {
-    if (!context.canPostNotifications()) {
+    if (!context.hasPostNotificationsPermission()) {
         return DeadlineReminderSendResult()
     }
 
@@ -165,44 +163,6 @@ internal fun TodoData.withSentDeadlineReminderKeys(sentKeys: List<String>): Todo
     )
 }
 
-internal fun buildDeadlineNotificationTitle(subjectName: String, title: String): String = listOf(
-    subjectName.ifBlank { "공통" },
-    title.ifBlank { "제목 없음" },
-).joinToString(" · ")
-
-internal fun buildDeadlineNotificationText(
-    todoType: String,
-    dueDate: String,
-    daysBefore: Int,
-): String {
-    val itemName = todoType.ifBlank { "과제" }
-    return if (daysBefore == 0) {
-        "$itemName 오늘 마감이에요!"
-    } else {
-        "$itemName 마감 D-${daysBefore}이에요!"
-    }
-}
-
-internal fun buildDeadlineNotificationBigText(
-    title: String,
-    subjectName: String,
-    professor: String,
-    todoType: String,
-    dueDate: String,
-    daysBefore: Int,
-): String {
-    val itemName = listOf(subjectName, todoType.ifBlank { "과제" })
-        .filter { it.isNotBlank() }
-        .joinToString(" ")
-        .ifBlank { title.ifBlank { "과제" } }
-
-    return if (daysBefore == 0) {
-        "$itemName 오늘 마감이에요!"
-    } else {
-        "$itemName 마감 D-${daysBefore}이에요!"
-    }
-}
-
 private fun TodoInfo.toPendingReminderCandidates(now: Instant): List<DeadlineReminderCandidate> {
     val dueInstant = due_date.toTodoDeadlineInstantOrNull() ?: return emptyList()
     val dueDate = dueInstant.atZone(TODO_DEADLINE_ZONE_ID).toLocalDate()
@@ -250,12 +210,10 @@ internal fun Context.buildNewTodoAnnouncementMessage(
     val subjectName = representative.subjectName.ifBlank {
         getString(R.string.new_todo_default_subject)
     }
-    val todoType = when (representative.type) {
-        TodoType.ASSIGNMENT -> getString(R.string.todo_type_assignment)
-        TodoType.COMMONS -> getString(R.string.todo_type_lecture)
-        TodoType.QUIZ -> getString(R.string.todo_type_quiz)
-        else -> return null
+    if (representative.type !in ANNOUNCABLE_TODO_TYPES) {
+        return null
     }
+    val todoType = representative.type.localizedLabel(this)
 
     return if (records.size == 1) {
         getString(R.string.new_todo_notification_single, subjectName, todoType)
@@ -270,23 +228,6 @@ private fun Context.buildDeadlineNotificationTitle(daysBefore: Int): String =
     } else {
         getString(R.string.deadline_title_upcoming)
     }
-
-@RequiresPermission(Manifest.permission.POST_NOTIFICATIONS)
-fun Context.showDebugNotification() {
-    val notificationId = 1033
-    val notification = NotificationCompat.Builder(this, CHANNEL_ID)
-        .setSmallIcon(R.drawable.outlined_checkbox)
-        .setColor(Color.RED)
-        .setContentTitle("디버그 입니다")
-        .setContentText("제가 보이시나요")
-        .setStyle(NotificationCompat.BigTextStyle().bigText("제가 보이시나요"))
-        .setSubText(":)")
-        .setAutoCancel(true)
-        .setPriority(NotificationCompat.PRIORITY_DEFAULT)
-        .build()
-
-    NotificationManagerCompat.from(this).notify(notificationId, notification)
-}
 
 @RequiresPermission(Manifest.permission.POST_NOTIFICATIONS)
 private fun Context.showDeadlineNotification(
@@ -349,7 +290,7 @@ suspend fun sendNewTodoAnnouncementsIfNeeded(context: Context, now: Instant = In
         now = now,
         canSend = {
             val allowed = context.notificationStore.data.first().allowSystemAlert &&
-                context.canPostNotifications() &&
+                context.hasPostNotificationsPermission() &&
                 NotificationManagerCompat.from(context).areNotificationsEnabled() &&
                 context.getSystemService(NotificationManager::class.java)
                     .getNotificationChannel(CHANNEL_ID)?.importance != NotificationManager.IMPORTANCE_NONE
@@ -412,10 +353,6 @@ private fun String.sha256Hex(): String =
 
 private fun Instant.isInRefreshWindowAfter(target: Instant): Boolean =
     !isBefore(target) && !isAfter(target.plus(REFRESH_NOTIFICATION_WINDOW))
-
-private fun Context.canPostNotifications(): Boolean =
-    Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
-        checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
 
 private fun scheduleDeadlineReminderAlarm(
     context: Context,
@@ -504,16 +441,6 @@ private fun Context.mainActivityPendingIntent(
         putExtra(MainActivity.EXTRA_NOTIFICATION_TYPE, if (dDay == 0) "due_today" else "deadline_soon")
     },
     PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
-)
-
-internal fun String.toDeadlineText(): String = toTodoDeadlineInstantOrNull()
-    ?.atZone(TODO_DEADLINE_ZONE_ID)
-    ?.format(deadlineDateTimeFormatter())
-    .orEmpty()
-
-private fun deadlineDateTimeFormatter(): DateTimeFormatter = DateTimeFormatter.ofPattern(
-    if (Locale.getDefault().language == Locale.KOREAN.language) "MM월 dd일 HH:mm" else "MMM dd HH:mm",
-    Locale.getDefault(),
 )
 
 private data class DeadlineReminderCandidate(
