@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.datastore.core.CorruptionException
 import androidx.datastore.core.DataStore
 import androidx.datastore.core.Serializer
+import androidx.datastore.core.handlers.ReplaceFileCorruptionHandler
 import androidx.datastore.dataStore
 import com.yourssu.data.TodoData
 import com.yourssu.ssutime.v2.analytics.SentryExceptionReporter
@@ -15,6 +16,7 @@ import java.io.OutputStream
 val Context.todoDataStore: DataStore<TodoData> by dataStore(
     fileName = "todos.json",
     serializer = TodoDataSerializer,
+    corruptionHandler = ReplaceFileCorruptionHandler { TodoDataSerializer.defaultValue },
 )
 
 private val todoJson = Json {

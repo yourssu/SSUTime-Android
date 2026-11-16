@@ -1,5 +1,6 @@
 package com.yourssu.ssutime.v2.notification
 
+import android.app.NotificationManager
 import android.content.Context
 import android.media.AudioAttributes
 import android.media.MediaPlayer
@@ -22,7 +23,7 @@ internal object CallAlertRinger {
     private var vibrationToken = 0
 
     @Synchronized
-    fun start(context: Context) {
+    fun start(context: Context, notificationId: Int? = null) {
         val appContext = context.applicationContext
         vibrationToken += 1
         val currentToken = vibrationToken
@@ -34,6 +35,13 @@ internal object CallAlertRinger {
             synchronized(this) {
                 if (vibrationToken == currentToken) {
                     stop(appContext)
+                    if (notificationId != null) {
+                        appContext.getSystemService(NotificationManager::class.java)
+                            ?.cancel(notificationId)
+                        CallAlertSession.finish(notificationId)
+                    } else {
+                        CallAlertSession.finishAll()
+                    }
                 }
             }
         }, CALL_RING_TIMEOUT_MILLIS)

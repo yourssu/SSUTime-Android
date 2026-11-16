@@ -179,7 +179,7 @@ object CyberTodoMapper {
                 )
                 if (isCompleted) {
                     submitted.add(todoInfo)
-                } else {
+                } else if (dueDate.isNotBlank()) {
                     todos.add(todoInfo)
                 }
             } else {
@@ -208,7 +208,7 @@ object CyberTodoMapper {
                     )
                     if (isCompleted) {
                         submitted.add(todoInfo)
-                    } else {
+                    } else if (dueDate.isNotBlank()) {
                         todos.add(todoInfo)
                     }
                 }
@@ -258,7 +258,7 @@ object CyberTodoMapper {
                 )
                 if (isSubmitted) {
                     submitted.add(todoInfo)
-                } else {
+                } else if (dueDate.isNotBlank()) {
                     todos.add(todoInfo)
                 }
             }

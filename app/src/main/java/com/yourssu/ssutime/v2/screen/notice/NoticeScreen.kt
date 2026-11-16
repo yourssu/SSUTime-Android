@@ -239,7 +239,7 @@ fun NoticeScreen(
     defaultExpandedIndex: Int = -1,
 ) {
     val context = LocalContext.current
-    val effectiveSubjects = if (subjects.isNotEmpty()) subjects else MockSubjectInfos
+    val effectiveSubjects = subjects
 
     var hasAutoSelected by rememberSaveable { mutableStateOf(false) }
     var selectedSubjectIndex by rememberSaveable {
@@ -727,6 +727,7 @@ fun DiscussionAttachmentItem(
 @Composable
 private fun NoticeScreenPreview() {
     NoticeScreen(
+        subjects = MockSubjectInfos,
         defaultExpandedIndex = 1
     )
 }

@@ -37,9 +37,9 @@ internal fun remainingDaysUntilDeadline(
     targetTime: String,
     now: Instant = Instant.now(),
 ): Long {
-    val targetInstant = targetTime.toTodoDeadlineInstant()
+    val targetDeadlineInstant = targetTime.toTodoDeadlineInstantOrNull() ?: return Long.MAX_VALUE
     val today = now.atZone(TODO_DEADLINE_ZONE_ID).toLocalDate()
-    val deadlineDate = targetInstant.atZone(TODO_DEADLINE_ZONE_ID).toLocalDate()
+    val deadlineDate = targetDeadlineInstant.atZone(TODO_DEADLINE_ZONE_ID).toLocalDate()
     return max(0, ChronoUnit.DAYS.between(today, deadlineDate))
 }
 
@@ -47,7 +47,7 @@ internal fun remainingTimeTextUntilDeadline(
     targetTime: String,
     now: Instant = Instant.now(),
 ): String {
-    val targetInstant = targetTime.toTodoDeadlineInstant()
+    val targetInstant = targetTime.toTodoDeadlineInstantOrNull() ?: return "-"
     val remainingSeconds = max(0, ChronoUnit.SECONDS.between(now, targetInstant))
 
     return if (remainingSeconds < 60) {

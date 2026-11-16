@@ -53,7 +53,7 @@ private const val NEW_TODO_NOTIFICATION_KEY = "new-todo-announcement"
 
 private val D_DAY_NOTIFY_TIME: LocalTime = LocalTime.of(9, 0)
 private val UPCOMING_NOTIFY_TIME: LocalTime = LocalTime.of(18, 0)
-private val REFRESH_NOTIFICATION_WINDOW: Duration = Duration.ofMinutes(15)
+private val REFRESH_NOTIFICATION_WINDOW: Duration = Duration.ofHours(6)
 private val NEW_TODO_NOTIFICATION_ID = NEW_TODO_NOTIFICATION_KEY.toStableNotificationId()
 
 data class DeadlineReminderSendResult(
@@ -589,7 +589,19 @@ private suspend fun rescheduleDeadlineNotificationsIfAllowed(context: Context) {
     val alertData = context.notificationStore.data.first()
     if (alertData.allowSystemAlert) {
         try {
-            sendNewTodoAnnouncementsIfNeeded(context)
+            if (context.canPostNotifications()) {
+                val todoData = context.todoDataStore.data.first()
+                val result = sendDeadlineNotificationsIfNeeded(
+                    context = context,
+                    todoData = todoData,
+                )
+                if (result.sentKeys.isNotEmpty()) {
+                    context.todoDataStore.updateData { currentData ->
+                        currentData.withSentDeadlineReminderKeys(result.sentKeys)
+                    }
+                }
+                sendNewTodoAnnouncementsIfNeeded(context)
+            }
         } finally {
             scheduleDeadlineNotifications(context)
         }

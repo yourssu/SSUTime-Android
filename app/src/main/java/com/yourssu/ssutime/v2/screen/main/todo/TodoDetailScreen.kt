@@ -72,7 +72,7 @@ import com.yourssu.ssutime.v2.component.SButton_Small
 import com.yourssu.ssutime.v2.screen.my.PopupButton
 import com.yourssu.ssutime.v2.screen.notice.openAttachmentUrl
 import com.yourssu.ssutime.v2.todo.TODO_DEADLINE_ZONE_ID
-import com.yourssu.ssutime.v2.todo.toTodoDeadlineInstant
+import com.yourssu.ssutime.v2.todo.toTodoDeadlineInstantOrNull
 import com.yourssu.ssutime.v2.ui.theme.N100
 import com.yourssu.ssutime.v2.ui.theme.N200
 import com.yourssu.ssutime.v2.ui.theme.N300
@@ -661,9 +661,9 @@ fun TodoOverView(
                         Text(
                             text = stringResource(
                                 R.string.main_due_until,
-                                todo.detailDeadline(now).toTodoDeadlineInstant()
-                                    .atZone(TODO_DEADLINE_ZONE_ID)
-                                    .format(DateTimeFormatter.ofPattern("yyyy.MM.dd HH:mm", Locale.ROOT)),
+                                todo.detailDeadline(now).toTodoDeadlineInstantOrNull()
+                                    ?.atZone(TODO_DEADLINE_ZONE_ID)
+                                    ?.format(DateTimeFormatter.ofPattern("yyyy.MM.dd HH:mm", Locale.ROOT)) ?: todo.detailDeadline(now).ifBlank { "-" },
                             ),
                             style = SSUType.Caption1SemiBold.copy(N500)
                         )

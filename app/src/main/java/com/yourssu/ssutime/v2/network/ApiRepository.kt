@@ -19,6 +19,7 @@ import com.yourssu.ssutime.v2.accessToken
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.engine.android.Android
+import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.request.bearerAuth
 import io.ktor.client.request.delete
@@ -48,6 +49,11 @@ class ApiRepository(
     val baseUrl: String = if (BuildConfig.DEBUG_MODE) BASE_URL_DEV else BASE_URL_PROD,
 ) {
     val client = HttpClient(Android) {
+        install(HttpTimeout) {
+            requestTimeoutMillis = 15_000L
+            connectTimeoutMillis = 10_000L
+            socketTimeoutMillis = 15_000L
+        }
         install(ContentNegotiation) {
             json(defaultJson)
         }
@@ -59,8 +65,10 @@ class ApiRepository(
         ) {
             contentType(ContentType.Application.Json)
             setBody(TokenRequest(id, pw))
-        }.apply {
-            Log.i("ApiRepository", bodyAsText())
+        }
+        Log.i("ApiRepository", "requestJwtToken status: ${response.status.value}")
+        if (!response.status.isSuccess()) {
+            throw IllegalStateException("HTTP ${response.status.value}")
         }
         return response.body()
     }
@@ -84,8 +92,12 @@ class ApiRepository(
             bearerAuth(accessToken)
             contentType(ContentType.Application.Json)
             setBody(NotificationSetting(enabled, minutes))
-        }.apply {
-            Log.i("ApiRepository", bodyAsText())
+        }
+        if (BuildConfig.DEBUG_MODE) {
+            Log.i("ApiRepository", "setNotificationSetting response: ${response.bodyAsText()}")
+        }
+        if (!response.status.isSuccess()) {
+            throw IllegalStateException("HTTP ${response.status.value}")
         }
 
         return response.body()
@@ -123,8 +135,12 @@ class ApiRepository(
             bearerAuth(accessToken)
             contentType(ContentType.Application.Json)
             setBody(enrollment)
-        }.apply {
-            Log.i("ApiRepository", bodyAsText())
+        }
+        if (BuildConfig.DEBUG_MODE) {
+            Log.i("ApiRepository", "getEnrollments response: ${response.bodyAsText()}")
+        }
+        if (!response.status.isSuccess()) {
+            throw IllegalStateException("HTTP ${response.status.value}")
         }
         return response.body()
     }
@@ -153,6 +169,9 @@ class ApiRepository(
         }
 
         Log.i("ApiRepository", "Get Todos Status Code : ${response.status.value}")
+        if (!response.status.isSuccess()) {
+            throw IllegalStateException("HTTP ${response.status.value}")
+        }
         return response.body()
     }
 
@@ -197,7 +216,11 @@ class ApiRepository(
             setBody(AccountWithdrawalRequest(reason = reason))
         }
         val responseText = response.bodyAsText()
-        Log.i("ApiRepository", "Account withdrawal status: ${response.status.value}, body: $responseText")
+        if (BuildConfig.DEBUG_MODE) {
+            Log.i("ApiRepository", "Account withdrawal status: ${response.status.value}, body: $responseText")
+        } else {
+            Log.i("ApiRepository", "Account withdrawal status: ${response.status.value}")
+        }
         if (response.status.isSuccess()) {
             return runCatching {
                 defaultJson.decodeFromString<AccountWithdrawalResponse>(responseText)
@@ -205,7 +228,7 @@ class ApiRepository(
                 AccountWithdrawalResponse(status = "REQUESTED")
             }
         } else {
-            throw IllegalStateException("Account withdrawal failed with status ${response.status.value}: $responseText")
+            throw IllegalStateException("Account withdrawal failed with status ${response.status.value}")
         }
     }
 }

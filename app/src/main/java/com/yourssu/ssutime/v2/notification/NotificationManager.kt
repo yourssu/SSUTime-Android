@@ -40,7 +40,7 @@ fun showCallAlert(context: Context, todo: TodoInfo) {
     }
 
     Analytics.callAlertReceived(subjectName = todo.subject?.name.orEmpty())
-    CallAlertRinger.start(context)
+    CallAlertRinger.start(context, notificationId)
 
     val notificationShown = runCatching {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
@@ -68,6 +68,10 @@ internal object CallAlertSession {
         activeNotificationId.compareAndSet(notificationId.toLong(), NO_ACTIVE_NOTIFICATION_ID)
     }
 
+    fun finishAll() {
+        activeNotificationId.set(NO_ACTIVE_NOTIFICATION_ID)
+    }
+
     fun activeNotificationId(): Long? = activeNotificationId.get()
         .takeIf { it != NO_ACTIVE_NOTIFICATION_ID }
 }
@@ -81,6 +85,7 @@ private fun showCallStyleAlert(context: Context, todo: TodoInfo, notificationId:
         .setImportant(true)
         .build()
     val declineIntent = context.callActionIntent(notificationId, ACTION_DECLINE_CALL)
+    val dismissIntent = context.callActionIntent(notificationId, ACTION_DISMISS_CALL)
     val answerIntent = context.callAlertActivityPendingIntent(notificationId, todo, ACTION_ANSWER_CALL)
     val contentIntent = context.callAlertActivityPendingIntent(notificationId, todo, ACTION_OPEN_CALL_ALERT)
     val fullScreenIntent = context.callAlertActivityPendingIntent(notificationId, todo, ACTION_SHOW_CALL_ALERT)
@@ -90,6 +95,7 @@ private fun showCallStyleAlert(context: Context, todo: TodoInfo, notificationId:
         .setContentTitle(todo.title)
         .setContentText(context.toCallAlertText(todo))
         .setContentIntent(contentIntent)
+        .setDeleteIntent(dismissIntent)
         .setOngoing(true)
         .setFullScreenIntent(fullScreenIntent, true)
         .setAutoCancel(true)
@@ -107,12 +113,14 @@ private fun showCallStyleAlert(context: Context, todo: TodoInfo, notificationId:
 
 private fun showFallbackNotification(context: Context, todo: TodoInfo, notificationId: Int) {
     val fullScreenIntent = context.callAlertActivityPendingIntent(notificationId, todo, ACTION_SHOW_CALL_ALERT)
+    val dismissIntent = context.callActionIntent(notificationId, ACTION_DISMISS_CALL)
     val notification = Notification.Builder(context, CALL_CHANNEL_ID)
         .setSmallIcon(R.drawable.outlined_checkbox)
         .setContentTitle(context.getString(R.string.call_alert_notification_title))
         .setContentText(context.toCallAlertText(todo))
         .setStyle(Notification.BigTextStyle().bigText(context.toCallAlertText(todo)))
         .setContentIntent(context.callAlertActivityPendingIntent(notificationId, todo, ACTION_OPEN_CALL_ALERT))
+        .setDeleteIntent(dismissIntent)
         .setFullScreenIntent(fullScreenIntent, true)
         .setAutoCancel(true)
         .setCategory(Notification.CATEGORY_REMINDER)
@@ -125,12 +133,20 @@ private fun showFallbackNotification(context: Context, todo: TodoInfo, notificat
 
 class CallNotificationActionReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
-        if (intent.action == ACTION_DECLINE_CALL) {
-            Analytics.callAlertReject()
-            val notificationId = intent.getIntExtra(EXTRA_CALL_NOTIFICATION_ID, 0)
-            context.getSystemService(NotificationManager::class.java).cancel(notificationId)
-            CallAlertRinger.stop(context)
-            CallAlertSession.finish(notificationId)
+        val notificationId = intent.getIntExtra(EXTRA_CALL_NOTIFICATION_ID, 0)
+        when (intent.action) {
+            ACTION_DECLINE_CALL -> {
+                Analytics.callAlertReject()
+                context.getSystemService(NotificationManager::class.java).cancel(notificationId)
+                CallAlertRinger.stop(context)
+                CallAlertSession.finish(notificationId)
+            }
+
+            ACTION_DISMISS_CALL -> {
+                context.getSystemService(NotificationManager::class.java).cancel(notificationId)
+                CallAlertRinger.stop(context)
+                CallAlertSession.finish(notificationId)
+            }
         }
     }
 }
@@ -183,7 +199,7 @@ private fun Context.logFullScreenIntentPermission() {
 
 private fun Context.callActionIntent(notificationId: Int, action: String): PendingIntent = PendingIntent.getBroadcast(
     this,
-    notificationId,
+    notificationId + action.hashCode(),
     Intent(this, CallNotificationActionReceiver::class.java).apply {
         this.action = action
         putExtra(EXTRA_CALL_NOTIFICATION_ID, notificationId)
@@ -240,6 +256,7 @@ private fun Context.toCallAlertText(todo: TodoInfo): String {
 
 private const val TAG = "CallNotification"
 private const val ACTION_DECLINE_CALL = "com.yourssu.ssutime.v2.notification.ACTION_DECLINE_CALL"
+private const val ACTION_DISMISS_CALL = "com.yourssu.ssutime.v2.action.DISMISS_CALL"
 private const val ACTION_OPEN_CALL_ALERT = "com.yourssu.ssutime.v2.notification.ACTION_OPEN_CALL_ALERT"
 internal const val ACTION_ANSWER_CALL = "com.yourssu.ssutime.v2.notification.ACTION_ANSWER_CALL"
 internal const val ACTION_SHOW_CALL_ALERT = "com.yourssu.ssutime.v2.notification.ACTION_SHOW_CALL_ALERT"

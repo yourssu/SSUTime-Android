@@ -6,6 +6,7 @@ import androidx.datastore.core.DataStore
 import com.yourssu.data.AiSummaryCache
 import com.yourssu.data.AlertData
 import com.yourssu.data.LabsData
+import com.yourssu.data.LoginData
 import com.yourssu.data.TodoData
 import com.yourssu.data.TodoInfo
 import com.yourssu.data.network.AssignmentAnalysisResponse
@@ -14,24 +15,29 @@ import com.yourssu.data.network.LmsSessionRequest
 import com.yourssu.data.network.UserTodoStatusResponse
 import com.yourssu.data.network.toReportWithAnalysisRequestOrNull
 import com.yourssu.data.todoUniqueKey
+import com.yourssu.ssutime.v2.accessToken
+import com.yourssu.ssutime.v2.analytics.SentryExceptionReporter
 import com.yourssu.ssutime.v2.network.ApiRepository
 import com.yourssu.ssutime.v2.notification.cancelDeadlineNotifications
 import com.yourssu.ssutime.v2.notification.scheduleDeadlineNotifications
 import com.yourssu.ssutime.v2.notification.sendDeadlineNotificationsIfNeeded
 import com.yourssu.ssutime.v2.notification.sendNewTodoAnnouncementsIfNeeded
 import com.yourssu.ssutime.v2.notification.withSentDeadlineReminderKeys
+import com.yourssu.ssutime.v2.screen.login.LoginRepository
 import com.yourssu.ssutime.v2.screen.my.AlertLocalStore
 import com.yourssu.ssutime.v2.todo.sortedByDeadlineThenName
 import com.yourssu.ssutime.v2.todo.withSubmissionOrder
 import com.yourssu.ssutime.v2.widget.updateAllTodoWidgets
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
+import kotlin.coroutines.cancellation.CancellationException
 
 class MainRepository(
     private val todoDataStore: DataStore<TodoData>,
     private val alertDataStore: DataStore<AlertData>,
     private val labsDataStore: DataStore<LabsData>,
     private val apiRepository: ApiRepository,
+    private val loginRepository: LoginRepository,
     private val context: Context,
 ) {
     val todoData: Flow<TodoData> = todoDataStore.data
@@ -71,10 +77,18 @@ class MainRepository(
         } else {
             cancelDeadlineNotifications(context)
         }
-        apiRepository.setNotificationSetting(
-            updatedAlertData.allowCallAlert,
-            updatedAlertData.callingAlertThresholdMinutes,
-        )
+        runCatching {
+            withValidAccessToken {
+                apiRepository.setNotificationSetting(
+                    updatedAlertData.allowCallAlert,
+                    updatedAlertData.callingAlertThresholdMinutes,
+                )
+            }
+        }.onFailure { exception ->
+            if (exception is CancellationException) throw exception
+            SentryExceptionReporter.capture(exception)
+            Log.w("MainRepository", "알림 설정 서버 동기화에 실패했습니다.", exception)
+        }
     }
 
     suspend fun updateTodoData(transform: (TodoData) -> TodoData): TodoData {
@@ -86,6 +100,7 @@ class MainRepository(
 
     suspend fun clearTodoData() {
         updateTodoData(TodoData())
+        cancelDeadlineNotifications(context)
     }
 
     suspend fun markDiscussionAsRead(discussionId: Int) {
@@ -150,7 +165,9 @@ class MainRepository(
     }
 
     suspend fun getReportedTodos(): List<UserTodoStatusResponse> =
-        apiRepository.getTodos()
+        withValidAccessToken {
+            apiRepository.getTodos()
+        }
 
     suspend fun getCachedAiSummary(key: String): AiSummaryCache? =
         getTodoData().aiSummaryCache[key]?.takeIf { it.summary.isNotBlank() }
@@ -181,7 +198,9 @@ class MainRepository(
             Log.w("MainRepository", "AI summary request skipped: unsupported todo payload")
             return null
         }
-        return apiRepository.reportTodoWithAnalysis(request)
+        return withValidAccessToken {
+            apiRepository.reportTodoWithAnalysis(request)
+        }
     }
 
     suspend fun dismissWidgetHelperBadge() {
@@ -208,4 +227,51 @@ class MainRepository(
             cancelDeadlineNotifications(context)
         }
     }
+
+    private suspend fun <T> withValidAccessToken(block: suspend () -> T): T {
+        ensureBackendToken()
+        return try {
+            block()
+        } catch (exception: CancellationException) {
+            throw exception
+        } catch (exception: Exception) {
+            if (!exception.isUnauthorizedError() || !refreshBackendToken()) {
+                throw exception
+            }
+            block()
+        }
+    }
+
+    private suspend fun ensureBackendToken(): Boolean {
+        if (accessToken.isBlank()) {
+            val loginData = loginRepository.getLoginData()
+            accessToken = loginData.accessToken
+            if (accessToken.isBlank()) {
+                return refreshBackendToken(loginData)
+            }
+        }
+        return true
+    }
+
+    private suspend fun refreshBackendToken(cachedLoginData: LoginData? = null): Boolean {
+        val loginData = cachedLoginData ?: loginRepository.getLoginData()
+        if (!loginData.hasAutoLoginCredentials) {
+            return false
+        }
+        return try {
+            val newToken = apiRepository.requestJwtToken(loginData.id, loginData.pw).accessToken
+            accessToken = newToken
+            loginRepository.updateLoginData(loginData.copy(accessToken = newToken))
+            true
+        } catch (exception: CancellationException) {
+            throw exception
+        } catch (exception: Exception) {
+            SentryExceptionReporter.capture(exception)
+            Log.e("MainRepository", "백엔드 토큰 갱신에 실패했습니다.", exception)
+            false
+        }
+    }
+
+    private fun Throwable.isUnauthorizedError(): Boolean =
+        message?.startsWith("HTTP 401") == true
 }

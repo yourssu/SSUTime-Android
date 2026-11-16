@@ -2,8 +2,6 @@ package com.yourssu.ssutime.v2
 
 import android.app.NotificationChannel
 import android.app.NotificationManager
-import android.media.AudioAttributes
-import android.media.RingtoneManager
 import android.os.Build
 import com.yourssu.ssutime.v2.analytics.Analytics
 import com.yourssu.ssutime.v2.analytics.captureInstallReferrerIfNeeded
@@ -36,15 +34,8 @@ class MainApplication : android.app.Application() {
             ).apply {
                 description = getString(R.string.call_channel_description)
                 lockscreenVisibility = android.app.Notification.VISIBILITY_PUBLIC
-                setSound(
-                    RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE),
-                    AudioAttributes.Builder()
-                        .setUsage(AudioAttributes.USAGE_NOTIFICATION_RINGTONE)
-                        .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                        .build(),
-                )
-                enableVibration(true)
-                vibrationPattern = longArrayOf(0, 1_000, 700, 1_000)
+                setSound(null, null)
+                enableVibration(false)
             }
 
             notificationManager.createNotificationChannel(assignmentChannel)

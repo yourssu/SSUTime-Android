@@ -247,4 +247,45 @@ class CyberTodoMapperTest {
         )
         assertTrue(cyberTodo.isCyber())
     }
+
+    @Test
+    fun mapWeeksToTodos_skipsIncompleteLectureWithBlankAttendancePeriodFromActiveTodos() {
+        val subject = CyberSubject(
+            name = "인공지능개론",
+            category = "전공선택",
+            professor = "홍길동",
+            credit = "3",
+            year = "2026",
+            semesterCode = "10",
+            courseCode = "05082",
+            deptCode = "001",
+            userNo = "12345",
+            progressPercent = 0,
+        )
+        val subjectInfo = CyberTodoMapper.mapToSubjectInfo(subject)
+        val weeks = listOf(
+            CyberWeek(
+                weekNo = 1,
+                attendancePeriod = "",
+                topic = "기간 미정",
+                attendanceStatus = "미출석",
+                lectures = listOf(
+                    CyberLecture(
+                        lectureNo = 1,
+                        statusText = "미학습",
+                        progressPercent = 0,
+                        studyTime = "00:00",
+                        baseTime = "30:00",
+                        videoFilePath = null,
+                        audioFilePath = null,
+                    )
+                ),
+            )
+        )
+
+        val (todos, submitted) = CyberTodoMapper.mapWeeksToTodos(subject, subjectInfo, weeks)
+
+        assertTrue(todos.isEmpty())
+        assertTrue(submitted.isEmpty())
+    }
 }

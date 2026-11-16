@@ -13,6 +13,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 
 class SplashViewModel(
     private val loginRepository: LoginRepository,
@@ -33,24 +34,31 @@ class SplashViewModel(
     }
 
     private suspend fun refreshAccessToken(loginData: LoginData) {
-        withContext(Dispatchers.IO) {
-            try {
-                val refreshedToken = apiRepository.requestJwtToken(loginData.id, loginData.pw).accessToken
-                if (refreshedToken.isBlank()) {
-                    accessToken = loginData.accessToken
-                    Log.w(TAG, "Backend access token refresh returned a blank token.")
-                    return@withContext
-                }
+        val completed = withTimeoutOrNull(TOKEN_REFRESH_TIMEOUT_MILLIS) {
+            withContext(Dispatchers.IO) {
+                try {
+                    val refreshedToken = apiRepository.requestJwtToken(loginData.id, loginData.pw).accessToken
+                    if (refreshedToken.isBlank()) {
+                        accessToken = loginData.accessToken
+                        Log.w(TAG, "Backend access token refresh returned a blank token.")
+                        return@withContext
+                    }
 
-                accessToken = refreshedToken
-                loginRepository.updateLoginData(loginData.copy(accessToken = refreshedToken))
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                accessToken = loginData.accessToken
-                SentryExceptionReporter.capture(e)
-                Log.e(TAG, "Failed to refresh backend access token on app start.", e)
+                    accessToken = refreshedToken
+                    loginRepository.updateLoginData(loginData.copy(accessToken = refreshedToken))
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    accessToken = loginData.accessToken
+                    SentryExceptionReporter.capture(e)
+                    Log.e(TAG, "Failed to refresh backend access token on app start.", e)
+                }
             }
+            true
+        }
+        if (completed == null) {
+            accessToken = loginData.accessToken
+            Log.w(TAG, "Timed out refreshing backend access token on app start.")
         }
     }
 }
@@ -61,3 +69,4 @@ enum class SplashDestination {
 }
 
 private const val TAG = "SplashViewModel"
+private const val TOKEN_REFRESH_TIMEOUT_MILLIS = 5_000L

@@ -4,6 +4,7 @@ import android.util.Log
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 import com.yourssu.data.SubjectInfo
+import com.yourssu.data.TodoData
 import com.yourssu.data.TodoInfo
 import com.yourssu.data.TodoType
 import com.yourssu.data.network.FcmRequest
@@ -32,7 +33,7 @@ import java.time.Instant
 
 private const val TAG = "LmsRefreshFCM"
 private const val ACTION_CRAWL_LMS = "crawl_lms"
-private const val REFRESH_TIMEOUT_MILLIS = 30_000L
+private const val REFRESH_TIMEOUT_MILLIS = 15_000L
 
 class LmsRefreshMessagingService : FirebaseMessagingService(), KoinComponent {
     private val lmsRefreshRepository: LmsRefreshRepository by inject()
@@ -78,24 +79,24 @@ class LmsRefreshMessagingService : FirebaseMessagingService(), KoinComponent {
             ?: message.sentTime.takeIf { it > 0L }?.let { "fcm-$it" }
             ?: Instant.now().toString()
 
-        val refreshResult = runBlocking {
-            lmsRefreshRepository.refreshTodos(
+        val refreshResult = runBlocking(Dispatchers.IO) {
+            val result = lmsRefreshRepository.refreshTodos(
                 source = RefreshSource.FCM,
                 requestId = requestId,
                 timeoutMillis = REFRESH_TIMEOUT_MILLIS,
             )
+            if (result is TodoRefreshResult.Success) {
+                runCatching {
+                    updateAllTodoWidgets(this@LmsRefreshMessagingService)
+                }
+            }
+            result
         }
 
         when (refreshResult) {
             is TodoRefreshResult.Success -> Log.i(TAG, "백그라운드 새로고침이 완료되었습니다.")
             is TodoRefreshResult.Failure -> Log.e(TAG, refreshResult.message, refreshResult.throwable)
             is TodoRefreshResult.Skipped -> Log.i(TAG, refreshResult.reason)
-        }
-
-        runBlocking {
-            runCatching {
-                updateAllTodoWidgets(this@LmsRefreshMessagingService)
-            }
         }
     }
 
@@ -121,20 +122,27 @@ class LmsRefreshMessagingService : FirebaseMessagingService(), KoinComponent {
     }
 
     private fun showDeadlineCallAlert(message: RemoteMessage) {
-        val alertData = runBlocking { mainRepository.getAlertData() }
-        if (!alertData.allowCallAlert) {
-            Log.i(TAG, "전화 알림 설정이 꺼져 있어 FCM 마감 임박 전화 알림을 표시하지 않습니다.")
-            return
-        }
-
         if (!canPostCallAlert()) {
             Log.i(TAG, "시스템 설정에서 알림 또는 마감 전화 알림 채널이 비활성화되어 있어 FCM 마감 임박 전화 알림을 건너뜁니다.")
             return
         }
 
-        val todoData = runBlocking { mainRepository.getTodoData() }
-        val todo = todoData.todos.selectMostUrgentTodo()
+        val todoData = runBlocking(Dispatchers.IO) {
+            val alertData = mainRepository.getAlertData()
+            if (!alertData.allowCallAlert) {
+                null
+            } else {
+                mainRepository.getTodoData()
+            }
+        }
+        if (todoData == null) {
+            Log.i(TAG, "전화 알림 설정이 꺼져 있어 FCM 마감 임박 전화 알림을 표시하지 않습니다.")
+            return
+        }
+
+        val todo = message.resolveTargetTodo(todoData.todos)
             ?: message.toFallbackTodoInfo()?.takeIf { it.todoUniqueKey() !in todoData.hiddenTodoKeys }
+            ?: todoData.todos.selectMostUrgentTodo()
 
         if (todo == null) {
             Log.i(TAG, "전화 알림을 표시할 Todo가 없습니다. data=${message.data}")
@@ -144,6 +152,34 @@ class LmsRefreshMessagingService : FirebaseMessagingService(), KoinComponent {
         showCallAlert(this, todo)
         Log.i(TAG, "FCM 마감 임박 전화 알림을 표시했습니다. todo=${todo.title}")
     }
+}
+
+private fun RemoteMessage.resolveTargetTodo(todos: List<TodoInfo>): TodoInfo? {
+    val targetTodoId = data["todoId"]?.toIntOrNull()?.takeIf { it != 0 }
+    if (targetTodoId != null) {
+        todos.firstOrNull { it.todoId == targetTodoId }?.let { return it }
+    }
+
+    val targetTitle = (data["todoTitle"] ?: data["title"] ?: notification?.title)
+        ?.trim()
+        ?.takeIf { it.isNotBlank() }
+        ?: return null
+    val targetSubject = (data["subjectName"] ?: data["subject"] ?: data["courseName"])
+        ?.trim()
+        ?.takeIf { it.isNotBlank() }
+
+    val titleMatches = todos.filter { it.title.trim().equals(targetTitle, ignoreCase = true) }
+    if (titleMatches.isEmpty()) {
+        return null
+    }
+    if (targetSubject != null) {
+        titleMatches.firstOrNull {
+            val subjectName = it.subject?.name.orEmpty().trim()
+            subjectName.equals(targetSubject, ignoreCase = true) ||
+                subjectName.contains(targetSubject, ignoreCase = true)
+        }?.let { return it }
+    }
+    return titleMatches.firstOrNull()
 }
 
 private fun List<TodoInfo>.selectMostUrgentTodo(now: Instant = Instant.now()): TodoInfo? =

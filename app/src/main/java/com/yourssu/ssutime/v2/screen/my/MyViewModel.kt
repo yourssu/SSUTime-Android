@@ -38,7 +38,10 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
+import kotlin.coroutines.resume
 import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
 
@@ -187,6 +190,16 @@ class MyViewModel(
     fun logout() {
         Analytics.applicationScope.launch {
             termSelectionStore.clear()
+            cyberRepository.logout()
+            withTimeoutOrNull(3_000L) {
+                suspendCancellableCoroutine { continuation ->
+                    LmsApi.logout {
+                        if (continuation.isActive) {
+                            continuation.resume(Unit)
+                        }
+                    }
+                }
+            }
             mainRepository.clearTodoData()
             mainRepository.clearLabsData()
             loginRepository.logout()

@@ -19,3 +19,23 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
+
+# Canvas LMS / Cyber Campus SDK (accessed directly and via reflection in CyberSessionCleaner)
+-keep class io.github.chlwhdtn03.** { *; }
+
+# Ktor cookie classes accessed via reflection in CyberSessionCleaner
+-keep class io.ktor.client.HttpClient { *; }
+-keep class io.ktor.client.HttpClientConfig { *; }
+-keep class io.ktor.client.plugins.cookies.** { *; }
+
+# Data module & kotlinx.serialization models
+-keep class com.yourssu.data.** { *; }
+-keep class com.yourssu.ssutime.v2.**$Companion { *; }
+-keepattributes *Annotation*, InnerClasses, EnclosingMethod, Signature
+-keepclassmembers class * {
+    @kotlinx.serialization.Serializable *;
+    public static ** Companion;
+}
+-keepclasseswithmembers class * {
+    kotlinx.serialization.KSerializer serializer(...);
+}

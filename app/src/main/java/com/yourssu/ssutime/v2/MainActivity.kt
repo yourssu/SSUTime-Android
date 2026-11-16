@@ -33,6 +33,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -61,7 +62,7 @@ import com.yourssu.ssutime.v2.screen.cyber.CyberLoginViewModel
 import com.yourssu.ssutime.v2.screen.login.LoginScreen
 import com.yourssu.ssutime.v2.screen.main.MainContainerScreen
 import com.yourssu.ssutime.v2.screen.main.TermSelectionStore
-import com.yourssu.ssutime.v2.screen.my.MyPageScreen
+import com.yourssu.ssutime.v2.screen.onboarding.OnBoardingRepository
 import com.yourssu.ssutime.v2.screen.onboarding.OnBoardingScreen
 import com.yourssu.ssutime.v2.screen.splash.Screens
 import com.yourssu.ssutime.v2.screen.splash.SplashScreen
@@ -72,6 +73,7 @@ import com.yourssu.ssutime.v2.ui.theme.R400
 import com.yourssu.ssutime.v2.ui.theme.SSUTimeTheme
 import com.yourssu.ssutime.v2.ui.theme.SSUType
 import com.yourssu.ssutime.v2.ui.theme.WHITE
+import kotlinx.coroutines.launch
 import org.koin.android.ext.android.inject
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -82,6 +84,7 @@ class MainActivity : ComponentActivity() {
     private val homeEntrySource = mutableStateOf(ENTRY_SOURCE_APP)
     private val homeEntryVersion = mutableIntStateOf(0)
     private val termSelectionStore: TermSelectionStore by inject()
+    private val onBoardingRepository: OnBoardingRepository by inject()
 
     private val appUpdateManager by lazy { AppUpdateManagerFactory.create(this) }
 
@@ -163,11 +166,23 @@ class MainActivity : ComponentActivity() {
                     }
 
                     composable(route = Screens.LOGIN.name) {
+                        val scope = rememberCoroutineScope()
                         LoginScreen(
                             successLogin = {
-                                navController.navigate(Screens.ONBORADING.name) {
-                                    popUpTo(Screens.LOGIN.name) { inclusive = true }
-                                    launchSingleTop = true
+                                scope.launch {
+                                    val isTipConfirmed = runCatching {
+                                        onBoardingRepository.getOnBoardingData().isTipConfirmed
+                                    }.getOrDefault(false)
+                                    val destination = if (isTipConfirmed) {
+                                        forceInitialLmsRefresh.value = true
+                                        Screens.MAIN.name
+                                    } else {
+                                        Screens.ONBORADING.name
+                                    }
+                                    navController.navigate(destination) {
+                                        popUpTo(Screens.LOGIN.name) { inclusive = true }
+                                        launchSingleTop = true
+                                    }
                                 }
                             }
                         )
@@ -220,19 +235,6 @@ class MainActivity : ComponentActivity() {
                         )
                     }
 
-                    composable(route = Screens.MY.name) {
-                        MyPageScreen(
-                            onLogout = {
-                                navController.navigate(Screens.LOGIN.name) {
-                                    popUpTo(0) { inclusive = true }
-                                    launchSingleTop = true
-                                }
-                            },
-                            onNavigateToCyberLogin = {
-                                navController.navigate(Screens.CYBER_LOGIN.name)
-                            },
-                        )
-                    }
 
                     composable(route = Screens.CYBER_LOGIN.name) {
                         val cyberLoginViewModel: CyberLoginViewModel = koinViewModel()

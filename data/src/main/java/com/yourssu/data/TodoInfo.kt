@@ -19,9 +19,8 @@ data class TodoInfo(
     val attachments: List<AttachmentInfo> = emptyList(), // 첨부파일
     val lateAt: String = "", // 지각 제출 마감 시각
     val completionObservedAt: String = "", // 제출 시각이 없을 때 앱에서 완료 전환을 확인한 시각
-) {
-    var subjectId = 0
-}
+    var subjectId: Int = 0,
+)
 
 @Serializable
 enum class TodoType(

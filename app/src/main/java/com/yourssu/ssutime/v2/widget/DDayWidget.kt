@@ -410,8 +410,8 @@ internal fun List<TodoInfo>.selectMostUrgentTodo(now: Instant = Instant.now()): 
 
 internal fun List<TodoInfo>.availableWidgetTodos(now: Instant): List<TodoInfo> =
     sortedByDeadlineThenName().filter { todo ->
-        val deadline = todo.due_date.toTodoDeadlineInstantOrNull()
-        deadline == null || deadline.isAfter(now) || todo.isLateSubmissionAvailable(now)
+        val deadline = todo.due_date.toTodoDeadlineInstantOrNull() ?: return@filter false
+        deadline.isAfter(now) || todo.isLateSubmissionAvailable(now)
     }
 
 private fun TodoInfo?.toDdayText(remainingDays: Long, remainingSeconds: Long): String {

@@ -39,6 +39,7 @@ import com.yourssu.ssutime.v2.screen.navigation.MainTab
 import com.yourssu.ssutime.v2.ui.theme.WHITE
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
+import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
 fun MainContainerScreen(
@@ -66,6 +67,7 @@ fun MainContainerScreen(
 
     val cyberRepository: CyberRepository = koinInject()
     val cyberLoginData by cyberRepository.cyberLoginData.collectAsState(initial = CyberLoginData())
+    val mainViewModel: MainViewModel = koinViewModel()
 
 
     Scaffold(
@@ -115,6 +117,7 @@ fun MainContainerScreen(
             ) {
                 composable(route = MainTab.HOME.route) {
                     MainScreen(
+                        viewModel = mainViewModel,
                         skipInitialLmsRefresh = skipInitialLmsRefresh,
                         forceInitialLmsRefresh = forceInitialLmsRefresh,
                         homeEntrySource = homeEntrySource,
@@ -129,6 +132,7 @@ fun MainContainerScreen(
 
                 composable(route = MainTab.CALENDAR.route) {
                     CalendarScreen(
+                        viewModel = mainViewModel,
                         resetKey = calendarResetKey,
                     )
                 }

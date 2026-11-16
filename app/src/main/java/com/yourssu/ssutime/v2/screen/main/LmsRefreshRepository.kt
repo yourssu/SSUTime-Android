@@ -44,6 +44,7 @@ import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.getAndUpdate
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
@@ -85,9 +86,19 @@ class LmsRefreshRepository(
     private val backendReportScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val appRefreshScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val _onboardingInitialRefreshInProgress = MutableStateFlow(false)
+    private val _onboardingRefreshError = MutableStateFlow<String?>(null)
     private var onboardingInitialRefreshJob: Job? = null
     val onboardingInitialRefreshInProgress: StateFlow<Boolean> =
         _onboardingInitialRefreshInProgress.asStateFlow()
+    val onboardingRefreshError: StateFlow<String?> =
+        _onboardingRefreshError.asStateFlow()
+
+    fun consumeOnboardingRefreshError(): String? =
+        _onboardingRefreshError.getAndUpdate { null }
+
+    suspend fun awaitOnboardingInitialRefreshIfRunning() {
+        onboardingInitialRefreshJob?.join()
+    }
 
     suspend fun getLmsSessionRequest(): LmsSessionRequest {
         val loginData = loginRepository.getLoginData()
@@ -212,14 +223,17 @@ class LmsRefreshRepository(
         }
 
         onboardingInitialRefreshJob = appRefreshScope.launch {
+            _onboardingRefreshError.value = null
             _onboardingInitialRefreshInProgress.value = true
             try {
                 when (val result = refreshTodos(source = RefreshSource.ONBOARDING)) {
                     is TodoRefreshResult.Success -> {
+                        _onboardingRefreshError.value = null
                         Log.i(TAG, "온보딩 LMS 초기 새로고침이 완료되었습니다.")
                     }
 
                     is TodoRefreshResult.Failure -> {
+                        _onboardingRefreshError.value = result.message
                         Log.e(TAG, "온보딩 LMS 초기 새로고침에 실패했습니다: ${result.message}", result.throwable)
                     }
 
@@ -371,7 +385,9 @@ class LmsRefreshRepository(
                 .filter { (it.subject?.id ?: it.subjectId) > 0 },
             loginData,
         )
-        TodoRefreshResult.Success(todoData, summary)
+        TodoRefreshResult.Success(todoData, summary).also {
+            _onboardingRefreshError.value = null
+        }
     }
 
     @OptIn(ExperimentalTime::class)
@@ -629,15 +645,18 @@ class LmsRefreshRepository(
         cyberResult: CyberTodoResult = CyberTodoResult(),
         isCyberConnected: Boolean = false,
     ): TodoData {
-        val subjectInfoById = subjectInfos.associateBy { it.id }
+        val subjectInfoById = subjectInfos.associate { it.id to it.copy(discussions = emptyList()) }
         val lmsTodos = subjects.flatMap { subject ->
-            subject.todoList.map { todo ->
+            subject.todoList.mapNotNull { todo ->
+                val todoType = runCatching {
+                    TodoType.valueOf(todo.component_type.uppercase())
+                }.getOrNull() ?: return@mapNotNull null
                 TodoInfo(
                     todoId = todo.assignment_id ?: -1,
                     title = todo.title,
                     due_date = todo.due_date,
                     lateAt = todo.late_at.orEmpty(),
-                    type = TodoType.valueOf(todo.component_type.uppercase()),
+                    type = todoType,
                     subject = subjectInfoById[subject.id],
                     description = todo.description.orEmpty(),
                     url = todo.url.orEmpty(),
@@ -757,7 +776,7 @@ class LmsRefreshRepository(
             true
         }.map { todo ->
             val sid = todo.subject?.id ?: todo.subjectId
-            val updatedSubject = subjectInfoById[sid] ?: todo.subject
+            val updatedSubject = subjectInfoById[sid] ?: todo.subject?.copy(discussions = emptyList())
             todo.copy(subject = updatedSubject)
         }
 
@@ -778,7 +797,7 @@ class LmsRefreshRepository(
             true
         }.map { sub ->
             val sid = sub.subject?.id ?: sub.subjectId
-            val updatedSubject = subjectInfoById[sid] ?: sub.subject
+            val updatedSubject = subjectInfoById[sid] ?: sub.subject?.copy(discussions = emptyList())
             sub.copy(subject = updatedSubject)
         }
 

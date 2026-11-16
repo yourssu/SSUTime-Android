@@ -155,7 +155,8 @@ fun CalendarScreen(
     val subjects = viewModel.subjects.toList()
     val unreadNoticeCount = viewModel.unreadNoticeCount
     val calendarNavController = rememberNavController()
-    var currentTodoJson by rememberSaveable { mutableStateOf<String?>(null) }
+    var selectedTodoKey by rememberSaveable { mutableStateOf<String?>(null) }
+    var selectedTodoFallbackJson by rememberSaveable { mutableStateOf<String?>(null) }
 
     LaunchedEffect(resetKey) {
         if (resetKey > 0) {
@@ -185,7 +186,10 @@ fun CalendarScreen(
                     calendarNavController.navigate(CALENDAR_NOTICE_ROUTE)
                 },
                 onTodoClick = { todo ->
-                    currentTodoJson = Json.encodeToString(todo)
+                    selectedTodoKey = todo.todoUniqueKey()
+                    selectedTodoFallbackJson = Json.encodeToString(
+                        todo.copy(subject = todo.subject?.copy(discussions = emptyList())),
+                    )
                     calendarNavController.navigate(CALENDAR_TODO_DETAIL_ROUTE)
                 },
             )
@@ -205,13 +209,16 @@ fun CalendarScreen(
         }
 
         composable(route = CALENDAR_TODO_DETAIL_ROUTE) {
-            val currentTodoInfo = remember(currentTodoJson) {
-                currentTodoJson?.let { todoJson ->
+            val selectedTodoFallback = remember(selectedTodoFallbackJson) {
+                selectedTodoFallbackJson?.let { fallbackJson ->
                     runCatching {
-                        Json.decodeFromString<TodoInfo>(todoJson)
+                        Json.decodeFromString<TodoInfo>(fallbackJson)
                     }.getOrNull()
                 }
             }
+            val currentTodoInfo = todos.firstOrNull { it.todoUniqueKey() == selectedTodoKey }
+                ?: viewModel.submitted.firstOrNull { it.todoUniqueKey() == selectedTodoKey }
+                ?: selectedTodoFallback?.takeIf { it.todoUniqueKey() == selectedTodoKey }
 
             if (currentTodoInfo != null) {
                 Column(

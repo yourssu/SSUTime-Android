@@ -91,6 +91,15 @@ class MainViewModel(
                 onboardingInitialRefreshInProgress.value = isRefreshing
             }
         }
+
+        viewModelScope.launch {
+            lmsRefreshRepository.onboardingRefreshError.collect { errorMessage ->
+                if (!errorMessage.isNullOrBlank() && loadedAt.value.isBlank()) {
+                    showNetworkCause.value = errorMessage
+                    showNetworkError.value = true
+                }
+            }
+        }
     }
 
     fun shouldRunInitialLoad(homeEntryVersion: Int): Boolean {
@@ -192,8 +201,19 @@ class MainViewModel(
             val shouldRefresh = allowRefresh && (forceRefresh || shouldRefreshOnOpen(cachedTodoData))
 
             if (!shouldRefresh) {
-                updateTodoState(cachedTodoData)
-                cachedTodoData
+                if (!allowRefresh) {
+                    lmsRefreshRepository.awaitOnboardingInitialRefreshIfRunning()
+                }
+                val latestTodoData = mainRepository.getTodoData()
+                val onboardingError = lmsRefreshRepository.consumeOnboardingRefreshError()
+                if (latestTodoData.loadedAt.isBlank() && !onboardingError.isNullOrBlank()) {
+                    showNetworkCause.value = onboardingError
+                    showNetworkError.value = true
+                    null
+                } else {
+                    updateTodoState(latestTodoData)
+                    latestTodoData
+                }
             } else {
                 when (val refreshResult = lmsRefreshRepository.refreshTodos(
                     source = source,

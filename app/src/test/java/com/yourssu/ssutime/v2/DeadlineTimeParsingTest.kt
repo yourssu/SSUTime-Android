@@ -77,4 +77,15 @@ class DeadlineTimeParsingTest {
         val expected0 = if (java.util.Locale.getDefault().language == java.util.Locale.KOREAN.language) "0초" else "0s"
         assertEquals(expected0, getRemainingTimeText(target0s, now))
     }
+
+    @Test
+    fun blankAndInvalidDeadlinesReturnSafeFallbackWithoutThrowing() {
+        val now = Instant.parse("2026-05-17T00:00:00Z")
+
+        assertEquals(Long.MAX_VALUE, getRemainingDays("", now))
+        assertEquals(Long.MAX_VALUE, getRemainingDays("invalid-date", now))
+        assertEquals("-", getRemainingTimeText("", now))
+        assertEquals("-", getRemainingTimeText("invalid-date", now))
+        assertEquals("invalid-date", getStringDate("invalid-date"))
+    }
 }

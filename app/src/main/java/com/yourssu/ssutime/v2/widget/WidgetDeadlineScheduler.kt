@@ -64,12 +64,17 @@ class WidgetDeadlineReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent?) {
         Log.i(TAG, "위젯 마감 갱신 알람 수신. 위젯 전체를 갱신합니다.")
+        val pendingResult = goAsync()
         val appContext = context.applicationContext
         scope.launch {
-            runCatching {
-                updateAllTodoWidgets(appContext)
-            }.onFailure { e ->
-                Log.e(TAG, "위젯 갱신 중 오류 발생", e)
+            try {
+                runCatching {
+                    updateAllTodoWidgets(appContext)
+                }.onFailure { e ->
+                    Log.e(TAG, "위젯 갱신 중 오류 발생", e)
+                }
+            } finally {
+                pendingResult.finish()
             }
         }
     }

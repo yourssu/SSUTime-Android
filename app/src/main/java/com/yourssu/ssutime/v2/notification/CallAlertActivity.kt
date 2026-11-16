@@ -7,6 +7,7 @@ import android.os.Build
 import android.os.Bundle
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
+import androidx.activity.OnBackPressedCallback
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -61,13 +62,21 @@ class CallAlertActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         configureCallWindow()
+        onBackPressedDispatcher.addCallback(
+            this,
+            object : OnBackPressedCallback(true) {
+                override fun handleOnBackPressed() {
+                    declineCall(intent.toCallAlertState(this@CallAlertActivity))
+                }
+            },
+        )
         val state = intent.toCallAlertState(this)
         currentNotificationId = state.notificationId
         if (intent.action == ACTION_ANSWER_CALL) {
             answerCall(state)
             return
         }
-        CallAlertRinger.start(this)
+        CallAlertRinger.start(this, state.notificationId)
         render(state)
     }
 
@@ -137,13 +146,21 @@ class CallAlertActivity : ComponentActivity() {
     }
 
     private fun closeAppAfterDecline() {
-        moveTaskToBack(true)
-        finishAffinity()
+        runCatching {
+            finishAndRemoveTask()
+        }.onFailure {
+            finish()
+        }
     }
 
     override fun onDestroy() {
-        CallAlertRinger.stop(this)
-        currentNotificationId?.let(CallAlertSession::finish)
+        if (isFinishing) {
+            CallAlertRinger.stop(this)
+            currentNotificationId?.let { notificationId ->
+                notificationManager.cancel(notificationId)
+                CallAlertSession.finish(notificationId)
+            }
+        }
         super.onDestroy()
     }
 }

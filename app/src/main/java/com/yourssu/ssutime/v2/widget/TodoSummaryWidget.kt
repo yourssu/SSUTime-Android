@@ -55,8 +55,9 @@ import com.yourssu.ssutime.v2.getStringSimpleDate
 import com.yourssu.ssutime.v2.screen.main.todo.detailDeadline
 import com.yourssu.ssutime.v2.screen.main.todo.isLateSubmissionAvailable
 import com.yourssu.ssutime.v2.screen.main.todoDataStore
+import com.yourssu.ssutime.v2.todo.TODO_DEADLINE_ZONE_ID
 import com.yourssu.ssutime.v2.todo.localizedLabel
-import com.yourssu.ssutime.v2.todo.toTodoDeadlineInstant
+import com.yourssu.ssutime.v2.todo.toTodoDeadlineInstantOrNull
 import com.yourssu.ssutime.v2.ui.theme.SSUType
 import kotlinx.coroutines.flow.first
 import java.time.Instant
@@ -773,13 +774,22 @@ internal fun TodoData.toTodoSummaryUiState(
     val now = Instant.now()
     val availableTodos = todos.availableWidgetTodos(now)
     val sortedTodos = availableTodos
-        .map { it.toTodoSummaryItem(context, now) }
+        .mapNotNull { it.toTodoSummaryItemOrNull(context, now) }
 
-    availableTodos
-        .map { it.detailDeadline(now).toTodoDeadlineInstant() }
-        .filter { it.isAfter(now) }
-        .minOrNull()
-        ?.let { scheduleWidgetDeadlineUpdate(context, it) }
+    if (availableTodos.isNotEmpty()) {
+        val nextMidnight = now.atZone(TODO_DEADLINE_ZONE_ID)
+            .toLocalDate()
+            .plusDays(1)
+            .atStartOfDay(TODO_DEADLINE_ZONE_ID)
+            .toInstant()
+        val earliestDetailDeadline = availableTodos
+            .mapNotNull { it.detailDeadline(now).toTodoDeadlineInstantOrNull() }
+            .filter { it.isAfter(now) }
+            .minOrNull()
+        listOfNotNull(nextMidnight, earliestDetailDeadline)
+            .minOrNull()
+            ?.let { scheduleWidgetDeadlineUpdate(context, it) }
+    }
 
     return TodoSummaryUiState(
         primary = sortedTodos.firstOrNull(),
@@ -792,8 +802,8 @@ internal fun TodoData.toTodoSummaryUiState(
     )
 }
 
-private fun TodoInfo.toTodoSummaryItem(context: Context, now: Instant): TodoSummaryItem {
-    val dueInstant = detailDeadline(now).toTodoDeadlineInstant()
+private fun TodoInfo.toTodoSummaryItemOrNull(context: Context, now: Instant): TodoSummaryItem? {
+    val dueInstant = detailDeadline(now).toTodoDeadlineInstantOrNull() ?: return null
     val rawRemainingSeconds = ChronoUnit.SECONDS.between(now, dueInstant)
     val remainingSeconds = rawRemainingSeconds.coerceAtLeast(0L)
     val remainingDays = ChronoUnit.DAYS.between(now, dueInstant).coerceAtLeast(0L)

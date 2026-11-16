@@ -62,7 +62,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -86,6 +85,9 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -93,6 +95,7 @@ import com.yourssu.data.AlertData
 import com.yourssu.data.TodoInfo
 import com.yourssu.data.TodoType
 import com.yourssu.data.isCyber
+import com.yourssu.data.todoUniqueKey
 import com.yourssu.ssutime.v2.MainActivity
 import com.yourssu.ssutime.v2.R
 import com.yourssu.ssutime.v2.analytics.Analytics
@@ -107,7 +110,7 @@ import com.yourssu.ssutime.v2.getRemainingTimeText
 import com.yourssu.ssutime.v2.getStringSimpleDate
 import com.yourssu.ssutime.v2.screen.main.todo.TodoDetailScreen
 import com.yourssu.ssutime.v2.todo.localizedLabel
-import com.yourssu.ssutime.v2.todo.toTodoDeadlineInstant
+import com.yourssu.ssutime.v2.todo.toTodoDeadlineInstantOrNull
 import com.yourssu.ssutime.v2.ui.theme.N100
 import com.yourssu.ssutime.v2.ui.theme.N200
 import com.yourssu.ssutime.v2.ui.theme.N300
@@ -149,7 +152,8 @@ fun MainScreen(
     var showWidgetHelperDialog by rememberSaveable { mutableStateOf(false) }
     var handledHomeResetKey by rememberSaveable { mutableIntStateOf(0) }
     val mainContentNavController = rememberNavController()
-    var currentTodoJson by rememberSaveable { mutableStateOf<String?>(null) }
+    var selectedTodoKey by rememberSaveable { mutableStateOf<String?>(null) }
+    var selectedTodoFallbackJson by rememberSaveable { mutableStateOf<String?>(null) }
     val showOnboardingInitialLoading = rememberSaveable { mutableStateOf(skipInitialLmsRefresh) }
     val showInitialLmsLoading = showOnboardingInitialLoading.value &&
         viewModel.onboardingInitialRefreshInProgress.value &&
@@ -263,14 +267,17 @@ fun MainScreen(
                 composable(MAIN_LIST_ROUTE) {
                     MainFragment(
                         innerPadding = innerPadding,
-                        todos = viewModel.todos,
-                        submitted = viewModel.submitted,
+                        todos = viewModel.todos.toList(),
+                        submitted = viewModel.submitted.toList(),
                         loadedAt = viewModel.loadedAt.value,
                         showWidgetBadge = viewModel.showWidgetBadge.value,
                         isRefreshing = viewModel.isLoading.value,
                         refreshProgress = viewModel.loadingProgress.value,
                         onClickTodo = { todo ->
-                            currentTodoJson = Json.encodeToString(todo)
+                            selectedTodoKey = todo.todoUniqueKey()
+                            selectedTodoFallbackJson = Json.encodeToString(
+                                todo.copy(subject = todo.subject?.copy(discussions = emptyList())),
+                            )
                             mainContentNavController.navigate(TODO_DETAIL_ROUTE)
                         },
                         onRefresh = {
@@ -302,13 +309,16 @@ fun MainScreen(
                 }
 
                 composable(TODO_DETAIL_ROUTE) {
-                    val currentTodoInfo = remember(currentTodoJson) {
-                        currentTodoJson?.let { todoJson ->
+                    val selectedTodoFallback = remember(selectedTodoFallbackJson) {
+                        selectedTodoFallbackJson?.let { fallbackJson ->
                             runCatching {
-                                Json.decodeFromString<TodoInfo>(todoJson)
+                                Json.decodeFromString<TodoInfo>(fallbackJson)
                             }.getOrNull()
                         }
                     }
+                    val currentTodoInfo = viewModel.todos.firstOrNull { it.todoUniqueKey() == selectedTodoKey }
+                        ?: viewModel.submitted.firstOrNull { it.todoUniqueKey() == selectedTodoKey }
+                        ?: selectedTodoFallback?.takeIf { it.todoUniqueKey() == selectedTodoKey }
 
                     if (currentTodoInfo != null) {
                         TodoDetailScreen(
@@ -696,9 +706,25 @@ fun TodoList(
     onClickTodo: (TodoInfo) -> Unit = {},
     submittedSize: Int
 ) {
+    val lifecycleOwner = LocalLifecycleOwner.current
+    var now by remember { mutableStateOf(Instant.now()) }
     val sortedTodos = todos.sortedForMainDisplay()
-    val immediateTodos = sortedTodos.filter { getRemainingDays(it.due_date) <= 1 }
-    val freeTodos = sortedTodos.filter { getRemainingDays(it.due_date) > 1 }
+    val immediateTodos = sortedTodos.filter { getRemainingDays(it.due_date, now) <= 1 }
+    val freeTodos = sortedTodos.filter { getRemainingDays(it.due_date, now) > 1 }
+    val hasUrgentTodo = immediateTodos.any { getRemainingDays(it.due_date, now) == 0L }
+    LaunchedEffect(lifecycleOwner, hasUrgentTodo) {
+        lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            while (true) {
+                now = Instant.now()
+                val sleepTime = if (hasUrgentTodo) {
+                    1000L - (System.currentTimeMillis() % 1000L)
+                } else {
+                    30_000L - (System.currentTimeMillis() % 30_000L)
+                }
+                delay(sleepTime)
+            }
+        }
+    }
 
     Column(
         modifier = modifier,
@@ -725,10 +751,11 @@ fun TodoList(
             }
 
             immediateTodos.forEach {
-                key(it.todoId) {
+                key(it.todoUniqueKey()) {
                     Spacer(Modifier.height(8.dp))
                     TodoItem(
                         todoInfo = it,
+                        now = now,
                         onClickTodo = { arg -> onClickTodo(arg) },
                     )
                 }
@@ -743,10 +770,11 @@ fun TodoList(
                 )
 
                 freeTodos.forEach {
-                    key(it.todoId) {
+                    key(it.todoUniqueKey()) {
                         Spacer(Modifier.height(8.dp))
                         TodoItem(
                             todoInfo = it,
+                            now = now,
                             onClickTodo = { arg -> onClickTodo(arg) },
                         )
                     }
@@ -773,10 +801,11 @@ fun TodoList(
                 )
             }
             freeTodos.forEach {
-                key(it.todoId) {
+                key(it.todoUniqueKey()) {
                     Spacer(Modifier.height(8.dp))
                     TodoItem(
                         todoInfo = it,
+                        now = now,
                         onClickTodo = { arg -> onClickTodo(arg) },
                     )
                 }
@@ -833,25 +862,15 @@ fun TodoList(
 @Composable
 fun TodoItem(
     todoInfo: TodoInfo,
+    now: Instant = Instant.now(),
     onClickTodo: (TodoInfo) -> Unit = {},
 ) {
-    var isLate by remember { mutableStateOf(false) }
-
-    // 1초마다 갱신되는 기준 시간 상태 (시스템 클럭의 000ms에 맞춰 갱신되도록 보정)
-    val now by produceState(initialValue = Instant.now()) {
-        while (true) {
-            value = Instant.now()
-            // 다음 1초 정각까지 남은 밀리초만큼 대기 (누적 오차 방지)
-            val sleepTime = 1000L - (System.currentTimeMillis() % 1000L)
-            delay(sleepTime)
-        }
-    }
-
     val leftDay = getRemainingDays(todoInfo.due_date, now)
-    val remainingSeconds = ChronoUnit.SECONDS.between(
-        now,
-        todoInfo.due_date.toTodoDeadlineInstant(),
-    ).coerceAtLeast(0L)
+    val deadlineInstant = todoInfo.due_date.toTodoDeadlineInstantOrNull()
+    val remainingSeconds = deadlineInstant?.let {
+        ChronoUnit.SECONDS.between(now, it).coerceAtLeast(0L)
+    } ?: 0L
+    val isLate = deadlineInstant != null && leftDay == 0L && remainingSeconds == 0L
 
 //    Log.d("리컴포지션", "${todoInfo.todoId} 리컴포지션 발생 (남은시간: ${
 //        getRemainingTimeText(
@@ -882,41 +901,36 @@ fun TodoItem(
                         .background(WHITE),
                     contentAlignment = Alignment.Center
                 ) {
-                    var res by remember { mutableIntStateOf(-1) }
-                    res = when(leftDay) {
+                    val res = when (leftDay) {
                         3L -> R.drawable.day3
                         2L -> R.drawable.day2
                         1L -> R.drawable.day_red2
-                        0L -> {
-                            val txt = getRemainingTimeText(
-                                todoInfo.due_date,
-                                now
-                            )
-                            if(remainingSeconds == 0L) {
-                                isLate = true
-                                R.drawable.late
-                            } else if(remainingSeconds < 60L)
-                                R.drawable.seconds
-                            else
-                                R.drawable.timer
+                        0L -> if (isLate) {
+                            R.drawable.late
+                        } else if (remainingSeconds < 60L) {
+                            R.drawable.seconds
+                        } else {
+                            R.drawable.timer
                         }
-                        else -> {
-                            -1
-                        }
+                        else -> -1
                     }
 
-                    if(res > 0)
+                    if (res > 0) {
                         Image(
                             painter = painterResource(res),
                             contentDescription = "day-$res"
                         )
+                    }
 
-                    if(!isLate) {
+                    if (!isLate) {
                         Text(
-                            text = if (leftDay > 0) "D-${leftDay}" else getRemainingTimeText(
-                                todoInfo.due_date,
-                                now
-                            ),
+                            text = if (deadlineInstant == null) {
+                                "-"
+                            } else if (leftDay > 0) {
+                                "D-${leftDay}"
+                            } else {
+                                getRemainingTimeText(todoInfo.due_date, now)
+                            },
                             style = when (leftDay) {
                                 2L, 3L -> SSUType.H4ExtraBold.copy(color = R400)
                                 0L, 1L -> SSUType.H4ExtraBold.copy(color = WHITE)

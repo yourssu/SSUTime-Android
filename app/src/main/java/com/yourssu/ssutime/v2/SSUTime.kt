@@ -37,6 +37,7 @@ import com.yourssu.ssutime.v2.security.LoginDataCrypto
 import com.yourssu.ssutime.v2.todo.TODO_DEADLINE_ZONE_ID
 import com.yourssu.ssutime.v2.todo.remainingDaysUntilDeadline
 import com.yourssu.ssutime.v2.todo.remainingTimeTextUntilDeadline
+import com.yourssu.ssutime.v2.todo.toTodoDeadlineInstantOrNull
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 import org.koin.android.ext.koin.androidContext
@@ -54,6 +55,7 @@ import java.util.Locale
 const val CHANNEL_ID = "ASSIGNMENT"
 const val CALL_CHANNEL_ID = "ASSIGNMENT_CALL_V2"
 
+@Volatile
 internal var accessToken = ""
 
 val appModule = module {
@@ -70,6 +72,7 @@ val appModule = module {
             get(named("todoDataStore")),
             get(named("alertDataStore")),
             get(named("labsDataStore")),
+            get(),
             get(),
             androidContext()
         )
@@ -132,6 +135,7 @@ val previewModule = module {
             get(named("todoDataStore")),
             get(named("alertDataStore")),
             get(named("labsDataStore")),
+            get(),
             get(),
             androidContext()
         )
@@ -283,7 +287,7 @@ fun getRemainingTimeText(targetTime: String, now: Instant = Instant.now()): Stri
 }
 
 fun getStringDate(targetTime: String): String {
-    val targetInstant = Instant.parse(targetTime)
+    val targetInstant = targetTime.toTodoDeadlineInstantOrNull() ?: return targetTime
     val formatter = DateTimeFormatter.ofPattern(monthDayPattern(), Locale.getDefault())
 
     return targetInstant
@@ -292,7 +296,7 @@ fun getStringDate(targetTime: String): String {
 }
 
 fun getStringDateWithTime(targetTime: String, includeSeconds: Boolean = true): String {
-    val targetInstant = Instant.parse(targetTime)
+    val targetInstant = targetTime.toTodoDeadlineInstantOrNull() ?: return targetTime
     val pattern = if (includeSeconds) monthDayTimePattern() else monthDayTimeWithoutSecondsPattern()
     val formatter = DateTimeFormatter.ofPattern(pattern, Locale.getDefault())
 
