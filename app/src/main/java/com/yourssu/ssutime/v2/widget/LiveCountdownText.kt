@@ -49,8 +49,41 @@ internal fun LiveCountdownText(
             setBoolean(R.id.widget_live_countdown, "setCountDown", true)
             setChronometer(R.id.widget_live_countdown, base, null, true)
         } else {
+            // Stop recycled launcher Chronometer ticks before writing static fallback text.
+            setBoolean(R.id.widget_live_countdown, "setCountDown", false)
+            setChronometer(R.id.widget_live_countdown, SystemClock.elapsedRealtime(), null, false)
             setTextViewText(R.id.widget_live_countdown, fallbackText)
         }
+    }
+
+    AndroidRemoteViews(
+        remoteViews = remoteViews,
+        modifier = modifier,
+    )
+}
+
+@Composable
+@GlanceComposable
+internal fun StaticCountdownText(
+    text: String,
+    fontSizeSp: Int,
+    color: LiveCountdownColor,
+    modifier: GlanceModifier = GlanceModifier,
+) {
+    val context = LocalContext.current
+    val remoteViews = RemoteViews(
+        context.packageName,
+        when (color) {
+            LiveCountdownColor.Accent -> R.layout.widget_static_countdown_accent
+            LiveCountdownColor.White -> R.layout.widget_static_countdown_white
+        },
+    ).apply {
+        setTextViewTextSize(
+            R.id.widget_static_countdown,
+            TypedValue.COMPLEX_UNIT_SP,
+            fontSizeSp.toFloat(),
+        )
+        setTextViewText(R.id.widget_static_countdown, text)
     }
 
     AndroidRemoteViews(

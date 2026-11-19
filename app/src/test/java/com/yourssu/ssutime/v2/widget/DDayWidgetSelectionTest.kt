@@ -50,4 +50,32 @@ class DDayWidgetSelectionTest {
             assertNull(listOf(item).selectMostUrgentTodo(due))
         }
     }
+
+    @Test
+    fun usesSeoulCalendarDateDifferenceForSummaryCountdown() {
+        val now = Instant.parse("2026-11-19T13:00:00Z") // 2026-11-19 22:00:00 KST
+
+        val todayDue = Instant.parse("2026-11-19T14:59:59Z") // 2026-11-19 23:59:59 KST
+        val todayCountdown = todo.copy(due_date = todayDue.toString(), lateAt = "")
+            .toTodoSummaryCountdownOrNull(now)!!
+        assertEquals("D-0", todayCountdown.dDayText)
+        assertEquals("1:59:59", todayCountdown.countdownText)
+        assertEquals(todayDue.toEpochMilli(), todayCountdown.countdownTargetEpochMillis)
+
+        // Less than 24h remaining, but due on the next Seoul calendar day -> D-1 (static, not live countdown)
+        val tomorrowDue = Instant.parse("2026-11-20T09:00:00Z") // 2026-11-20 18:00:00 KST (20h away)
+        val tomorrowCountdown = todo.copy(due_date = tomorrowDue.toString(), lateAt = "")
+            .toTodoSummaryCountdownOrNull(now)!!
+        assertEquals("D-1", tomorrowCountdown.dDayText)
+        assertEquals("D-1", tomorrowCountdown.countdownText)
+        assertNull(tomorrowCountdown.countdownTargetEpochMillis)
+
+        // Four calendar days later at an earlier time of day -> D-4 (not truncated to D-3)
+        val fourDaysLaterDue = Instant.parse("2026-11-23T03:00:00Z") // 2026-11-23 12:00:00 KST
+        val fourDaysLaterCountdown = todo.copy(due_date = fourDaysLaterDue.toString(), lateAt = "")
+            .toTodoSummaryCountdownOrNull(now)!!
+        assertEquals("D-4", fourDaysLaterCountdown.dDayText)
+        assertEquals("D-4", fourDaysLaterCountdown.countdownText)
+        assertNull(fourDaysLaterCountdown.countdownTargetEpochMillis)
+    }
 }

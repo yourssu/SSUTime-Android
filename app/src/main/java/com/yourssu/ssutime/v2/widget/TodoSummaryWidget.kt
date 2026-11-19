@@ -48,6 +48,7 @@ import com.yourssu.data.TodoData
 import com.yourssu.data.TodoInfo
 import com.yourssu.ssutime.v2.MainActivity
 import com.yourssu.ssutime.v2.R
+import com.yourssu.ssutime.v2.getRemainingDays
 import com.yourssu.ssutime.v2.screen.main.todo.detailDeadline
 import com.yourssu.ssutime.v2.screen.main.todo.isLateSubmissionAvailable
 import com.yourssu.ssutime.v2.screen.main.todoDataStore
@@ -60,7 +61,6 @@ import java.time.Instant
 import java.time.temporal.ChronoUnit
 import java.util.Locale
 
-private const val SUMMARY_SECONDS_PER_DAY = 24 * 60 * 60L
 private val summaryBackground = ColorProvider(
     day = Color.White,
     night = Color.Black
@@ -513,15 +513,25 @@ private fun PrimaryCountdown(
                     .copy(color = headlineTextColor),
             )
         }
-        LiveCountdownText(
-            targetEpochMillis = item.countdownTargetEpochMillis,
-            fallbackText = item.countdownText,
-            fontSizeSp = countdownSize,
-            color = LiveCountdownColor.Accent,
-            modifier = GlanceModifier
-                .width(if (countdownSize <= 30) 132.dp else 190.dp)
-                .height((countdownSize + 4).dp),
-        )
+        val countdownModifier = GlanceModifier
+            .width(if (countdownSize <= 30) 132.dp else 190.dp)
+            .height((countdownSize + 4).dp)
+        if (item.countdownTargetEpochMillis != null) {
+            LiveCountdownText(
+                targetEpochMillis = item.countdownTargetEpochMillis,
+                fallbackText = item.countdownText,
+                fontSizeSp = countdownSize,
+                color = LiveCountdownColor.Accent,
+                modifier = countdownModifier,
+            )
+        } else {
+            StaticCountdownText(
+                text = item.countdownText,
+                fontSizeSp = countdownSize,
+                color = LiveCountdownColor.Accent,
+                modifier = countdownModifier,
+            )
+        }
     }
 }
 
@@ -774,27 +784,46 @@ internal fun TodoData.toTodoSummaryUiState(
     )
 }
 
-private fun TodoInfo.toTodoSummaryItemOrNull(context: Context, now: Instant): TodoSummaryItem? {
-    val dueInstant = detailDeadline(now).toTodoDeadlineInstantOrNull() ?: return null
+internal data class TodoSummaryCountdown(
+    val countdownText: String,
+    val countdownTargetEpochMillis: Long?,
+    val dDayText: String,
+    val isLate: Boolean,
+)
+
+internal fun TodoInfo.toTodoSummaryCountdownOrNull(now: Instant): TodoSummaryCountdown? {
+    val deadline = detailDeadline(now)
+    val dueInstant = deadline.toTodoDeadlineInstantOrNull() ?: return null
     val rawRemainingSeconds = ChronoUnit.SECONDS.between(now, dueInstant)
     val remainingSeconds = rawRemainingSeconds.coerceAtLeast(0L)
-    val remainingDays = ChronoUnit.DAYS.between(now, dueInstant).coerceAtLeast(0L)
+    val remainingDays = getRemainingDays(deadline, now)
     val dDayText = "D-$remainingDays"
 
-    return TodoSummaryItem(
-        subjectName = subject?.name.toWidgetSubjectName(context),
-        title = title.takeIf { it.isNotBlank() } ?: type.localizedLabel(context),
-        type = type.localizedLabel(context),
-        countdownText = if (remainingSeconds <= SUMMARY_SECONDS_PER_DAY) {
+    return TodoSummaryCountdown(
+        countdownText = if (remainingDays == 0L) {
             remainingSeconds.toLiveCountdownFallbackText()
         } else {
             dDayText
         },
         countdownTargetEpochMillis = dueInstant
             .toEpochMilli()
-            .takeIf { rawRemainingSeconds in 1..SUMMARY_SECONDS_PER_DAY },
+            .takeIf { remainingDays == 0L && rawRemainingSeconds > 0 },
         dDayText = dDayText,
         isLate = isLateSubmissionAvailable(now),
+    )
+}
+
+private fun TodoInfo.toTodoSummaryItemOrNull(context: Context, now: Instant): TodoSummaryItem? {
+    val countdown = toTodoSummaryCountdownOrNull(now) ?: return null
+
+    return TodoSummaryItem(
+        subjectName = subject?.name.toWidgetSubjectName(context),
+        title = title.takeIf { it.isNotBlank() } ?: type.localizedLabel(context),
+        type = type.localizedLabel(context),
+        countdownText = countdown.countdownText,
+        countdownTargetEpochMillis = countdown.countdownTargetEpochMillis,
+        dDayText = countdown.dDayText,
+        isLate = countdown.isLate,
     )
 }
 
